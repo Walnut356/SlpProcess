@@ -8,6 +8,8 @@ use std::path::Path;
 use std::slice;
 use std::thread;
 
+use crate::event::GameStart;
+
 // #[derive(Debug, Copy, Clone)]
 // struct PreFrame {
 //     frame_index: i32,
@@ -111,6 +113,21 @@ pub fn parse(path: &String) -> Vec<Vec<u8>> {
     let mut event = EventType::None;
     let mut event_dispatch = Vec::new();
 
+    let mut game_start: GameStart;
+
+    if stream.read_u8().unwrap() == EventType::GameStart as u8 {
+        game_start = GameStart::new(
+            stream.buffer().as_ptr(),
+            event_sizes[&(EventType::GameStart as u8)] as usize,
+        );
+    }
+    bytes_read += event_sizes[&(EventType::GameStart as u8)] as u32;
+
+    // update stream position, need to subtract 1 from event size length due to command byte
+    stream
+        .seek_relative((event_sizes[&(EventType::GameStart as u8)]) as i64)
+        .unwrap();
+
     while bytes_read < raw_length && event != EventType::GameEnd {
         let code = stream.read_u8().unwrap();
         bytes_read += 1;
@@ -118,7 +135,12 @@ pub fn parse(path: &String) -> Vec<Vec<u8>> {
         event = EventType::from(code);
         let size = event_sizes[&code];
 
-        event_dispatch.push((code, stream.buffer().as_ptr(), size as usize));
+        event_dispatch.push((code, bytes_read as isize, size as usize));
+
+        //BufReader.buffer().as_ptr() returns a pointer to the *current location* within the buffer for some reason,
+        // not to the start of the buffer. It's more convenient for my purposes but still weird.
+
+        // event_dispatch.push((code, stream.buffer().as_ptr(), size as usize));
 
         bytes_read += size as u32;
         stream.seek_relative(size as i64).unwrap();
@@ -126,19 +148,27 @@ pub fn parse(path: &String) -> Vec<Vec<u8>> {
 
     // -------------------------------------------------- Rayon Map ------------------------------------------------- //
 
-    // rayon par_iter doesn't like raw pointers, so it's necessary to
-    // let thing: Vec<&[u8]> = event_dispatch
-    //     .par_iter()
-    //     .map(|f| {
-    //         let code = f.0;
-    //         let size = f.1;
-    //         let pos = f.2;
-    //         let start = unsafe { stream.buffer().as_ptr().offset(pos) };
+    // rayon par_iter doesn't like raw pointers, so it's necessary to use the bytes_read and set the stream position
+    // back to the start.
 
-    //         let slice = unsafe { slice::from_raw_parts(start, size).clone() };
-    //         slice
-    //     })
-    //     .collect();
+    stream.seek(SeekFrom::Start(0)).unwrap();
+
+    let thing: Vec<Vec<u8>> = event_dispatch
+        .par_iter()
+        .map(|f| {
+            let code = f.0;
+            let pos = f.1;
+            let size = f.2;
+
+            let start = unsafe { stream.buffer().as_ptr().offset(pos) };
+
+            let slice = unsafe { slice::from_raw_parts(start, size).clone() };
+            let mut vec = Vec::with_capacity(size);
+            vec.resize(size, 0);
+            vec[..].clone_from_slice(slice);
+            vec
+        })
+        .collect();
 
     // ------------------------------------------------ Regular Loop ------------------------------------------------ //
 
@@ -154,19 +184,19 @@ pub fn parse(path: &String) -> Vec<Vec<u8>> {
 
     // ------------------------------------------------- Regular Map ------------------------------------------------ //
 
-    let thing: Vec<Vec<u8>> = event_dispatch
-        .iter()
-        .map(|f| {
-            let code = f.0;
-            let ptr = f.1;
-            let size = f.2;
+    // let thing: Vec<Vec<u8>> = event_dispatch
+    //     .iter()
+    //     .map(|f| {
+    //         let code = f.0;
+    //         let ptr = f.1;
+    //         let size = f.2;
 
-            let slice = unsafe { slice::from_raw_parts(ptr, size) };
-            let mut vec = Vec::with_capacity(size);
-            vec.resize(size, 0);
-            vec[..].clone_from_slice(slice);
-            vec
-        })
-        .collect();
+    //         let slice = unsafe { slice::from_raw_parts(ptr, size) };
+    //         let mut vec = Vec::with_capacity(size);
+    //         vec.resize(size, 0);
+    //         vec[..].clone_from_slice(slice);
+    //         vec
+    //     })
+    //     .collect();
     thing
 }
