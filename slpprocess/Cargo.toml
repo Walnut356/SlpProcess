@@ -6,10 +6,25 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+polars = { version = "0.31.1", features = [
+    "lazy",
+    "performant",
+    "dtype-u16",
+    "dtype-u8",
+    "dtype-i8",
+    "dtype-struct",
+    "dtype-datetime",
+    "dtype-duration",
+] }
 byteorder = "1.4.3"
 num_enum = "0.6.1"
 enumflags2 = "0.7.7"
 nohash-hasher = "0.2.0"
 rayon = "1.7.0"
-peppi = { git = "https://github.com/hohav/peppi.git" }
 bytemuck = "1.13.1"
+anyhow = "1.0.72"
+rand = "0.8.5"
+bytes = "1.4.0"
+encoding_rs = "0.8.32"
+serde_json = "1.0.104"
+minstant = "0.1.2"

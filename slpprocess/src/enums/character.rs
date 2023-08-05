@@ -1,0 +1,128 @@
+use anyhow::{anyhow, Result};
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum Character {
+    CaptainFalcon = 0,
+    DonkeyKong = 1,
+    Fox = 2,
+    GameAndWatch = 3,
+    Kirby = 4,
+    Bowser = 5,
+    Link = 6,
+    Luigi = 7,
+    Mario = 8,
+    Marth = 9,
+    Mewtwo = 10,
+    Ness = 11,
+    Peach = 12,
+    Pikachu = 13,
+    IceClimbers = 14,
+    Jigglypuff = 15,
+    Samus = 16,
+    Yoshi = 17,
+    Zelda = 18,
+    Sheik = 19,
+    Falco = 20,
+    #[default] // for whatever reason, empty ports have young link as the default character
+    YoungLink = 21,
+    DrMario = 22,
+    Roy = 23,
+    Pichu = 24,
+    Ganondorf = 25,
+    MasterHand = 26,
+    WireframeMale = 27,
+    WireframeFemale = 28,
+    GigaBowser = 29,
+    CrazyHand = 30,
+    Sandbag = 31,
+    Popo = 32,
+    Nana = 33,
+}
+
+impl Character {
+    /// Attempts to match the given ID with a character on the Character Select Screen
+    pub fn try_from_css(id: u8) -> Result<Self> {
+        match id {
+            0 => Ok(Character::CaptainFalcon),
+            1 => Ok(Character::DonkeyKong),
+            2 => Ok(Character::Fox),
+            3 => Ok(Character::GameAndWatch),
+            4 => Ok(Character::Kirby),
+            5 => Ok(Character::Bowser),
+            6 => Ok(Character::Link),
+            7 => Ok(Character::Luigi),
+            8 => Ok(Character::Mario),
+            9 => Ok(Character::Marth),
+            10 => Ok(Character::Mewtwo),
+            11 => Ok(Character::Ness),
+            12 => Ok(Character::Peach),
+            13 => Ok(Character::Pikachu),
+            14 => Ok(Character::IceClimbers),
+            15 => Ok(Character::Jigglypuff),
+            16 => Ok(Character::Samus),
+            17 => Ok(Character::Yoshi),
+            18 => Ok(Character::Zelda),
+            19 => Ok(Character::Sheik),
+            20 => Ok(Character::Falco),
+            21 => Ok(Character::YoungLink),
+            22 => Ok(Character::DrMario),
+            23 => Ok(Character::Roy),
+            24 => Ok(Character::Pichu),
+            25 => Ok(Character::Ganondorf),
+            26 => Ok(Character::MasterHand),
+            27 => Ok(Character::WireframeMale),
+            28 => Ok(Character::WireframeFemale),
+            29 => Ok(Character::GigaBowser),
+            30 => Ok(Character::CrazyHand),
+            31 => Ok(Character::Sandbag),
+            32 => Ok(Character::Popo),
+            x => Err(anyhow!(
+                "Invalid CSS Character code: {}. Expected value 0-32 (inclusive)",
+                x
+            )),
+        }
+    }
+
+    /// Attempts to match the given ID to a character as they are represented in memory during a match
+    pub fn try_from_internal(id: u8) -> Result<Self> {
+        match id {
+            0 => Ok(Character::Mario),
+            1 => Ok(Character::Fox),
+            2 => Ok(Character::CaptainFalcon),
+            3 => Ok(Character::DonkeyKong),
+            4 => Ok(Character::Kirby),
+            5 => Ok(Character::Bowser),
+            6 => Ok(Character::Link),
+            7 => Ok(Character::Sheik),
+            8 => Ok(Character::Ness),
+            9 => Ok(Character::Peach),
+            10 => Ok(Character::Popo),
+            11 => Ok(Character::Nana),
+            12 => Ok(Character::Pikachu),
+            13 => Ok(Character::Samus),
+            14 => Ok(Character::Yoshi),
+            15 => Ok(Character::Jigglypuff),
+            16 => Ok(Character::Mewtwo),
+            17 => Ok(Character::Luigi),
+            18 => Ok(Character::Marth),
+            19 => Ok(Character::Zelda),
+            20 => Ok(Character::YoungLink),
+            21 => Ok(Character::DrMario),
+            22 => Ok(Character::Falco),
+            23 => Ok(Character::Pichu),
+            24 => Ok(Character::GameAndWatch),
+            25 => Ok(Character::Ganondorf),
+            26 => Ok(Character::Roy),
+            27 => Ok(Character::MasterHand),
+            28 => Ok(Character::CrazyHand),
+            29 => Ok(Character::WireframeMale),
+            30 => Ok(Character::WireframeFemale),
+            31 => Ok(Character::GigaBowser),
+            32 => Ok(Character::Sandbag),
+            x => Err(anyhow!(
+                "Invalid Internal Character code: {}. Expected value 0-32 (inclusive)",
+                x
+            )),
+        }
+    }
+}

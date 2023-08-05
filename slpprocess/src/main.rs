@@ -1,20 +1,21 @@
-use slpprocess::parse;
+use bytes::*;
+use minstant::Instant;
+use polars::export::num::PrimInt;
+use polars::prelude::*;
+use rand::{thread_rng, Rng};
+use slpprocess::{parse, Game};
+use std::io::Cursor;
 use std::path::Path;
-use std::{fs, io, time};
+use std::{fs, io};
 
 fn main() {
-    let now = time::Instant::now();
-    let path = "../Game_20230526T020459.slp".to_string();
-    let thing = parse::parse(&path);
+    let path = "./hbox_llod_timeout_g8.slp";
+    // let path = r"G:\temp";
+    let now = Instant::now();
+    let thing = parse(path);
     let dur = now.elapsed();
-    println!("{}", dur.as_millis());
-
-    let now = time::Instant::now();
-    let mut buf = io::BufReader::new(fs::File::open("../Game_20230526T020459.slp").unwrap());
-    let game = peppi::game(&mut buf, None, None).unwrap();
-    let dur = now.elapsed();
-    println!("{}", dur.as_millis());
-
-    println!("{:?}", thing[0]);
-    println!("{:?}", game.metadata);
+    println!("{:?}", dur);
+    println!("{:?}", thing.len());
+    println!("{:?}", thing.first().unwrap().start);
+    println!("{:?}", thing.first().unwrap().end);
 }

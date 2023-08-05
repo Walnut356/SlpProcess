@@ -1,38 +1,42 @@
+#![allow(non_upper_case_globals)]
+
 use byteorder::{BigEndian, ReadBytesExt};
+use bytes::Bytes;
 use nohash_hasher::IntMap;
-use num_enum::FromPrimitive;
+use num_enum::{FromPrimitive, IntoPrimitive};
+use polars::prelude::{DataFrame, LazyFrame};
 use rayon::prelude::*;
 use std::fs::File;
-use std::io::{prelude::*, BufReader, SeekFrom};
+use std::io::{prelude::*, Cursor};
+
 use std::path::Path;
-use std::slice;
-use std::thread;
+use std::rc::Rc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
-use crate::event::GameStart;
+use crate::events::game_end::{parse_gameend, GameEnd};
+use crate::events::item::parse_itemframes;
+use crate::{
+    events::{
+        game_start::{GameStart, Version},
+        post_frame::parse_postframes,
+        pre_frame::parse_preframes,
+    },
+    player::Player,
+};
+use crate::{ubjson, Port};
 
-// #[derive(Debug, Copy, Clone)]
-// struct PreFrame {
-//     frame_index: i32,
-//     player: u8,
-//     follower: u8,
-//     random_seed: u32,
-//     pos_x: f32,
-//     pos_y: f32,
-//     facing_direction: f32,
-//     joystick_x: f32,
-//     joystick_y: f32,
-//     cstick_x: f32,
-//     cstick_y: f32,
-//     trigger: f32,
-//     processed_buttons: u32,
-//     physical_buttons: u32,
-//     physical_l: f32,
-//     physical_r: f32,
-//     x_analog: i8,
-//     percent: f32,
-// }
+trait AsFrames {
+    fn as_frames(&self) -> u64;
+}
 
-#[derive(Debug, Clone, Copy, FromPrimitive, PartialEq)]
+impl AsFrames for Duration {
+    fn as_frames(&self) -> u64 {
+        (*self / 60).as_secs()
+    }
+}
+
+#[derive(Debug, Clone, Copy, FromPrimitive, PartialEq, IntoPrimitive)]
 #[repr(u8)]
 enum EventType {
     EventPayloads = 0x35,
@@ -49,154 +53,207 @@ enum EventType {
     None = 0x00,
 }
 
-fn expect_bytes<R: Read>(r: &mut R, expected: &[u8]) -> std::io::Result<()> {
+fn expect_bytes<R: Read>(stream: &mut R, expected: &[u8]) -> std::io::Result<()> {
     let mut actual = vec![0; expected.len()];
-    r.read_exact(&mut actual)?;
+    stream.read_exact(&mut actual)?;
     if expected == actual.as_slice() {
         Ok(())
     } else {
         Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
-            "got {actual}, expected {expected}",
+            format!("got {actual:?}, expected {expected:?}"),
         ))
     }
 }
 
-fn get_event_sizes<R>(file: &mut R, bytes_read: &mut u32) -> IntMap<u8, u16>
-where
-    R: Read,
-{
-    let code = EventType::from_primitive(file.read_u8().unwrap());
-    if code != EventType::EventPayloads {
-        panic!("expected EventPayloads, got {code:?}")
-    };
-    let payloads_size = file.read_u8().unwrap();
-
-    if (payloads_size - 1) % 3 != 0 {
-        panic!("invalid length for EventPayloads Event")
-    };
-
-    let mut event_map: IntMap<u8, u16> = IntMap::default();
-
-    for _ in (0..(payloads_size - 1)).step_by(3) {
-        event_map.insert(
-            file.read_u8().unwrap(),
-            file.read_u16::<BigEndian>().unwrap(),
-        );
-    }
-
-    *bytes_read += payloads_size as u32 + 1;
-
-    return event_map;
+pub struct Game {
+    pub start: GameStart,
+    pub end: Option<GameEnd>, // There's an unresolved bug where sometiems game end events don't appear
+    pub duration: Duration,
+    pub version: Version,
+    pub players: [Player; 2],
+    pub item_frames: DataFrame,
 }
 
-pub fn parse(path: &String) -> Vec<Vec<u8>> {
-    let p = Path::new(path);
-    let mut f = File::open(p).unwrap();
-    let mut stream = BufReader::with_capacity(f.metadata().unwrap().len() as usize, f);
-
-    let mut bytes_read: u32 = 0;
-
-    expect_bytes(
-        &mut stream,
-        &[
-            0x7b, 0x55, 0x03, 0x72, 0x61, 0x77, 0x5b, 0x24, 0x55, 0x23, 0x6c,
-        ],
-    )
-    .unwrap();
-    bytes_read += 11;
-
-    let raw_length = stream.read_u32::<BigEndian>().unwrap();
-    bytes_read += 4;
-
-    let event_sizes = get_event_sizes(&mut stream, &mut bytes_read);
-    let mut event = EventType::None;
-    let mut event_dispatch = Vec::new();
-
-    let mut game_start: GameStart;
-
-    if stream.read_u8().unwrap() == EventType::GameStart as u8 {
-        game_start = GameStart::new(
-            stream.buffer().as_ptr(),
-            event_sizes[&(EventType::GameStart as u8)] as usize,
-        );
+impl Game {
+    pub fn new(path: &Path) -> Self {
+        Game::parse(path)
     }
-    bytes_read += event_sizes[&(EventType::GameStart as u8)] as u32;
 
-    // update stream position, need to subtract 1 from event size length due to command byte
-    stream
-        .seek_relative((event_sizes[&(EventType::GameStart as u8)]) as i64)
+    pub fn get_port(&self, port: Port) -> Result<&Player, ()> {
+        for player in self.players.iter() {
+            if player.port == port {
+                return Ok(player);
+            }
+        }
+
+        Err(())
+    }
+
+    fn get_port_mut(&mut self, port: Port) -> Result<&mut Player, ()> {
+        for player in self.players.iter_mut() {
+            if player.port == port {
+                return Ok(player);
+            }
+        }
+
+        Err(())
+    }
+
+    fn get_event_sizes<R>(file: &mut R) -> IntMap<u8, u16>
+    where
+        R: Read,
+    {
+        let code = EventType::from_primitive(file.read_u8().unwrap());
+        if code != EventType::EventPayloads {
+            panic!("expected EventPayloads, got {code:?}")
+        };
+        let payloads_size = file.read_u8().unwrap();
+
+        if (payloads_size - 1) % 3 != 0 {
+            panic!("invalid length for EventPayloads Event")
+        };
+
+        let mut event_map: IntMap<u8, u16> = IntMap::default();
+
+        for _ in (0..(payloads_size - 1)).step_by(3) {
+            let event = EventType::from(file.read_u8().unwrap());
+            let size = file.read_u16::<BigEndian>().unwrap();
+            event_map.insert(event.into(), size);
+        }
+
+        // *bytes_read += payloads_size as u32 + 1;
+
+        event_map
+    }
+
+    fn get_file_contents(path: &Path) -> Bytes {
+        let mut f = File::open(path).unwrap();
+        let file_length = f.metadata().unwrap().len() as usize;
+        let mut file_data = vec![0; file_length];
+        f.read_exact(&mut file_data).unwrap();
+
+        Bytes::from(file_data)
+    }
+
+    fn parse(path: &Path) -> Self {
+        // -------------------------------------------------- setup ------------------------------------------------- //
+        let file_data = Self::get_file_contents(path);
+        // todo replace this with another bytes object? Bytes comes with an internal cursor that supports .advance()
+        let mut stream = Cursor::new(file_data);
+
+        expect_bytes(
+            &mut stream,
+            &[
+                0x7b, 0x55, 0x03, 0x72, 0x61, 0x77, 0x5b, 0x24, 0x55, 0x23, 0x6c,
+            ],
+        )
         .unwrap();
 
-    while bytes_read < raw_length && event != EventType::GameEnd {
-        let code = stream.read_u8().unwrap();
-        bytes_read += 1;
+        let raw_length = stream.read_u32::<BigEndian>().unwrap() as u64 + 15;
 
-        event = EventType::from(code);
-        let size = event_sizes[&code];
+        let event_sizes: IntMap<u8, u16> = Self::get_event_sizes(&mut stream);
 
-        event_dispatch.push((code, bytes_read as isize, size as usize));
+        // ----------------------------------------------- game start ----------------------------------------------- //
 
-        //BufReader.buffer().as_ptr() returns a pointer to the *current location* within the buffer for some reason,
-        // not to the start of the buffer. It's more convenient for my purposes but still weird.
+        assert_eq!(stream.read_u8().unwrap(), EventType::GameStart as u8);
 
-        // event_dispatch.push((code, stream.buffer().as_ptr(), size as usize));
+        let raw_start = stream.get_ref().slice(
+            // god i hate rust sometimes
+            stream.position() as usize
+                ..(stream.position() + event_sizes[&EventType::GameStart.into()] as u64) as usize,
+        );
 
-        bytes_read += size as u32;
-        stream.seek_relative(size as i64).unwrap();
+        let (game_start, version, mut players) = GameStart::parse(raw_start);
+
+        stream.set_position(stream.position() + event_sizes[&EventType::GameStart.into()] as u64);
+
+        let mut game_end_bytes: Option<Bytes> = None;
+
+        // --------------------------------------------- event dispatch --------------------------------------------- //
+
+        let mut event = EventType::None;
+        let mut pre_bytes = Vec::new();
+        let mut post_bytes = Vec::new();
+        let mut item_bytes = Vec::new();
+
+        while stream.position() < raw_length && event != EventType::GameEnd {
+            let code = stream.read_u8().unwrap();
+            event = EventType::from(code);
+            // TODO remove this once everything works
+            /* EventType::None allows the parser to continue working on newer replays (with possible new events). During
+            testing all events are accounted for, so any EventType::Nones are likely a misalignment of my slices */
+            assert!(event != EventType::None);
+
+            let size = event_sizes[&code] as u64;
+            let pos = stream.position();
+            let raw_data = stream.get_ref();
+
+            match event {
+                EventType::PreFrame => {
+                    pre_bytes.push(raw_data.slice(pos as usize..(pos + size) as usize))
+                }
+                EventType::PostFrame => {
+                    post_bytes.push(raw_data.slice(pos as usize..(pos + size) as usize))
+                }
+                EventType::Item => {
+                    item_bytes.push(raw_data.slice(pos as usize..(pos + size) as usize))
+                }
+                EventType::GameEnd => {
+                    game_end_bytes = Some(raw_data.slice(pos as usize..(pos + size) as usize))
+                }
+                _ => (),
+            }
+
+            stream.set_position(pos + size);
+        }
+
+        expect_bytes(
+            &mut stream,
+            // `metadata` key & type ("U\x08metadata{")
+            &[
+                0x55, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x7b,
+            ],
+        )
+        .unwrap();
+
+        let mut duration: Duration = Duration::default();
+        let metadata = ubjson::to_map(&mut stream).unwrap();
+        if let serde_json::Value::Number(lastframe) = &metadata["lastFrame"] {
+            // duration, in frames is translated to seconds
+            // the saturating_sub (i.e. clamp to a minimum of 0) reports all games as 0 duration if they conclude
+            // before the timer starts. This improves ergonomics by a
+            duration =
+                Duration::from_secs(((1 + lastframe.as_u64().unwrap()).saturating_sub(123)) / 60);
+        }
+
+        let mut game_end = None;
+
+        if let Some(bytes) = game_end_bytes {
+            game_end = Some(parse_gameend(bytes));
+        }
+
+        let ports = [players[0].port, players[1].port];
+
+        let mut item_frames = parse_itemframes(&mut item_bytes);
+
+        let (mut pre_frames, mut post_frames) = rayon::join(
+            || parse_preframes(&mut pre_bytes, ports),
+            || parse_postframes(&mut post_bytes, ports),
+        );
+
+        for player in players.iter_mut() {
+            player.frames.pre = pre_frames.remove(&player.port.into()).unwrap();
+            player.frames.post = post_frames.remove(&player.port.into()).unwrap();
+        }
+
+        Game {
+            start: game_start,
+            end: game_end,
+            duration,
+            players,
+            version,
+            item_frames,
+        }
     }
-
-    // -------------------------------------------------- Rayon Map ------------------------------------------------- //
-
-    // rayon par_iter doesn't like raw pointers, so it's necessary to use the bytes_read and set the stream position
-    // back to the start.
-
-    stream.seek(SeekFrom::Start(0)).unwrap();
-
-    let thing: Vec<Vec<u8>> = event_dispatch
-        .par_iter()
-        .map(|f| {
-            let code = f.0;
-            let pos = f.1;
-            let size = f.2;
-
-            let start = unsafe { stream.buffer().as_ptr().offset(pos) };
-
-            let slice = unsafe { slice::from_raw_parts(start, size).clone() };
-            let mut vec = Vec::with_capacity(size);
-            vec.resize(size, 0);
-            vec[..].clone_from_slice(slice);
-            vec
-        })
-        .collect();
-
-    // ------------------------------------------------ Regular Loop ------------------------------------------------ //
-
-    // let mut thing = Vec::new();
-
-    // for (code, size, pos) in event_dispatch {
-    //     let start = unsafe { stream.buffer().as_ptr().offset(pos) };
-
-    //     let slice = unsafe { slice::from_raw_parts(start, size).clone() };
-
-    //     thing.push(Vec::from_iter(slice));
-    // }
-
-    // ------------------------------------------------- Regular Map ------------------------------------------------ //
-
-    // let thing: Vec<Vec<u8>> = event_dispatch
-    //     .iter()
-    //     .map(|f| {
-    //         let code = f.0;
-    //         let ptr = f.1;
-    //         let size = f.2;
-
-    //         let slice = unsafe { slice::from_raw_parts(ptr, size) };
-    //         let mut vec = Vec::with_capacity(size);
-    //         vec.resize(size, 0);
-    //         vec[..].clone_from_slice(slice);
-    //         vec
-    //     })
-    //     .collect();
-    thing
 }
