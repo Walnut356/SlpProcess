@@ -37,10 +37,17 @@ pub enum Port {
     P4,
 }
 
+
+/// Accepts a string file path to a single replay, or a directory containing replays. Returns a vector containing the
+/// resultant game object(s).
+///
+/// Replays that error out during parsing for any reason are skipped.
+///
+/// Directory parsing is multi-threaded by default, can end up IO limited if replays aren't on an SSD
 pub fn parse(path: &str) -> Vec<Game> {
     let f_path = Path::new(path);
     if f_path.is_file() {
-        return vec![Game::new(f_path)];
+        return vec![Game::new(f_path).unwrap()];
     }
     if f_path.is_dir() {
         let files: Vec<PathBuf> = fs::read_dir(f_path)
@@ -59,17 +66,10 @@ pub fn parse(path: &str) -> Vec<Game> {
             })
             .collect();
 
-        // let mut result = Vec::new();
-        // let mut counter = 1;
 
-        // for file in files {
-        //     println!("{}: {:?}", counter, file);
-        //     result.push(Game::new(file.as_path()));
-        //     counter += 1;
-        // }
         let result: Vec<Game> = files
             .par_iter()
-            .map(|path| Game::new(path.as_path()))
+            .filter_map(|path| Game::new(path.as_path()).ok())
             .collect();
 
         return result;

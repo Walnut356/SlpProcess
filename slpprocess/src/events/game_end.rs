@@ -24,15 +24,17 @@ pub fn parse_gameend(mut raw: Bytes) -> GameEnd {
     let end_method = EndMethod::try_from(raw.get_u8()).unwrap();
     let mut lras_initiator = None;
     let mut placements = None;
+
     if raw.has_remaining() {
         let temp = raw.get_i8();
-        if lras_initiator != Some(-1) {
-            lras_initiator = None;
+        if temp != -1 {
+            lras_initiator = Some(temp);
         }
     }
-    // if raw.has_remaining() {
-    //     placements = Some([raw.get_i8(), raw.get_i8(), raw.get_i8(), raw.get_i8()]);
-    // }
+
+    if raw.has_remaining() {
+        placements = Some([raw.get_i8(), raw.get_i8(), raw.get_i8(), raw.get_i8()]);
+    }
 
     GameEnd {
         end_method,

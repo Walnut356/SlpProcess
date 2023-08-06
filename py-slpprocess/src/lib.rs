@@ -1,15 +1,12 @@
 use std::path::Path;
 
-use polars::datatypes::AnyValue;
-use polars::prelude::*;
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::{exceptions::PyValueError, types::PyList};
 use pyo3_polars::PyDataFrame;
-use slpprocess;
-use slpprocess::{Game, Port};
+use slpprocess::Game;
 
 #[repr(transparent)]
-#[pyclass]
+#[pyclass(name = "Game")]
 pub struct PyGame {
     game: Game,
 }
@@ -25,7 +22,7 @@ impl PyGame {
     #[new]
     pub fn __init__(path: String) -> Self {
         let f_path = Path::new(&path);
-        let game = Game::new(f_path);
+        let game = Game::new(f_path).unwrap();
         PyGame::new(game)
     }
 

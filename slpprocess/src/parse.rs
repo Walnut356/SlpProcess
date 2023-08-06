@@ -1,17 +1,15 @@
 #![allow(non_upper_case_globals)]
 
+use anyhow::{anyhow, ensure, Result};
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
 use nohash_hasher::IntMap;
 use num_enum::{FromPrimitive, IntoPrimitive};
-use polars::prelude::{DataFrame, LazyFrame};
-use rayon::prelude::*;
+use polars::prelude::DataFrame;
+
 use std::fs::File;
 use std::io::{prelude::*, Cursor};
-
 use std::path::Path;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use crate::events::game_end::{parse_gameend, GameEnd};
@@ -23,6 +21,7 @@ use crate::{
         pre_frame::parse_preframes,
     },
     player::Player,
+    utils::ParseError,
 };
 use crate::{ubjson, Port};
 
@@ -76,43 +75,55 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(path: &Path) -> Self {
-        Game::parse(path)
+    /// Creates a new game object from the given Path.
+    ///
+    /// Can panic if replay is severely malformed (Payload size doesn't match Payload Sizes listing, metadata event
+    /// missing, etc.)
+    pub fn new(path: &Path) -> Result<Self> {
+        ensure!(path.is_file() && path.extension().unwrap() == "slp");
+        let file_data = Self::get_file_contents(path)?;
+        Game::parse(file_data)
     }
 
-    pub fn get_port(&self, port: Port) -> Result<&Player, ()> {
+    pub fn get_port(&self, port: Port) -> Result<&Player> {
         for player in self.players.iter() {
             if player.port == port {
                 return Ok(player);
             }
         }
 
-        Err(())
+        Err(anyhow!("Unable to find player with port {:?}", port))
     }
 
-    fn get_port_mut(&mut self, port: Port) -> Result<&mut Player, ()> {
+    pub fn get_port_mut(&mut self, port: Port) -> Result<&mut Player> {
         for player in self.players.iter_mut() {
             if player.port == port {
                 return Ok(player);
             }
         }
 
-        Err(())
+        Err(anyhow!("Unable to find player with port {:?}", port))
     }
 
-    fn get_event_sizes<R>(file: &mut R) -> IntMap<u8, u16>
+    fn get_event_sizes<R>(file: &mut R) -> Result<IntMap<u8, u16>>
     where
         R: Read,
     {
         let code = EventType::from_primitive(file.read_u8().unwrap());
-        if code != EventType::EventPayloads {
-            panic!("expected EventPayloads, got {code:?}")
-        };
+        ensure!(
+            code == EventType::EventPayloads,
+            ParseError::Value(
+                format!("{:?}", EventType::EventPayloads),
+                format!("{:?}", code)
+            )
+        );
+
         let payloads_size = file.read_u8().unwrap();
 
-        if (payloads_size - 1) % 3 != 0 {
-            panic!("invalid length for EventPayloads Event")
-        };
+        ensure!(
+            (payloads_size - 1) % 3 == 0,
+            anyhow!("EventPayloads length invalid")
+        );
 
         let mut event_map: IntMap<u8, u16> = IntMap::default();
 
@@ -122,23 +133,22 @@ impl Game {
             event_map.insert(event.into(), size);
         }
 
-        // *bytes_read += payloads_size as u32 + 1;
-
-        event_map
+        Ok(event_map)
     }
 
-    fn get_file_contents(path: &Path) -> Bytes {
-        let mut f = File::open(path).unwrap();
-        let file_length = f.metadata().unwrap().len() as usize;
+    fn get_file_contents(path: &Path) -> Result<Bytes> {
+        let mut f = File::open(path)?;
+        let file_length = f.metadata()?.len() as usize;
         let mut file_data = vec![0; file_length];
         f.read_exact(&mut file_data).unwrap();
 
-        Bytes::from(file_data)
+        Ok(Bytes::from(file_data))
     }
 
-    fn parse(path: &Path) -> Self {
+    /// Accepts a tokio Bytes object, returns a Game object. Useful if you already have the file in memory for some
+    /// other reason
+    pub fn parse(file_data: Bytes) -> Result<Self> {
         // -------------------------------------------------- setup ------------------------------------------------- //
-        let file_data = Self::get_file_contents(path);
         // todo replace this with another bytes object? Bytes comes with an internal cursor that supports .advance()
         let mut stream = Cursor::new(file_data);
 
@@ -147,12 +157,11 @@ impl Game {
             &[
                 0x7b, 0x55, 0x03, 0x72, 0x61, 0x77, 0x5b, 0x24, 0x55, 0x23, 0x6c,
             ],
-        )
-        .unwrap();
+        )?;
 
         let raw_length = stream.read_u32::<BigEndian>().unwrap() as u64 + 15;
 
-        let event_sizes: IntMap<u8, u16> = Self::get_event_sizes(&mut stream);
+        let event_sizes: IntMap<u8, u16> = Self::get_event_sizes(&mut stream)?;
 
         // ----------------------------------------------- game start ----------------------------------------------- //
 
@@ -214,17 +223,17 @@ impl Game {
             &[
                 0x55, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x7b,
             ],
-        )
-        .unwrap();
+        )?;
 
         let mut duration: Duration = Duration::default();
-        let metadata = ubjson::to_map(&mut stream).unwrap();
+        let metadata = ubjson::to_map(&mut stream)?;
         if let serde_json::Value::Number(lastframe) = &metadata["lastFrame"] {
             // duration, in frames is translated to seconds
-            // the saturating_sub (i.e. clamp to a minimum of 0) reports all games as 0 duration if they conclude
-            // before the timer starts. This improves ergonomics by a
-            duration =
-                Duration::from_secs(((1 + lastframe.as_u64().unwrap()).saturating_sub(123)) / 60);
+            // values below 0 are clamped to 0 so that the duration matches the in-game timer
+            let framecount = lastframe.as_i64().unwrap();
+            let seconds = framecount.min(0) / 60;
+
+            duration = Duration::from_secs(seconds as u64); // i shouldn't have to do any checks on this conversion
         }
 
         let mut game_end = None;
@@ -235,7 +244,7 @@ impl Game {
 
         let ports = [players[0].port, players[1].port];
 
-        let mut item_frames = parse_itemframes(&mut item_bytes);
+        let item_frames = parse_itemframes(&mut item_bytes);
 
         let (mut pre_frames, mut post_frames) = rayon::join(
             || parse_preframes(&mut pre_bytes, ports),
@@ -247,13 +256,13 @@ impl Game {
             player.frames.post = post_frames.remove(&player.port.into()).unwrap();
         }
 
-        Game {
+        Ok(Game {
             start: game_start,
             end: game_end,
             duration,
             players,
             version,
             item_frames,
-        }
+        })
     }
 }
