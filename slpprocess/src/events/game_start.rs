@@ -2,10 +2,8 @@
 
 use bytes::{Buf, Bytes};
 use encoding_rs::SHIFT_JIS;
-use nohash_hasher::IntMap;
 use num_enum::{FromPrimitive, IntoPrimitive, TryFromPrimitive};
 use polars::prelude::*;
-use std::iter::zip;
 use std::time::Duration;
 
 use crate::{
@@ -153,7 +151,7 @@ impl GameStart {
             );
         }
 
-        for mut val in temp_ucf.iter_mut() {
+        for val in temp_ucf.iter_mut() {
             let dashback = ControllerFix::try_from(raw.get_u32() as u8).unwrap();
             let shield_drop = ControllerFix::try_from(raw.get_u32() as u8).unwrap();
             *val = Some(UCFToggles {

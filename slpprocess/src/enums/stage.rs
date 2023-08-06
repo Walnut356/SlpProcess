@@ -1,3 +1,5 @@
+#![allow(non_camel_case_types)]
+
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Debug, Copy, Clone, TryFromPrimitive, IntoPrimitive, PartialEq)]

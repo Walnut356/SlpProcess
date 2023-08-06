@@ -1,9 +1,8 @@
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
-use std::{iter::zip, sync::Mutex};
 
-use crate::{player::Player, Port};
+use crate:: Port;
 
 pub struct PostFrames {
     frame_number: Vec<i32>,
@@ -173,11 +172,15 @@ pub fn parse_postframes(frames: &mut [Bytes], ports: [Port; 2]) -> IntMap<u8, Da
     p_frames.insert(ports[0].into(), PostFrames::new(len));
     p_frames.insert(ports[1].into(), PostFrames::new(len));
 
-    for mut frame in frames {
+    for frame in frames {
         let frame_number = frame.get_i32();
         let port = frame.get_u8();
         let working = p_frames.get_mut(&port).unwrap();
         let is_nana = frame.get_u8() != 0; // TODO add ic's specific logic using metadata
+
+        if is_nana {
+            continue;
+        }
 
         working.frame_number.push(frame_number);
         working.character.push(frame.get_u8());

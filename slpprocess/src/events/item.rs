@@ -1,5 +1,4 @@
 use bytes::{Buf, Bytes};
-use nohash_hasher::IntMap;
 use polars::prelude::*;
 
 pub struct Items {
@@ -83,7 +82,7 @@ impl Into<DataFrame> for Items {
 pub fn parse_itemframes(frames: &mut [Bytes]) -> DataFrame {
     let mut working = Items::new(frames.len());
 
-    for mut frame in frames {
+    for frame in frames {
         working.frame_number.push(frame.get_i32());
         working.item_id.push(frame.get_u16());
         working.state.push(frame.get_u8());

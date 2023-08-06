@@ -1,4 +1,4 @@
-use polars::prelude::{DataFrame, LazyFrame};
+use polars::prelude::DataFrame;
 
 use crate::{enums::character::Character, events::game_start::ControllerFix, Port};
 
