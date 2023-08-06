@@ -2,5 +2,6 @@
     "lldb.displayFormat": "decimal",
     "lldb.showDisassembly": "auto",
     "lldb.dereferencePointers": true,
-    "lldb.consoleMode": "evaluate"
+    "lldb.consoleMode": "evaluate",
+    "python.analysis.typeCheckingMode": "basic"
 }

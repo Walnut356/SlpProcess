@@ -9,6 +9,9 @@ fin = time.time()
 print(fin - now)
 print(len(game))
 
-frames = game[0].get_port_frames(1)
+frames = game[0].start
 
-print(frames.get_column(1))
+now = time.time()
+print(frames)
+fin = time.time()
+print(fin - now)
