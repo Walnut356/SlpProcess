@@ -5,7 +5,7 @@ use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
 use nohash_hasher::IntMap;
 use num_enum::{FromPrimitive, IntoPrimitive};
-use polars::prelude::DataFrame;
+use polars::prelude::*;
 
 use std::fs::File;
 use std::io::{prelude::*, Cursor};

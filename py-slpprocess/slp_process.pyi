@@ -21,8 +21,14 @@ class GameStart:
     game_number: int | None
     tiebreak_number: int | None
 
+class GameEnd:
+    end_method: int
+    lras_initiator: int | None
+    placements: list[int] | None
+
 class Game:
     start: GameStart
+    end: GameEnd | None
     def get_port_frames(self, port: int) -> Frames: ...
 
 class PreFrame(Enum):

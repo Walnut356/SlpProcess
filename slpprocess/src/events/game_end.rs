@@ -1,9 +1,9 @@
 #![allow(non_upper_case_globals)]
 
 use bytes::{Buf, Bytes};
-use num_enum::TryFromPrimitive;
+use num_enum::{TryFromPrimitive, IntoPrimitive};
 
-#[derive(Debug, Clone, PartialEq, TryFromPrimitive)]
+#[derive(Debug, Clone, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
 pub enum EndMethod {
     Unresolved,

@@ -9,9 +9,8 @@ fin = time.time()
 print(fin - now)
 print(len(game))
 
-frames = game[0].start
+start = game[0].start
+end = game[0].end
 
-now = time.time()
-print(frames)
-fin = time.time()
-print(fin - now)
+print(start)
+print(end)

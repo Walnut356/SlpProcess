@@ -7,9 +7,9 @@ pub mod enums {
 pub mod events {
     pub mod game_end;
     pub mod game_start;
+    pub mod item;
     pub mod post_frame;
     pub mod pre_frame;
-    pub mod item;
 }
 pub mod parse;
 pub mod player;
@@ -37,6 +37,19 @@ pub enum Port {
     P4,
 }
 
+impl TryFrom<i8> for Port {
+    fn try_from(val: i8) -> Result<Self, Self::Error> {
+        match val {
+            0 => Ok(Port::P1),
+            1 => Ok(Port::P2),
+            2 => Ok(Port::P3),
+            3 => Ok(Port::P4),
+            _ => Err("Port must be a number 0-3 inclusive"),
+        }
+    }
+
+    type Error = &'static str;
+}
 
 /// Accepts a string file path to a single replay, or a directory containing replays. Returns a vector containing the
 /// resultant game object(s).
@@ -66,7 +79,6 @@ pub fn parse(path: &str) -> Vec<Game> {
             })
             .collect();
 
-
         let result: Vec<Game> = files
             .par_iter()
             .filter_map(|path| Game::new(path.as_path()).ok())
@@ -75,4 +87,73 @@ pub fn parse(path: &str) -> Vec<Game> {
         return result;
     }
     panic!()
+}
+
+pub mod Columns {
+    use strum_macros::{Display, EnumString};
+    #[derive(Debug, Clone, Copy, Display, EnumString)]
+    pub enum Post {
+        #[strum(serialize = "frame number")]
+        FrameNumber,
+        #[strum(serialize = "character")]
+        Character,
+        #[strum(serialize = "action state")]
+        ActionState,
+        #[strum(serialize = "position x")]
+        PositionX,
+        #[strum(serialize = "position y")]
+        PositionY,
+        #[strum(serialize = "facing")]
+        Facing,
+        #[strum(serialize = "percent")]
+        Percent,
+        #[strum(serialize = "shield health")]
+        ShieldHealth,
+        #[strum(serialize = "last attack landed")]
+        LastAttackLanded,
+        #[strum(serialize = "combo count")]
+        ComboCount,
+        #[strum(serialize = "last hit by")]
+        LastHitBy,
+        #[strum(serialize = "stocks")]
+        Stocks,
+        #[strum(serialize = "state frame")]
+        StateFrame,
+        #[strum(serialize = "flags 1")]
+        Flags1,
+        #[strum(serialize = "flags 2")]
+        Flags2,
+        #[strum(serialize = "flags 3")]
+        Flags3,
+        #[strum(serialize = "flags 4")]
+        Flags4,
+        #[strum(serialize = "flags 5")]
+        Flags5,
+        #[strum(serialize = "misc as")]
+        MiscAS,
+        #[strum(serialize = "is grounded")]
+        IsGrounded,
+        #[strum(serialize = "last ground id")]
+        LastGroundID,
+        #[strum(serialize = "jumps remaining")]
+        JumpsRemaining,
+        #[strum(serialize = "l cancel")]
+        LCancel,
+        #[strum(serialize = "hurtbox state")]
+        HurtboxState,
+        #[strum(serialize = "self air x")]
+        SelfAirX,
+        #[strum(serialize = "self y")]
+        SelfY,
+        #[strum(serialize = "knockback x")]
+        KnockbackX,
+        #[strum(serialize = "knockback y")]
+        KnockbackY,
+        #[strum(serialize = "self ground x")]
+        SelfGroundX,
+        #[strum(serialize = "hitlag remaining")]
+        HitlagRemaining,
+        #[strum(serialize = "animation index")]
+        AnimationIndex,
+    }
 }

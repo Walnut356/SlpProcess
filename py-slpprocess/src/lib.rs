@@ -7,6 +7,7 @@ use pyo3::prelude::*;
 use pyo3::types::*;
 use pyo3_polars::PyDataFrame;
 use serde::Serialize;
+use slpprocess::events::game_end::GameEnd;
 use slpprocess::events::game_start::GameStart;
 use slpprocess::Game;
 
@@ -15,14 +16,20 @@ pub struct PyGame {
     game: Game,
     #[pyo3(get)]
     start: PyGameStart,
-    // end: PyGameEnd,
+    #[pyo3(get)]
+    end: Option<PyGameEnd>,
     // players: PyTuple,
 }
 
 impl PyGame {
     pub fn new(game: Game) -> Self {
         let start = PyGameStart::new(&game.start);
-        PyGame { game, start }
+        let mut end = None;
+        if let Some(game_end) =  game.end.as_ref() {
+            end = Some(PyGameEnd::new(game_end));
+        }
+
+        PyGame { game, start, end }
     }
 }
 
@@ -57,7 +64,7 @@ pub struct PyFrames {
     post: PyDataFrame,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Debug)]
 #[pyclass(name = "GameStart")]
 pub struct PyGameStart {
     #[pyo3(get)]
@@ -109,6 +116,31 @@ impl PyGameStart {
             game_number: game_start.game_number,
             tiebreak_number: game_start.tiebreak_number,
         }
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[pyclass(name = "GameEnd")]
+pub struct PyGameEnd {
+    end_method: u8,
+    lras_initiator: Option<i8>,
+    placements: Option<[i8; 4]>,
+}
+
+impl PyGameEnd {
+    pub fn new(game_end: &GameEnd) -> Self {
+        PyGameEnd {
+            end_method: game_end.end_method.clone().into(),
+            lras_initiator: game_end.lras_initiator,
+            placements: game_end.placements,
+        }
+    }
+}
+
+#[pymethods]
+impl PyGameEnd {
+    fn __repr__(&self) -> String {
+        serde_json::to_string(self).unwrap()
     }
 }
 
