@@ -10,6 +10,7 @@ use polars::prelude::*;
 use std::fs::File;
 use std::io::{prelude::*, Cursor};
 use std::path::Path;
+use std::sync::{Mutex, RwLock};
 use std::time::Duration;
 
 use crate::events::game_end::{parse_gameend, GameEnd};
@@ -70,7 +71,7 @@ pub struct Game {
     pub end: Option<GameEnd>, // There's an unresolved bug where sometiems game end events don't appear
     pub duration: Duration,
     pub version: Version,
-    pub players: [Player; 2],
+    pub players: Arc<[RwLock<Player>; 2]>,
     pub item_frames: DataFrame,
 }
 
@@ -85,9 +86,9 @@ impl Game {
         Game::parse(file_data)
     }
 
-    pub fn get_port(&self, port: Port) -> Result<&Player> {
-        for player in self.players.iter() {
-            if player.port == port {
+    pub fn get_port(&self, port: Port) -> Result<&RwLock<Player>> {
+        for player in self.players.as_ref().iter() {
+            if player.read().unwrap().port == port {
                 return Ok(player);
             }
         }
@@ -95,9 +96,9 @@ impl Game {
         Err(anyhow!("Unable to find player with port {:?}", port))
     }
 
-    pub fn get_port_mut(&mut self, port: Port) -> Result<&mut Player> {
-        for player in self.players.iter_mut() {
-            if player.port == port {
+    pub fn get_port_mut(&mut self, port: Port) -> Result<&RwLock<Player>> {
+        for player in self.players.iter() {
+            if player.write().unwrap().port == port {
                 return Ok(player);
             }
         }
@@ -260,7 +261,7 @@ impl Game {
             start: game_start,
             end: game_end,
             duration,
-            players,
+            players: Arc::new(players.map(RwLock::new)),
             version,
             item_frames,
         })

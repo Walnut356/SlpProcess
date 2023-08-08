@@ -60,7 +60,7 @@ pub struct GameStart {
     pub is_pal: Option<bool>,
     pub is_frozen_stadium: Option<bool>,
     pub is_netplay: Option<bool>,
-    pub match_id: Option<Box<str>>,
+    pub match_id: Option<String>,
     pub match_type: Option<MatchType>,
     pub game_number: Option<u32>,
     pub tiebreak_number: Option<u32>,
@@ -550,7 +550,7 @@ impl GameStart {
         let end = match_id_bytes.iter().position(|&x| x == 0).unwrap_or(50);
         match_id_bytes.truncate(end);
         let match_id_len = match_id_bytes.len();
-        match_id = Some(String::from_utf8(match_id_bytes).unwrap().into_boxed_str());
+        match_id = Some(String::from_utf8(match_id_bytes).unwrap());
 
         game_number = Some(raw.get_u32());
         tiebreak_number = Some(raw.get_u32());

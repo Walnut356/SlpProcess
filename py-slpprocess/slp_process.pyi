@@ -7,28 +7,56 @@ class Frames:
 
 def parse(path: str) -> list[Game]: ...
 
-class GameStart:
-    random_seed: int
-    is_teams: bool
-    stage: int
-    timer: int
-    damage_ratio: float
-    is_pal: bool | None
-    is_frozen_stadium: bool | None
-    is_netplay: bool | None
-    match_id: str | None
-    match_type: int | None
-    game_number: int | None
-    tiebreak_number: int | None
-
-class GameEnd:
-    end_method: int
-    lras_initiator: int | None
-    placements: list[int] | None
-
 class Game:
-    start: GameStart
-    end: GameEnd | None
+
+
+    @property
+    def random_seed(self) -> int: ...
+    @property
+    def is_teams(self) -> bool: ...
+    @property
+    def stage(self) -> int: ...
+    @property
+    def timer(self) -> int: ...
+    @property
+    def damage_ratio(self) -> float: ...
+    @property
+    def is_pal(self) -> bool | None: ...
+    @property
+    def is_frozen_stadium(self) -> bool | None: ...
+    @property
+    def is_netplay(self) -> bool | None: ...
+    @property
+    def match_id(self) -> str | None: ...
+    @property
+    def match_type(self) -> int | None: ...
+    @property
+    def game_number(self) -> int | None: ...
+    @property
+    def tiebreak_number(self) -> int | None: ...
+    @property
+    def end_method(self) -> int | None: ...
+    @property
+    def lras_initiator(self) -> int | None: ...
+    @property
+    def placements(self) -> list[int]: ...
+
+    def __init__(self, path: str):
+        self.__random_seed: int
+        self.__is_teams: bool
+        self.__stage: int
+        self.__timer: int
+        self.__damage_ratio: float
+        self.__is_pal: bool | None
+        self.__is_frozen_stadium: bool | None
+        self.__is_netplay: bool | None
+        self.__match_id: str | None
+        self.__match_type: int | None
+        self.__game_number: int | None
+        self.__tiebreak_number: int | None
+        self.__end_method: int | None
+        self.__lras_initiator: int | None
+        self.__placements: list[int]
     def get_port_frames(self, port: int) -> Frames: ...
 
 class PreFrame(Enum):
