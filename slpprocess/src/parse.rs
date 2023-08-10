@@ -71,7 +71,7 @@ pub struct Game {
     pub end: Option<GameEnd>, // There's an unresolved bug where sometiems game end events don't appear
     pub duration: Duration,
     pub version: Version,
-    pub players: Arc<[RwLock<Player>; 2]>,
+    pub players: [Arc<RwLock<Player>>; 2],
     pub item_frames: DataFrame,
 }
 
@@ -261,7 +261,7 @@ impl Game {
             start: game_start,
             end: game_end,
             duration,
-            players: Arc::new(players.map(RwLock::new)),
+            players: players.map(|x| Arc::new(RwLock::new(x))),
             version,
             item_frames,
         })

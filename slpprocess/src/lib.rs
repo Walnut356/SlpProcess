@@ -89,7 +89,7 @@ pub fn parse(path: &str) -> Vec<Game> {
     panic!()
 }
 
-pub mod Columns {
+pub mod columns {
     use strum_macros::{Display, EnumString};
     #[derive(Debug, Clone, Copy, Display, EnumString)]
     pub enum Post {

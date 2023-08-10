@@ -120,7 +120,7 @@ impl GameStart {
                         port: Port::try_from(i as u8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
-                        winner: None,
+                        is_winner: None,
                         stats: (),
                         combos: (),
                         frames: Frames::default(),
@@ -172,7 +172,7 @@ impl GameStart {
                         port: Port::try_from(i as u8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
-                        winner: None,
+                        is_winner: None,
                         stats: (),
                         combos: (),
                         frames: Frames::default(),
@@ -217,7 +217,7 @@ impl GameStart {
                         port: Port::try_from(i as u8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
-                        winner: None,
+                        is_winner: None,
                         stats: (),
                         combos: (),
                         frames: Frames::default(),
@@ -262,7 +262,7 @@ impl GameStart {
                         port: Port::try_from(i as u8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
-                        winner: None,
+                        is_winner: None,
                         stats: (),
                         combos: (),
                         frames: Frames::default(),
@@ -307,7 +307,7 @@ impl GameStart {
                         port: Port::try_from(i as u8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
-                        winner: None,
+                        is_winner: None,
                         stats: (),
                         combos: (),
                         frames: Frames::default(),
@@ -353,7 +353,7 @@ impl GameStart {
                         port: Port::try_from(i as u8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
-                        winner: None,
+                        is_winner: None,
                         stats: (),
                         combos: (),
                         frames: Frames::default(),
@@ -390,7 +390,7 @@ impl GameStart {
             let end = dn_bytes.iter().position(|&x| x == 0).unwrap_or(30);
             dn_bytes.truncate(end);
             let (display_name, _, _) = SHIFT_JIS.decode(&dn_bytes);
-            *val = Some(display_name.to_string().into_boxed_str());
+            *val = Some(display_name.to_string());
         }
 
         for val in connect_codes.iter_mut() {
@@ -399,7 +399,7 @@ impl GameStart {
             let end = cc_bytes.iter().position(|&x| x == 0).unwrap_or(30);
             cc_bytes.truncate(end);
             let (connect_code, _, _) = SHIFT_JIS.decode(&cc_bytes);
-            *val = Some(connect_code.to_string().into_boxed_str());
+            *val = Some(connect_code.to_string());
         }
 
         if !raw.has_remaining() {
@@ -414,7 +414,7 @@ impl GameStart {
                         port: Port::try_from(i as u8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
-                        winner: None,
+                        is_winner: None,
                         stats: (),
                         combos: (),
                         frames: Frames::default(),
@@ -469,7 +469,7 @@ impl GameStart {
                         port: Port::try_from(i as u8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
-                        winner: None,
+                        is_winner: None,
                         stats: (),
                         combos: (),
                         frames: Frames::default(),
@@ -514,7 +514,7 @@ impl GameStart {
                         port: Port::try_from(i as u8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
-                        winner: None,
+                        is_winner: None,
                         stats: (),
                         combos: (),
                         frames: Frames::default(),
@@ -575,7 +575,7 @@ impl GameStart {
                     port: Port::try_from(i as u8).unwrap(),
                     connect_code: connect_codes[i].clone(),
                     display_name: display_names[i].clone(),
-                    winner: None,
+                    is_winner: None,
                     stats: (),
                     combos: (),
                     frames: Frames::default(),

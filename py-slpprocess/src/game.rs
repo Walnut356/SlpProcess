@@ -2,27 +2,38 @@
 
 use std::path::Path;
 
+use crate::player::*;
+
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::types::PyList;
 use pyo3_polars::PyDataFrame;
 use slpprocess::Game;
 
+#[derive(Clone, Debug)]
 #[pyclass(name = "Frames")]
 pub struct PyFrames {
     #[pyo3(get)]
-    pre: PyDataFrame,
+    pub pre: PyDataFrame,
     #[pyo3(get)]
-    post: PyDataFrame,
+    pub post: PyDataFrame,
 }
 
 #[pyclass(name = "Game")]
 pub struct PyGame {
     game: Game,
+    #[pyo3(get)]
+    players: Vec<PyPlayer>,
 }
 
 impl PyGame {
     pub fn new(game: Game) -> Self {
-        PyGame { game }
+        let players = game
+            .players
+            .iter()
+            .map(|x| PyPlayer::new(x.clone()))
+            .collect();
+        PyGame { game, players }
     }
 }
 
@@ -35,19 +46,9 @@ impl PyGame {
         PyGame::new(game)
     }
 
-    pub fn get_port_frames(&self, port: u8) -> PyResult<PyFrames> {
-        let normalized = (port - 1).try_into().unwrap();
-        for player in self.game.players.iter() {
-            if player.read().unwrap().port == normalized {
-                return Ok(PyFrames {
-                    pre: PyDataFrame(player.read().unwrap().frames.pre.clone()),
-                    post: PyDataFrame(player.read().unwrap().frames.post.clone()),
-                });
-            }
-        }
-        PyResult::Err(PyValueError::new_err(format!("No player with port {port}")))
+    pub fn get_port_frames(&self, port: usize) -> PyResult<PyFrames> {
+        Ok(self.players.get(port).unwrap().frames.clone())
     }
-
     // --------------------------------------------- game start getters --------------------------------------------- //
     #[getter]
     pub fn get_random_seed(&self) -> PyResult<u32> {

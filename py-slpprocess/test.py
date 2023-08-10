@@ -10,6 +10,10 @@ print(fin - now)
 print(len(game))
 
 game = game[0]
-
-
-print(game.timer)
+x = game.players[0]
+x = x.frames
+now = time.time()
+x = x.pre
+fin = time.time()
+print(fin - now)
+print(x)

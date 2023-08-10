@@ -1,4 +1,5 @@
 pub mod game;
+pub mod player;
 
 use game::PyGame;
 use pyo3::prelude::*;
@@ -15,6 +16,7 @@ pub fn parse(path: String) -> Vec<PyGame> {
 fn slp_process(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<game::PyGame>().unwrap();
     m.add_class::<game::PyFrames>().unwrap();
+    m.add_class::<player::PyPlayer>().unwrap();
     m.add_function(wrap_pyfunction!(parse, m)?)?;
     Ok(())
 }

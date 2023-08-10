@@ -7,14 +7,14 @@ pub struct Player {
     pub character: Character,
     pub costume: u8,
     pub port: Port,
-    pub connect_code: Option<Box<str>>,
-    pub display_name: Option<Box<str>>,
-    pub winner: Option<bool>,
+    pub connect_code: Option<String>,
+    pub display_name: Option<String>,
+    pub is_winner: Option<bool>,
     pub ucf: Option<UCFToggles>,
     pub stats: (),
     pub combos: (),
     pub frames: Frames,
-    pub nana_frames: Option<DataFrame>,
+    pub nana_frames: Option<Frames>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]

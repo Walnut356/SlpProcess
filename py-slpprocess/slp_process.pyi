@@ -5,11 +5,37 @@ class Frames:
     pre: DataFrame
     post: DataFrame
 
+class Player:
+    frames: Frames
+    nana_frames: Frames | None
+    @property
+    def character(self) -> int: ...
+    @property
+    def costume(self) -> int: ...
+    @property
+    def port(self) -> int: ...
+    @property
+    def connect_code(self) -> str | None: ...
+    @property
+    def display_name(self) -> str | None: ...
+    @property
+    def is_winner(self) -> bool | None: ...
+
+    def __init__(self):
+        self.__character: int
+        self.__costume: int
+        self.__port: int
+        self.__connect_code: str | None
+        self.__display_name: str | None
+        self.__is_winner: bool | None
+
+
 def parse(path: str) -> list[Game]: ...
 
 class Game:
 
-
+    @property
+    def players(self) -> list[Player]: ...
     @property
     def random_seed(self) -> int: ...
     @property
@@ -42,6 +68,7 @@ class Game:
     def placements(self) -> list[int]: ...
 
     def __init__(self, path: str):
+        self.__players: list[Player]
         self.__random_seed: int
         self.__is_teams: bool
         self.__stage: int
