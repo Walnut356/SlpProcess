@@ -125,7 +125,7 @@ pub fn parse_preframes(frames: &mut [Bytes], ports: [Port; 2]) -> IntMap<u8, Dat
             // version < 1.4.0
             continue;
         }
-        working.percent.push(Some(frame.get_f32_ne()));
+        working.percent.push(Some(frame.get_f32()));
     }
 
     let mut result = IntMap::default();
