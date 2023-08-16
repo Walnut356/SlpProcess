@@ -1,8 +1,14 @@
+#![allow(clippy::uninit_vec)]
+
 use bytes::{Buf, Bytes};
+use minstant::Instant;
 use nohash_hasher::IntMap;
 use polars::prelude::*;
+use rayon::prelude::IntoParallelRefIterator;
 
-use crate:: Port;
+use crate::{utils::BufUnchecked, Port};
+
+impl BufUnchecked for Bytes {}
 
 pub struct PostFrames {
     frame_number: Vec<i32>,
@@ -41,38 +47,216 @@ pub struct PostFrames {
 impl PostFrames {
     fn new(len: usize) -> Self {
         PostFrames {
-            frame_number: Vec::with_capacity(len),
-            character: Vec::with_capacity(len),
-            action_state: Vec::with_capacity(len),
-            position_x: Vec::with_capacity(len),
-            position_y: Vec::with_capacity(len),
-            facing: Vec::with_capacity(len),
-            percent: Vec::with_capacity(len),
-            shield_health: Vec::with_capacity(len),
-            last_attack_landed: Vec::with_capacity(len),
-            combo_count: Vec::with_capacity(len),
-            last_hit_by: Vec::with_capacity(len),
-            stocks: Vec::with_capacity(len),
-            state_frame: Vec::with_capacity(len),
-            flags_1: Vec::with_capacity(len),
-            flags_2: Vec::with_capacity(len),
-            flags_3: Vec::with_capacity(len),
-            flags_4: Vec::with_capacity(len),
-            flags_5: Vec::with_capacity(len),
-            misc_as: Vec::with_capacity(len),
-            is_grounded: Vec::with_capacity(len),
-            last_ground_id: Vec::with_capacity(len),
-            jumps_remaining: Vec::with_capacity(len),
-            l_cancel: Vec::with_capacity(len),
-            hurtbox_state: Vec::with_capacity(len),
-            self_air_x: Vec::with_capacity(len),
-            self_y: Vec::with_capacity(len),
-            knockback_x: Vec::with_capacity(len),
-            knockback_y: Vec::with_capacity(len),
-            self_ground_x: Vec::with_capacity(len),
-            hitlag_remaining: Vec::with_capacity(len),
-            animation_index: Vec::with_capacity(len),
+            frame_number: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            character: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            action_state: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            position_x: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            position_y: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            facing: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            percent: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            shield_health: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            last_attack_landed: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            combo_count: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            last_hit_by: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            stocks: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            state_frame: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            flags_1: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            flags_2: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            flags_3: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            flags_4: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            flags_5: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            misc_as: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            is_grounded: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            last_ground_id: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            jumps_remaining: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            l_cancel: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            hurtbox_state: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            self_air_x: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            self_y: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            knockback_x: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            knockback_y: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            self_ground_x: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            hitlag_remaining: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
+            animation_index: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp
+            },
         }
+    }
+
+    fn byte_swap(&mut self) {
+        self.frame_number
+            .iter_mut()
+            .for_each(|x| *x = x.swap_bytes());
+        self.action_state
+            .iter_mut()
+            .for_each(|x| *x = x.swap_bytes());
+        self.position_x
+            .iter_mut()
+            .for_each(|x| *x = f32::from_be_bytes(x.to_ne_bytes()));
+        self.position_y
+            .iter_mut()
+            .for_each(|x| *x = f32::from_be_bytes(x.to_ne_bytes()));
+        self.facing
+            .iter_mut()
+            .for_each(|x| *x = f32::from_be_bytes(x.to_ne_bytes()));
+        self.percent
+            .iter_mut()
+            .for_each(|x| *x = f32::from_be_bytes(x.to_ne_bytes()));
+        self.shield_health
+            .iter_mut()
+            .for_each(|x| *x = f32::from_be_bytes(x.to_ne_bytes()));
+        self.state_frame
+            .iter_mut()
+            .for_each(|x| *x = x.map(|x| f32::from_be_bytes(x.to_ne_bytes())));
+        self.misc_as
+            .iter_mut()
+            .for_each(|x| *x = x.map(|x| f32::from_be_bytes(x.to_ne_bytes())));
+        self.last_ground_id
+            .iter_mut()
+            .for_each(|x| *x = x.map(|x| x.swap_bytes()));
+        self.self_air_x
+            .iter_mut()
+            .for_each(|x| *x = x.map(|x| f32::from_be_bytes(x.to_ne_bytes())));
+        self.self_y
+            .iter_mut()
+            .for_each(|x| *x = x.map(|x| f32::from_be_bytes(x.to_ne_bytes())));
+        self.knockback_x
+            .iter_mut()
+            .for_each(|x| *x = x.map(|x| f32::from_be_bytes(x.to_ne_bytes())));
+        self.knockback_y
+            .iter_mut()
+            .for_each(|x| *x = x.map(|x| f32::from_be_bytes(x.to_ne_bytes())));
+        self.self_ground_x
+            .iter_mut()
+            .for_each(|x| *x = x.map(|x| f32::from_be_bytes(x.to_ne_bytes())));
+        self.hitlag_remaining
+            .iter_mut()
+            .for_each(|x| *x = x.map(|x| f32::from_be_bytes(x.to_ne_bytes())));
+        self.animation_index
+            .iter_mut()
+            .for_each(|x| *x = x.map(|x| x.swap_bytes()));
     }
 }
 
@@ -165,81 +349,149 @@ impl Into<DataFrame> for PostFrames {
     }
 }
 
-pub fn parse_postframes(frames: &mut [Bytes], ports: [Port; 2]) -> IntMap<u8, DataFrame> {
+pub fn parse_postframes(frames: &mut [Bytes], ports: [Port; 2], ics: [bool; 2]) -> [DataFrame; 2] {
     let len = frames.len() / 2;
 
-    let mut p_frames: IntMap<u8, PostFrames> = IntMap::default();
-    p_frames.insert(ports[0].into(), PostFrames::new(len));
-    p_frames.insert(ports[1].into(), PostFrames::new(len));
+    let mut p_frames: [PostFrames; 2] = [PostFrames::new(len), PostFrames::new(len)];
 
-    for frame in frames {
-        let frame_number = frame.get_i32();
-        let port = frame.get_u8();
-        let working = p_frames.get_mut(&port).unwrap();
-        let is_nana = frame.get_u8() != 0; // TODO add ic's specific logic using metadata
+    if !ics[0] && !ics[1] {
+        no_ics(frames, &mut p_frames);
+    } else if ics[0] ^ ics[1] {
+        one_ics(frames, &mut p_frames);
+    } else {
+        two_ics(frames, &mut p_frames);
+    }
 
-        if is_nana {
-            continue;
-        }
+    for frames in p_frames.iter_mut() {
+        frames.byte_swap();
+    }
 
-        working.frame_number.push(frame_number);
-        working.character.push(frame.get_u8());
-        working.action_state.push(frame.get_u16());
-        working.position_x.push(frame.get_f32());
-        working.position_y.push(frame.get_f32());
-        working.facing.push(frame.get_f32());
-        working.percent.push(frame.get_f32());
-        working.shield_health.push(frame.get_f32());
-        working.last_attack_landed.push(frame.get_u8());
-        working.combo_count.push(frame.get_u8());
-        working.last_hit_by.push(frame.get_u8());
-        working.stocks.push(frame.get_u8());
-        if !frame.has_remaining() {
+    p_frames.map(|x| x.into())
+}
+
+pub fn no_ics(frames: &mut [Bytes], p_frames: &mut [PostFrames; 2]) {
+    for (i, frame) in frames.chunks_exact_mut(2).enumerate() {
+        let frame_number = frame[0].get_i32_unchecked();
+        let port = frame[0].get_u8();
+        let working = p_frames.get_mut(0).unwrap();
+        // let is_nana = frame.get_u8() != 0;
+        frame[0].advance(1);
+
+        working.frame_number[i] = frame_number;
+
+        working.character[i] = frame[0].get_u8();
+        working.action_state[i] = frame[0].get_u16();
+        working.position_x[i] = frame[0].get_f32_unchecked();
+        working.position_y[i] = frame[0].get_f32_unchecked();
+        working.facing[i] = frame[0].get_f32_unchecked();
+        working.percent[i] = frame[0].get_f32_unchecked();
+        working.shield_health[i] = frame[0].get_f32_unchecked();
+        working.last_attack_landed[i] = frame[0].get_u8();
+        working.combo_count[i] = frame[0].get_u8();
+        working.last_hit_by[i] = frame[0].get_u8();
+        working.stocks[i] = frame[0].get_u8();
+        if !frame[0].has_remaining() {
             // version < 2.0.0
             continue;
         }
-        working.state_frame.push(Some(frame.get_f32()));
-        working.flags_1.push(Some(frame.get_u8()));
-        working.flags_2.push(Some(frame.get_u8()));
-        working.flags_3.push(Some(frame.get_u8()));
-        working.flags_4.push(Some(frame.get_u8()));
-        working.flags_5.push(Some(frame.get_u8()));
-        working.misc_as.push(Some(frame.get_f32()));
-        working.is_grounded.push(Some(frame.get_u8() != 0));
-        working.last_ground_id.push(Some(frame.get_u16()));
-        working.jumps_remaining.push(Some(frame.get_u8()));
-        working.l_cancel.push(Some(frame.get_u8()));
-        if !frame.has_remaining() {
+        working.state_frame[i] = Some(frame[0].get_f32_unchecked());
+        working.flags_1[i] = Some(frame[0].get_u8());
+        working.flags_2[i] = Some(frame[0].get_u8());
+        working.flags_3[i] = Some(frame[0].get_u8());
+        working.flags_4[i] = Some(frame[0].get_u8());
+        working.flags_5[i] = Some(frame[0].get_u8());
+        working.misc_as[i] = Some(frame[0].get_f32_unchecked());
+        working.is_grounded[i] = Some(frame[0].get_u8() != 0);
+        working.last_ground_id[i] = Some(frame[0].get_u16());
+        working.jumps_remaining[i] = Some(frame[0].get_u8());
+        working.l_cancel[i] = Some(frame[0].get_u8());
+        if !frame[0].has_remaining() {
             // version < 2.1.0
             continue;
         }
-        working.hurtbox_state.push(Some(frame.get_u8()));
-        if !frame.has_remaining() {
+        working.hurtbox_state[i] = Some(frame[0].get_u8());
+        if !frame[0].has_remaining() {
             // version < 3.5.0
             continue;
         }
-        working.self_air_x.push(Some(frame.get_f32()));
-        working.self_y.push(Some(frame.get_f32()));
-        working.knockback_x.push(Some(frame.get_f32()));
-        working.knockback_y.push(Some(frame.get_f32()));
-        working.self_ground_x.push(Some(frame.get_f32()));
-        if !frame.has_remaining() {
+        working.self_air_x[i] = Some(frame[0].get_f32_unchecked());
+        working.self_y[i] = Some(frame[0].get_f32_unchecked());
+        working.knockback_x[i] = Some(frame[0].get_f32_unchecked());
+        working.knockback_y[i] = Some(frame[0].get_f32_unchecked());
+        working.self_ground_x[i] = Some(frame[0].get_f32_unchecked());
+        if !frame[0].has_remaining() {
             // version < 3.8.0
             continue;
         }
-        working.hitlag_remaining.push(Some(frame.get_f32()));
-        if !frame.has_remaining() {
+        working.hitlag_remaining[i] = Some(frame[0].get_f32_unchecked());
+        if !frame[0].has_remaining() {
             // version < 3.11.0
             continue;
         }
-        working.animation_index.push(Some(frame.get_u32()));
+        working.animation_index[i] = Some(frame[0].get_u32_unchecked());
+
+        // -------------------------------------- player 2 -------------------------------------- //
+        let frame_number = frame[1].get_i32();
+        let port = frame[1].get_u8();
+        let working = p_frames.get_mut(1).unwrap();
+        // let is_nana = frame.get_u8() != 0;
+        frame[1].advance(1);
+
+        working.frame_number[i] = frame_number;
+
+        working.character[i] = frame[1].get_u8();
+        working.action_state[i] = frame[1].get_u16();
+        working.position_x[i] = frame[1].get_f32_unchecked();
+        working.position_y[i] = frame[1].get_f32_unchecked();
+        working.facing[i] = frame[1].get_f32_unchecked();
+        working.percent[i] = frame[1].get_f32_unchecked();
+        working.shield_health[i] = frame[1].get_f32_unchecked();
+        working.last_attack_landed[i] = frame[1].get_u8();
+        working.combo_count[i] = frame[1].get_u8();
+        working.last_hit_by[i] = frame[1].get_u8();
+        working.stocks[i] = frame[1].get_u8();
+        if !frame[1].has_remaining() {
+            // version < 2.0.0
+            continue;
+        }
+        working.state_frame[i] = Some(frame[1].get_f32_unchecked());
+        working.flags_1[i] = Some(frame[1].get_u8());
+        working.flags_2[i] = Some(frame[1].get_u8());
+        working.flags_3[i] = Some(frame[1].get_u8());
+        working.flags_4[i] = Some(frame[1].get_u8());
+        working.flags_5[i] = Some(frame[1].get_u8());
+        working.misc_as[i] = Some(frame[1].get_f32_unchecked());
+        working.is_grounded[i] = Some(frame[1].get_u8() != 0);
+        working.last_ground_id[i] = Some(frame[1].get_u16_ne());
+        working.jumps_remaining[i] = Some(frame[1].get_u8_unchecked());
+        working.l_cancel[i] = Some(frame[1].get_u8_unchecked());
+        if !frame[1].has_remaining() {
+            // version < 2.1.0
+            continue;
+        }
+        working.hurtbox_state[i] = Some(frame[1].get_u8_unchecked());
+        if !frame[1].has_remaining() {
+            // version < 3.5.0
+            continue;
+        }
+        working.self_air_x[i] = Some(frame[1].get_f32_unchecked());
+        working.self_y[i] = Some(frame[1].get_f32_unchecked());
+        working.knockback_x[i] = Some(frame[1].get_f32_unchecked());
+        working.knockback_y[i] = Some(frame[1].get_f32_unchecked());
+        working.self_ground_x[i] = Some(frame[1].get_f32_unchecked());
+        if !frame[1].has_remaining() {
+            // version < 3.8.0
+            continue;
+        }
+        working.hitlag_remaining[i] = Some(frame[1].get_f32_unchecked());
+        if !frame[1].has_remaining() {
+            // version < 3.11.0
+            continue;
+        }
+        working.animation_index[i] = Some(frame[1].get_u32_unchecked());
     }
-
-    let mut result = IntMap::default();
-
-    for (port, frames) in p_frames {
-        result.insert(port, frames.into());
-    }
-
-    result
 }
+
+fn one_ics(frames: &mut [Bytes], p_frames: &mut [PostFrames; 2]) {}
+
+fn two_ics(frames: &mut [Bytes], p_frames: &mut [PostFrames; 2]) {}

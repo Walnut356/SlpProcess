@@ -12,7 +12,9 @@ use std::io::{prelude::*, Cursor};
 use std::path::Path;
 use std::sync::{Mutex, RwLock};
 use std::time::Duration;
+use std::iter::zip;
 
+use crate::enums::character::Character;
 use crate::events::game_end::{parse_gameend, GameEnd};
 use crate::events::item::parse_itemframes;
 use crate::{
@@ -176,6 +178,13 @@ impl Game {
 
         let (game_start, version, mut players) = GameStart::parse(raw_start);
 
+        let mut ics: [bool; 2] = [false, false];
+        for i in 0..2 {
+            if players[i].character == Character::IceClimbers {
+                ics[i] = true;
+            }
+        }
+
         stream.set_position(stream.position() + event_sizes[&EventType::GameStart.into()] as u64);
 
         let mut game_end_bytes: Option<Bytes> = None;
@@ -247,14 +256,14 @@ impl Game {
 
         let item_frames = parse_itemframes(&mut item_bytes);
 
-        let (mut pre_frames, mut post_frames) = rayon::join(
-            || parse_preframes(&mut pre_bytes, ports),
-            || parse_postframes(&mut post_bytes, ports),
+        let (pre_frames, post_frames) = rayon::join(
+            || parse_preframes(&mut pre_bytes, ports, ics),
+            || parse_postframes(&mut post_bytes, ports, ics),
         );
 
-        for player in players.iter_mut() {
-            player.frames.pre = pre_frames.remove(&player.port.into()).unwrap();
-            player.frames.post = post_frames.remove(&player.port.into()).unwrap();
+        for ((pre_frames, post_frames), player) in zip(zip(pre_frames.into_iter(), post_frames.into_iter()), players.iter_mut()) {
+            player.frames.pre = pre_frames;
+            player.frames.post = post_frames;
         }
 
         Ok(Game {

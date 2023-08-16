@@ -1,19 +1,32 @@
-use std::io;
+use std::{io, time::Duration};
+use bytes::{Bytes, Buf};
 
 use minstant::Instant;
-use slpprocess::parse;
+use slpprocess::{parse, Game};
 
 fn main() {
-    let mut buf = String::new();
-    io::stdin().read_line(&mut buf).unwrap();
-    let path = buf.as_str().trim();
+    let path = "./Game_20230526T020459.slp";
     // let path = r"G:\temp";
-    let mut thing = parse(path);
-    let game = thing.pop().unwrap();
-    let now = Instant::now();
-    let df = game.players[0].read().unwrap().frames.pre.clone();
-    let dur = now.elapsed();
-    println!("{:?}", dur);
-    println!("{:?}", df);
-    println!("{:?}", game.players[0].read().unwrap().frames.pre);
+
+    let mut times = Vec::with_capacity(1000);
+
+    let mut game = 0.0;
+    for _i in 0..1000 {
+        let now = Instant::now();
+
+        let thing = parse(path);
+
+        let dur = now.elapsed();
+        times.push(dur.as_nanos());
+
+        game = thing[0].start.damage_ratio;
+    }
+
+    let total_dur: u128 = times.iter().sum();
+    let avg = total_dur / times.len() as u128;
+    let avg_dur = Duration::from_nanos(avg as u64);
+
+    println!("{:?}", avg_dur);
+    println!("{game}");
+
 }
