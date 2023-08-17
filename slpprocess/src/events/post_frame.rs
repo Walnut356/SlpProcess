@@ -362,16 +362,16 @@ pub fn parse_postframes(frames: &mut [Bytes], ports: [Port; 2], ics: [bool; 2]) 
         two_ics(frames, &mut p_frames);
     }
 
-    for frames in p_frames.iter_mut() {
-        frames.byte_swap();
-    }
+    // for frames in p_frames.iter_mut() {
+    //     frames.byte_swap();
+    // }
 
     p_frames.map(|x| x.into())
 }
 
 pub fn no_ics(frames: &mut [Bytes], p_frames: &mut [PostFrames; 2]) {
     for (i, frame) in frames.chunks_exact_mut(2).enumerate() {
-        let frame_number = frame[0].get_i32_unchecked();
+        let frame_number = frame[0].get_i32();
         let port = frame[0].get_u8();
         let working = p_frames.get_mut(0).unwrap();
         // let is_nana = frame.get_u8() != 0;
@@ -381,11 +381,11 @@ pub fn no_ics(frames: &mut [Bytes], p_frames: &mut [PostFrames; 2]) {
 
         working.character[i] = frame[0].get_u8();
         working.action_state[i] = frame[0].get_u16();
-        working.position_x[i] = frame[0].get_f32_unchecked();
-        working.position_y[i] = frame[0].get_f32_unchecked();
-        working.facing[i] = frame[0].get_f32_unchecked();
-        working.percent[i] = frame[0].get_f32_unchecked();
-        working.shield_health[i] = frame[0].get_f32_unchecked();
+        working.position_x[i] = frame[0].get_f32();
+        working.position_y[i] = frame[0].get_f32();
+        working.facing[i] = frame[0].get_f32();
+        working.percent[i] = frame[0].get_f32();
+        working.shield_health[i] = frame[0].get_f32();
         working.last_attack_landed[i] = frame[0].get_u8();
         working.combo_count[i] = frame[0].get_u8();
         working.last_hit_by[i] = frame[0].get_u8();
@@ -394,13 +394,13 @@ pub fn no_ics(frames: &mut [Bytes], p_frames: &mut [PostFrames; 2]) {
             // version < 2.0.0
             continue;
         }
-        working.state_frame[i] = Some(frame[0].get_f32_unchecked());
+        working.state_frame[i] = Some(frame[0].get_f32());
         working.flags_1[i] = Some(frame[0].get_u8());
         working.flags_2[i] = Some(frame[0].get_u8());
         working.flags_3[i] = Some(frame[0].get_u8());
         working.flags_4[i] = Some(frame[0].get_u8());
         working.flags_5[i] = Some(frame[0].get_u8());
-        working.misc_as[i] = Some(frame[0].get_f32_unchecked());
+        working.misc_as[i] = Some(frame[0].get_f32());
         working.is_grounded[i] = Some(frame[0].get_u8() != 0);
         working.last_ground_id[i] = Some(frame[0].get_u16());
         working.jumps_remaining[i] = Some(frame[0].get_u8());
@@ -414,21 +414,21 @@ pub fn no_ics(frames: &mut [Bytes], p_frames: &mut [PostFrames; 2]) {
             // version < 3.5.0
             continue;
         }
-        working.self_air_x[i] = Some(frame[0].get_f32_unchecked());
-        working.self_y[i] = Some(frame[0].get_f32_unchecked());
-        working.knockback_x[i] = Some(frame[0].get_f32_unchecked());
-        working.knockback_y[i] = Some(frame[0].get_f32_unchecked());
-        working.self_ground_x[i] = Some(frame[0].get_f32_unchecked());
+        working.self_air_x[i] = Some(frame[0].get_f32());
+        working.self_y[i] = Some(frame[0].get_f32());
+        working.knockback_x[i] = Some(frame[0].get_f32());
+        working.knockback_y[i] = Some(frame[0].get_f32());
+        working.self_ground_x[i] = Some(frame[0].get_f32());
         if !frame[0].has_remaining() {
             // version < 3.8.0
             continue;
         }
-        working.hitlag_remaining[i] = Some(frame[0].get_f32_unchecked());
+        working.hitlag_remaining[i] = Some(frame[0].get_f32());
         if !frame[0].has_remaining() {
             // version < 3.11.0
             continue;
         }
-        working.animation_index[i] = Some(frame[0].get_u32_unchecked());
+        working.animation_index[i] = Some(frame[0].get_u32());
 
         // -------------------------------------- player 2 -------------------------------------- //
         let frame_number = frame[1].get_i32();
@@ -441,11 +441,11 @@ pub fn no_ics(frames: &mut [Bytes], p_frames: &mut [PostFrames; 2]) {
 
         working.character[i] = frame[1].get_u8();
         working.action_state[i] = frame[1].get_u16();
-        working.position_x[i] = frame[1].get_f32_unchecked();
-        working.position_y[i] = frame[1].get_f32_unchecked();
-        working.facing[i] = frame[1].get_f32_unchecked();
-        working.percent[i] = frame[1].get_f32_unchecked();
-        working.shield_health[i] = frame[1].get_f32_unchecked();
+        working.position_x[i] = frame[1].get_f32();
+        working.position_y[i] = frame[1].get_f32();
+        working.facing[i] = frame[1].get_f32();
+        working.percent[i] = frame[1].get_f32();
+        working.shield_health[i] = frame[1].get_f32();
         working.last_attack_landed[i] = frame[1].get_u8();
         working.combo_count[i] = frame[1].get_u8();
         working.last_hit_by[i] = frame[1].get_u8();
@@ -454,41 +454,41 @@ pub fn no_ics(frames: &mut [Bytes], p_frames: &mut [PostFrames; 2]) {
             // version < 2.0.0
             continue;
         }
-        working.state_frame[i] = Some(frame[1].get_f32_unchecked());
+        working.state_frame[i] = Some(frame[1].get_f32());
         working.flags_1[i] = Some(frame[1].get_u8());
         working.flags_2[i] = Some(frame[1].get_u8());
         working.flags_3[i] = Some(frame[1].get_u8());
         working.flags_4[i] = Some(frame[1].get_u8());
         working.flags_5[i] = Some(frame[1].get_u8());
-        working.misc_as[i] = Some(frame[1].get_f32_unchecked());
+        working.misc_as[i] = Some(frame[1].get_f32());
         working.is_grounded[i] = Some(frame[1].get_u8() != 0);
         working.last_ground_id[i] = Some(frame[1].get_u16_ne());
-        working.jumps_remaining[i] = Some(frame[1].get_u8_unchecked());
-        working.l_cancel[i] = Some(frame[1].get_u8_unchecked());
+        working.jumps_remaining[i] = Some(frame[1].get_u8());
+        working.l_cancel[i] = Some(frame[1].get_u8());
         if !frame[1].has_remaining() {
             // version < 2.1.0
             continue;
         }
-        working.hurtbox_state[i] = Some(frame[1].get_u8_unchecked());
+        working.hurtbox_state[i] = Some(frame[1].get_u8());
         if !frame[1].has_remaining() {
             // version < 3.5.0
             continue;
         }
-        working.self_air_x[i] = Some(frame[1].get_f32_unchecked());
-        working.self_y[i] = Some(frame[1].get_f32_unchecked());
-        working.knockback_x[i] = Some(frame[1].get_f32_unchecked());
-        working.knockback_y[i] = Some(frame[1].get_f32_unchecked());
-        working.self_ground_x[i] = Some(frame[1].get_f32_unchecked());
+        working.self_air_x[i] = Some(frame[1].get_f32());
+        working.self_y[i] = Some(frame[1].get_f32());
+        working.knockback_x[i] = Some(frame[1].get_f32());
+        working.knockback_y[i] = Some(frame[1].get_f32());
+        working.self_ground_x[i] = Some(frame[1].get_f32());
         if !frame[1].has_remaining() {
             // version < 3.8.0
             continue;
         }
-        working.hitlag_remaining[i] = Some(frame[1].get_f32_unchecked());
+        working.hitlag_remaining[i] = Some(frame[1].get_f32());
         if !frame[1].has_remaining() {
             // version < 3.11.0
             continue;
         }
-        working.animation_index[i] = Some(frame[1].get_u32_unchecked());
+        working.animation_index[i] = Some(frame[1].get_u32());
     }
 }
 
