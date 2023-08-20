@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub enum Character {
     CaptainFalcon = 0,
     DonkeyKong = 1,

@@ -10,11 +10,13 @@ use polars::prelude::*;
 use std::fs::File;
 use std::io::{prelude::*, Cursor};
 use std::path::Path;
-use std::sync::{Mutex, RwLock};
+use std::sync::RwLock;
 use std::time::Duration;
 
+use crate::enums::character::Character;
 use crate::events::game_end::{parse_gameend, GameEnd};
 use crate::events::item::parse_itemframes;
+use crate::player::Frames;
 use crate::{
     events::{
         game_start::{GameStart, Version},
@@ -146,11 +148,12 @@ impl Game {
         Ok(Bytes::from(file_data))
     }
 
-    /// Accepts a tokio Bytes object, returns a Game object. Useful if you already have the file in memory for some
-    /// other reason
+    /// Accepts a tokio Bytes object, returns a Game object. Useful if you already have the file in
+    /// memory for some other reason
     pub fn parse(file_data: Bytes) -> Result<Self> {
-        // -------------------------------------------------- setup ------------------------------------------------- //
-        // todo replace this with another bytes object? Bytes comes with an internal cursor that supports .advance()
+        // ---------------------------------------- setup --------------------------------------- //
+        // todo replace this with another bytes object? Bytes comes with an internal cursor
+        // that supports .advance()
         let mut stream = Cursor::new(file_data);
 
         expect_bytes(
@@ -164,12 +167,12 @@ impl Game {
 
         let event_sizes: IntMap<u8, u16> = Self::get_event_sizes(&mut stream)?;
 
-        // ----------------------------------------------- game start ----------------------------------------------- //
+        // ------------------------------------- game start ------------------------------------- //
 
         assert_eq!(stream.read_u8().unwrap(), EventType::GameStart as u8);
 
         let raw_start = stream.get_ref().slice(
-            // god i hate rust sometimes
+            // wow this is exceptionally ugly! thanks rust =)
             stream.position() as usize
                 ..(stream.position() + event_sizes[&EventType::GameStart.into()] as u64) as usize,
         );
@@ -180,7 +183,7 @@ impl Game {
 
         let mut game_end_bytes: Option<Bytes> = None;
 
-        // --------------------------------------------- event dispatch --------------------------------------------- //
+        // ----------------------------------- event dispatch ----------------------------------- //
 
         let mut event = EventType::None;
         let mut pre_bytes = Vec::new();
@@ -191,8 +194,9 @@ impl Game {
             let code = stream.read_u8().unwrap();
             event = EventType::from(code);
             // TODO remove this once everything works
-            /* EventType::None allows the parser to continue working on newer replays (with possible new events). During
-            testing all events are accounted for, so any EventType::Nones are likely a misalignment of my slices */
+            /* EventType::None allows the parser to continue working on newer replays (with possible
+            new events). During testing all events are accounted for, so any EventType::Nones are
+            likely a misalignment of my slices */
             assert!(event != EventType::None);
 
             let size = event_sizes[&code] as u64;
@@ -234,7 +238,8 @@ impl Game {
             let framecount = lastframe.as_i64().unwrap();
             let seconds = framecount.min(0) / 60;
 
-            duration = Duration::from_secs(seconds as u64); // i shouldn't have to do any checks on this conversion
+            // i shouldn't have to do any checks on this conversion
+            duration = Duration::from_secs(seconds as u64);
         }
 
         let mut game_end = None;
@@ -243,18 +248,32 @@ impl Game {
             game_end = Some(parse_gameend(bytes));
         }
 
+        // i could map but this gives me arrays instead of slices without into
         let ports = [players[0].port, players[1].port];
+        let ics = [
+            players[0].character == Character::IceClimbers,
+            players[1].character == Character::IceClimbers,
+        ];
 
         let item_frames = parse_itemframes(&mut item_bytes);
 
         let (mut pre_frames, mut post_frames) = rayon::join(
-            || parse_preframes(&mut pre_bytes, ports),
-            || parse_postframes(&mut post_bytes, ports),
+            || parse_preframes(&mut pre_bytes, ports, ics),
+            || parse_postframes(&mut post_bytes, ports, ics),
         );
 
         for player in players.iter_mut() {
-            player.frames.pre = pre_frames.remove(&player.port.into()).unwrap();
-            player.frames.post = post_frames.remove(&player.port.into()).unwrap();
+            let temp_pre = pre_frames.remove(&player.port.into()).unwrap();
+            player.frames.pre = temp_pre.0;
+
+            let temp_post = post_frames.remove(&player.port.into()).unwrap();
+            player.frames.post = temp_post.0;
+            if temp_pre.1.is_some() {
+                player.nana_frames = Some(Frames {
+                    pre: temp_pre.1.unwrap(),
+                    post: temp_post.1.unwrap(),
+                })
+            }
         }
 
         Ok(Game {

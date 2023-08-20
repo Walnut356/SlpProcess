@@ -4,9 +4,7 @@ use std::path::Path;
 
 use crate::player::*;
 
-use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::PyList;
 use pyo3_polars::PyDataFrame;
 use slpprocess::Game;
 

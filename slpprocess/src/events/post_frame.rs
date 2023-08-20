@@ -1,77 +1,203 @@
+#![allow(clippy::uninit_vec)]
+
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
 
-use crate:: Port;
+use crate::Port;
 
 pub struct PostFrames {
-    frame_number: Vec<i32>,
-    character: Vec<u8>,
-    action_state: Vec<u16>,
-    position_x: Vec<f32>,
-    position_y: Vec<f32>,
-    facing: Vec<f32>,
-    percent: Vec<f32>,
-    shield_health: Vec<f32>,
-    last_attack_landed: Vec<u8>,
-    combo_count: Vec<u8>,
-    last_hit_by: Vec<u8>,
-    stocks: Vec<u8>,
-    state_frame: Vec<Option<f32>>,
-    flags_1: Vec<Option<u8>>,
-    flags_2: Vec<Option<u8>>,
-    flags_3: Vec<Option<u8>>,
-    flags_4: Vec<Option<u8>>,
-    flags_5: Vec<Option<u8>>,
-    misc_as: Vec<Option<f32>>,
-    is_grounded: Vec<Option<bool>>,
-    last_ground_id: Vec<Option<u16>>,
-    jumps_remaining: Vec<Option<u8>>,
-    l_cancel: Vec<Option<u8>>,
-    hurtbox_state: Vec<Option<u8>>,
-    self_air_x: Vec<Option<f32>>,
-    self_y: Vec<Option<f32>>,
-    knockback_x: Vec<Option<f32>>,
-    knockback_y: Vec<Option<f32>>,
-    self_ground_x: Vec<Option<f32>>,
-    hitlag_remaining: Vec<Option<f32>>,
-    animation_index: Vec<Option<u32>>,
+    frame_number: Box<[i32]>,
+    character: Box<[u8]>,
+    action_state: Box<[u16]>,
+    position_x: Box<[f32]>,
+    position_y: Box<[f32]>,
+    facing: Box<[f32]>,
+    percent: Box<[f32]>,
+    shield_health: Box<[f32]>,
+    last_attack_landed: Box<[u8]>,
+    combo_count: Box<[u8]>,
+    last_hit_by: Box<[u8]>,
+    stocks: Box<[u8]>,
+    state_frame: Box<[Option<f32>]>,
+    flags_1: Box<[Option<u8>]>,
+    flags_2: Box<[Option<u8>]>,
+    flags_3: Box<[Option<u8>]>,
+    flags_4: Box<[Option<u8>]>,
+    flags_5: Box<[Option<u8>]>,
+    misc_as: Box<[Option<f32>]>,
+    is_grounded: Box<[Option<bool>]>,
+    last_ground_id: Box<[Option<u16>]>,
+    jumps_remaining: Box<[Option<u8>]>,
+    l_cancel: Box<[Option<u8>]>,
+    hurtbox_state: Box<[Option<u8>]>,
+    self_air_x: Box<[Option<f32>]>,
+    self_y: Box<[Option<f32>]>,
+    knockback_x: Box<[Option<f32>]>,
+    knockback_y: Box<[Option<f32>]>,
+    self_ground_x: Box<[Option<f32>]>,
+    hitlag_remaining: Box<[Option<f32>]>,
+    animation_index: Box<[Option<u32>]>,
 }
 
 impl PostFrames {
     fn new(len: usize) -> Self {
         PostFrames {
-            frame_number: Vec::with_capacity(len),
-            character: Vec::with_capacity(len),
-            action_state: Vec::with_capacity(len),
-            position_x: Vec::with_capacity(len),
-            position_y: Vec::with_capacity(len),
-            facing: Vec::with_capacity(len),
-            percent: Vec::with_capacity(len),
-            shield_health: Vec::with_capacity(len),
-            last_attack_landed: Vec::with_capacity(len),
-            combo_count: Vec::with_capacity(len),
-            last_hit_by: Vec::with_capacity(len),
-            stocks: Vec::with_capacity(len),
-            state_frame: Vec::with_capacity(len),
-            flags_1: Vec::with_capacity(len),
-            flags_2: Vec::with_capacity(len),
-            flags_3: Vec::with_capacity(len),
-            flags_4: Vec::with_capacity(len),
-            flags_5: Vec::with_capacity(len),
-            misc_as: Vec::with_capacity(len),
-            is_grounded: Vec::with_capacity(len),
-            last_ground_id: Vec::with_capacity(len),
-            jumps_remaining: Vec::with_capacity(len),
-            l_cancel: Vec::with_capacity(len),
-            hurtbox_state: Vec::with_capacity(len),
-            self_air_x: Vec::with_capacity(len),
-            self_y: Vec::with_capacity(len),
-            knockback_x: Vec::with_capacity(len),
-            knockback_y: Vec::with_capacity(len),
-            self_ground_x: Vec::with_capacity(len),
-            hitlag_remaining: Vec::with_capacity(len),
-            animation_index: Vec::with_capacity(len),
+            frame_number: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            character: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            action_state: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            position_x: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            position_y: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            facing: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            percent: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            shield_health: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            last_attack_landed: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            combo_count: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            last_hit_by: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            stocks: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            state_frame: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            flags_1: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            flags_2: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            flags_3: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            flags_4: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            flags_5: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            misc_as: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            is_grounded: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            last_ground_id: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            jumps_remaining: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            l_cancel: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            hurtbox_state: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            self_air_x: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            self_y: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            knockback_x: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            knockback_y: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            self_ground_x: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            hitlag_remaining: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
+            animation_index: unsafe {
+                let mut temp = Vec::with_capacity(len);
+                temp.set_len(len);
+                temp.into_boxed_slice()
+            },
         }
     }
 }
@@ -80,53 +206,7 @@ impl PostFrames {
 // implicitly `Into`) because I intentionally want to disallow translation back.
 #[allow(clippy::from_over_into)]
 impl Into<DataFrame> for PostFrames {
-    fn into(mut self) -> DataFrame {
-        let len = self.frame_number.len();
-
-        // handle potentially optional values. We only need to check against 1 per version bump
-        if self.state_frame.len() != len {
-            // version < 0.2.0
-            self.state_frame.resize(len, None)
-        }
-
-        if self.flags_1.len() != len {
-            // version < 2.0.0
-            self.flags_1.resize(len, None);
-            self.flags_2.resize(len, None);
-            self.flags_3.resize(len, None);
-            self.flags_4.resize(len, None);
-            self.flags_5.resize(len, None);
-            self.misc_as.resize(len, None);
-            self.is_grounded.resize(len, None);
-            self.last_ground_id.resize(len, None);
-            self.jumps_remaining.resize(len, None);
-            self.l_cancel.resize(len, None);
-        }
-
-        if self.hurtbox_state.len() != len {
-            // version < 2.1.0
-            self.hurtbox_state.resize(len, None);
-        }
-
-        if self.self_air_x.len() != len {
-            // version < 3.5.0
-            self.self_air_x.resize(len, None);
-            self.self_y.resize(len, None);
-            self.knockback_x.resize(len, None);
-            self.knockback_y.resize(len, None);
-            self.self_ground_x.resize(len, None);
-        }
-
-        if self.hitlag_remaining.len() != len {
-            // version < 3.8.0
-            self.hitlag_remaining.resize(len, None);
-        }
-
-        if self.animation_index.len() != len {
-            // version < 3.11.0
-            self.animation_index.resize(len, None);
-        }
-
+    fn into(self) -> DataFrame {
         let vec_series = vec![
             Series::new("frame number", self.frame_number),
             Series::new("character", self.character),
@@ -165,81 +245,369 @@ impl Into<DataFrame> for PostFrames {
     }
 }
 
-pub fn parse_postframes(frames: &mut [Bytes], ports: [Port; 2]) -> IntMap<u8, DataFrame> {
-    let len = frames.len() / 2;
-
-    let mut p_frames: IntMap<u8, PostFrames> = IntMap::default();
-    p_frames.insert(ports[0].into(), PostFrames::new(len));
-    p_frames.insert(ports[1].into(), PostFrames::new(len));
-
-    for frame in frames {
-        let frame_number = frame.get_i32();
-        let port = frame.get_u8();
-        let working = p_frames.get_mut(&port).unwrap();
-        let is_nana = frame.get_u8() != 0; // TODO add ic's specific logic using metadata
-
-        if is_nana {
-            continue;
+pub fn parse_postframes(
+    frames: &mut [Bytes],
+    ports: [Port; 2],
+    ics: [bool; 2],
+) -> IntMap<u8, (DataFrame, Option<DataFrame>)> {
+    let p_frames = {
+        /* splitting these out saves us a small amount of time in conditional logic, and allows for
+        exact iterator chunk sizes. */
+        if !ics[0] && !ics[1] {
+            no_ics(frames, ports)
+        } else if ics[0] ^ ics[1] {
+            one_ics(frames, ports, ics)
+        } else {
+            two_ics(frames, ports)
         }
-
-        working.frame_number.push(frame_number);
-        working.character.push(frame.get_u8());
-        working.action_state.push(frame.get_u16());
-        working.position_x.push(frame.get_f32());
-        working.position_y.push(frame.get_f32());
-        working.facing.push(frame.get_f32());
-        working.percent.push(frame.get_f32());
-        working.shield_health.push(frame.get_f32());
-        working.last_attack_landed.push(frame.get_u8());
-        working.combo_count.push(frame.get_u8());
-        working.last_hit_by.push(frame.get_u8());
-        working.stocks.push(frame.get_u8());
-        if !frame.has_remaining() {
-            // version < 2.0.0
-            continue;
-        }
-        working.state_frame.push(Some(frame.get_f32()));
-        working.flags_1.push(Some(frame.get_u8()));
-        working.flags_2.push(Some(frame.get_u8()));
-        working.flags_3.push(Some(frame.get_u8()));
-        working.flags_4.push(Some(frame.get_u8()));
-        working.flags_5.push(Some(frame.get_u8()));
-        working.misc_as.push(Some(frame.get_f32()));
-        working.is_grounded.push(Some(frame.get_u8() != 0));
-        working.last_ground_id.push(Some(frame.get_u16()));
-        working.jumps_remaining.push(Some(frame.get_u8()));
-        working.l_cancel.push(Some(frame.get_u8()));
-        if !frame.has_remaining() {
-            // version < 2.1.0
-            continue;
-        }
-        working.hurtbox_state.push(Some(frame.get_u8()));
-        if !frame.has_remaining() {
-            // version < 3.5.0
-            continue;
-        }
-        working.self_air_x.push(Some(frame.get_f32()));
-        working.self_y.push(Some(frame.get_f32()));
-        working.knockback_x.push(Some(frame.get_f32()));
-        working.knockback_y.push(Some(frame.get_f32()));
-        working.self_ground_x.push(Some(frame.get_f32()));
-        if !frame.has_remaining() {
-            // version < 3.8.0
-            continue;
-        }
-        working.hitlag_remaining.push(Some(frame.get_f32()));
-        if !frame.has_remaining() {
-            // version < 3.11.0
-            continue;
-        }
-        working.animation_index.push(Some(frame.get_u32()));
-    }
+    };
 
     let mut result = IntMap::default();
 
-    for (port, frames) in p_frames {
-        result.insert(port, frames.into());
+    for (port, (player_frames, nana_frames)) in p_frames {
+        result.insert(port, (player_frames.into(), nana_frames.map(|x| x.into())));
     }
 
     result
+}
+
+pub fn no_ics(
+    frames: &mut [Bytes],
+    ports: [Port; 2],
+) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
+    let frames_iter = frames.chunks_exact_mut(2).enumerate();
+    let len = frames_iter.len();
+
+    let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
+    p_frames.insert(ports[0].into(), (PostFrames::new(len), None));
+    p_frames.insert(ports[1].into(), (PostFrames::new(len), None));
+
+    for (i, frames_raw) in frames_iter {
+        for frame in frames_raw {
+            let frame_number = frame.get_i32();
+            let port = frame.get_u8();
+
+            frame.advance(1); // skip nana byte
+
+            let (working, _) = p_frames.get_mut(&port).unwrap();
+
+            unsafe {
+                *working.frame_number.get_unchecked_mut(i) = frame_number;
+                *working.character.get_unchecked_mut(i) = frame.get_u8();
+                *working.action_state.get_unchecked_mut(i) = frame.get_u16();
+                *working.position_x.get_unchecked_mut(i) = frame.get_f32();
+                *working.position_y.get_unchecked_mut(i) = frame.get_f32();
+                *working.facing.get_unchecked_mut(i) = frame.get_f32();
+                *working.percent.get_unchecked_mut(i) = frame.get_f32();
+                *working.shield_health.get_unchecked_mut(i) = frame.get_f32();
+                *working.last_attack_landed.get_unchecked_mut(i) = frame.get_u8();
+                *working.combo_count.get_unchecked_mut(i) = frame.get_u8();
+                *working.last_hit_by.get_unchecked_mut(i) = frame.get_u8();
+                *working.stocks.get_unchecked_mut(i) = frame.get_u8();
+
+                // version 2.0.0
+                if !frame.has_remaining() {
+                    *working.state_frame.get_unchecked_mut(i) = None;
+                    *working.flags_1.get_unchecked_mut(i) = None;
+                    *working.flags_2.get_unchecked_mut(i) = None;
+                    *working.flags_3.get_unchecked_mut(i) = None;
+                    *working.flags_4.get_unchecked_mut(i) = None;
+                    *working.flags_5.get_unchecked_mut(i) = None;
+                    *working.misc_as.get_unchecked_mut(i) = None;
+                    *working.is_grounded.get_unchecked_mut(i) = None;
+                    *working.last_ground_id.get_unchecked_mut(i) = None;
+                    *working.jumps_remaining.get_unchecked_mut(i) = None;
+                    *working.l_cancel.get_unchecked_mut(i) = None;
+                } else {
+                    *working.state_frame.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.flags_1.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.flags_2.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.flags_3.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.flags_4.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.flags_5.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.misc_as.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.is_grounded.get_unchecked_mut(i) = Some(frame.get_u8() != 0);
+                    *working.last_ground_id.get_unchecked_mut(i) = Some(frame.get_u16());
+                    *working.jumps_remaining.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.l_cancel.get_unchecked_mut(i) = Some(frame.get_u8());
+                }
+
+                // version 2.1.0
+                if !frame.has_remaining() {
+                    *working.hurtbox_state.get_unchecked_mut(i) = None;
+                } else {
+                    *working.hurtbox_state.get_unchecked_mut(i) = Some(frame.get_u8());
+                }
+
+                // version 3.5.0
+                if !frame.has_remaining() {
+                    *working.self_air_x.get_unchecked_mut(i) = None;
+                    *working.self_y.get_unchecked_mut(i) = None;
+                    *working.knockback_x.get_unchecked_mut(i) = None;
+                    *working.knockback_y.get_unchecked_mut(i) = None;
+                    *working.self_ground_x.get_unchecked_mut(i) = None;
+                } else {
+                    *working.self_air_x.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.self_y.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.knockback_x.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.knockback_y.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.self_ground_x.get_unchecked_mut(i) = Some(frame.get_f32());
+                }
+
+                // version < 3.8.0
+                if !frame.has_remaining() {
+                    *working.hitlag_remaining.get_unchecked_mut(i) = None;
+                } else {
+                    *working.hitlag_remaining.get_unchecked_mut(i) = Some(frame.get_f32());
+                }
+
+                // version < 3.11.0
+                if !frame.has_remaining() {
+                    *working.animation_index.get_unchecked_mut(i) = None;
+                } else {
+                    *working.animation_index.get_unchecked_mut(i) = Some(frame.get_u32());
+                }
+            }
+        }
+    }
+    p_frames
+}
+
+pub fn one_ics(
+    frames: &mut [Bytes],
+    ports: [Port; 2],
+    ics: [bool; 2],
+) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
+    let frames_iter = frames.chunks_exact_mut(4).enumerate();
+    let len = frames_iter.len();
+
+    let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
+    p_frames.insert(
+        ports[0].into(),
+        (PostFrames::new(len), ics[0].then(|| PostFrames::new(len))),
+    );
+    p_frames.insert(
+        ports[1].into(),
+        (PostFrames::new(len), ics[1].then(|| PostFrames::new(len))),
+    );
+
+    for (i, frames_raw) in frames_iter {
+        for frame in frames_raw {
+            let frame_number = frame.get_i32();
+            let port = frame.get_u8();
+            let nana = frame.get_u8() != 0;
+
+            let working = {
+                let temp = p_frames.get_mut(&port).unwrap();
+                if nana {
+                    temp.1.as_mut().unwrap()
+                } else {
+                    &mut temp.0
+                }
+            };
+
+            unsafe {
+                *working.frame_number.get_unchecked_mut(i) = frame_number;
+                *working.character.get_unchecked_mut(i) = frame.get_u8();
+                *working.action_state.get_unchecked_mut(i) = frame.get_u16();
+                *working.position_x.get_unchecked_mut(i) = frame.get_f32();
+                *working.position_y.get_unchecked_mut(i) = frame.get_f32();
+                *working.facing.get_unchecked_mut(i) = frame.get_f32();
+                *working.percent.get_unchecked_mut(i) = frame.get_f32();
+                *working.shield_health.get_unchecked_mut(i) = frame.get_f32();
+                *working.last_attack_landed.get_unchecked_mut(i) = frame.get_u8();
+                *working.combo_count.get_unchecked_mut(i) = frame.get_u8();
+                *working.last_hit_by.get_unchecked_mut(i) = frame.get_u8();
+                *working.stocks.get_unchecked_mut(i) = frame.get_u8();
+
+                // version 2.0.0
+                if !frame.has_remaining() {
+                    *working.state_frame.get_unchecked_mut(i) = None;
+                    *working.flags_1.get_unchecked_mut(i) = None;
+                    *working.flags_2.get_unchecked_mut(i) = None;
+                    *working.flags_3.get_unchecked_mut(i) = None;
+                    *working.flags_4.get_unchecked_mut(i) = None;
+                    *working.flags_5.get_unchecked_mut(i) = None;
+                    *working.misc_as.get_unchecked_mut(i) = None;
+                    *working.is_grounded.get_unchecked_mut(i) = None;
+                    *working.last_ground_id.get_unchecked_mut(i) = None;
+                    *working.jumps_remaining.get_unchecked_mut(i) = None;
+                    *working.l_cancel.get_unchecked_mut(i) = None;
+                } else {
+                    *working.state_frame.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.flags_1.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.flags_2.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.flags_3.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.flags_4.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.flags_5.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.misc_as.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.is_grounded.get_unchecked_mut(i) = Some(frame.get_u8() != 0);
+                    *working.last_ground_id.get_unchecked_mut(i) = Some(frame.get_u16());
+                    *working.jumps_remaining.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.l_cancel.get_unchecked_mut(i) = Some(frame.get_u8());
+                }
+
+                // version 2.1.0
+                if !frame.has_remaining() {
+                    *working.hurtbox_state.get_unchecked_mut(i) = None;
+                } else {
+                    *working.hurtbox_state.get_unchecked_mut(i) = Some(frame.get_u8());
+                }
+
+                // version 3.5.0
+                if !frame.has_remaining() {
+                    *working.self_air_x.get_unchecked_mut(i) = None;
+                    *working.self_y.get_unchecked_mut(i) = None;
+                    *working.knockback_x.get_unchecked_mut(i) = None;
+                    *working.knockback_y.get_unchecked_mut(i) = None;
+                    *working.self_ground_x.get_unchecked_mut(i) = None;
+                } else {
+                    *working.self_air_x.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.self_y.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.knockback_x.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.knockback_y.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.self_ground_x.get_unchecked_mut(i) = Some(frame.get_f32());
+                }
+
+                // version < 3.8.0
+                if !frame.has_remaining() {
+                    *working.hitlag_remaining.get_unchecked_mut(i) = None;
+                } else {
+                    *working.hitlag_remaining.get_unchecked_mut(i) = Some(frame.get_f32());
+                }
+
+                // version < 3.11.0
+                if !frame.has_remaining() {
+                    *working.animation_index.get_unchecked_mut(i) = None;
+                } else {
+                    *working.animation_index.get_unchecked_mut(i) = Some(frame.get_u32());
+                }
+            }
+        }
+    }
+
+    p_frames
+}
+
+/// Frame ordering on a completed replay is guaranteed to be in port order, with that port's nana
+/// frames directly following the leader frames
+///
+/// e.g.
+/// * port 1: leader
+/// * port 1: nana
+/// * port 2: leader
+/// * port 2: nana
+pub fn two_ics(
+    frames: &mut [Bytes],
+    ports: [Port; 2],
+) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
+    let frames_iter = frames.chunks_exact_mut(4).enumerate();
+    let len = frames_iter.len();
+
+    let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
+    p_frames.insert(
+        ports[0].into(),
+        (PostFrames::new(len), Some(PostFrames::new(len))),
+    );
+    p_frames.insert(
+        ports[1].into(),
+        (PostFrames::new(len), Some(PostFrames::new(len))),
+    );
+
+    for (i, frames_raw) in frames_iter {
+        for frame in frames_raw {
+            let frame_number = frame.get_i32();
+            let port = frame.get_u8();
+            let nana = frame.get_u8() != 0;
+
+            let working = {
+                let temp = p_frames.get_mut(&port).unwrap();
+                if nana {
+                    temp.1.as_mut().unwrap()
+                } else {
+                    &mut temp.0
+                }
+            };
+
+            unsafe {
+                *working.frame_number.get_unchecked_mut(i) = frame_number;
+                *working.character.get_unchecked_mut(i) = frame.get_u8();
+                *working.action_state.get_unchecked_mut(i) = frame.get_u16();
+                *working.position_x.get_unchecked_mut(i) = frame.get_f32();
+                *working.position_y.get_unchecked_mut(i) = frame.get_f32();
+                *working.facing.get_unchecked_mut(i) = frame.get_f32();
+                *working.percent.get_unchecked_mut(i) = frame.get_f32();
+                *working.shield_health.get_unchecked_mut(i) = frame.get_f32();
+                *working.last_attack_landed.get_unchecked_mut(i) = frame.get_u8();
+                *working.combo_count.get_unchecked_mut(i) = frame.get_u8();
+                *working.last_hit_by.get_unchecked_mut(i) = frame.get_u8();
+                *working.stocks.get_unchecked_mut(i) = frame.get_u8();
+
+                // version 2.0.0
+                if !frame.has_remaining() {
+                    *working.state_frame.get_unchecked_mut(i) = None;
+                    *working.flags_1.get_unchecked_mut(i) = None;
+                    *working.flags_2.get_unchecked_mut(i) = None;
+                    *working.flags_3.get_unchecked_mut(i) = None;
+                    *working.flags_4.get_unchecked_mut(i) = None;
+                    *working.flags_5.get_unchecked_mut(i) = None;
+                    *working.misc_as.get_unchecked_mut(i) = None;
+                    *working.is_grounded.get_unchecked_mut(i) = None;
+                    *working.last_ground_id.get_unchecked_mut(i) = None;
+                    *working.jumps_remaining.get_unchecked_mut(i) = None;
+                    *working.l_cancel.get_unchecked_mut(i) = None;
+                } else {
+                    *working.state_frame.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.flags_1.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.flags_2.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.flags_3.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.flags_4.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.flags_5.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.misc_as.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.is_grounded.get_unchecked_mut(i) = Some(frame.get_u8() != 0);
+                    *working.last_ground_id.get_unchecked_mut(i) = Some(frame.get_u16());
+                    *working.jumps_remaining.get_unchecked_mut(i) = Some(frame.get_u8());
+                    *working.l_cancel.get_unchecked_mut(i) = Some(frame.get_u8());
+                }
+
+                // version 2.1.0
+                if !frame.has_remaining() {
+                    *working.hurtbox_state.get_unchecked_mut(i) = None;
+                } else {
+                    *working.hurtbox_state.get_unchecked_mut(i) = Some(frame.get_u8());
+                }
+
+                // version 3.5.0
+                if !frame.has_remaining() {
+                    *working.self_air_x.get_unchecked_mut(i) = None;
+                    *working.self_y.get_unchecked_mut(i) = None;
+                    *working.knockback_x.get_unchecked_mut(i) = None;
+                    *working.knockback_y.get_unchecked_mut(i) = None;
+                    *working.self_ground_x.get_unchecked_mut(i) = None;
+                } else {
+                    *working.self_air_x.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.self_y.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.knockback_x.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.knockback_y.get_unchecked_mut(i) = Some(frame.get_f32());
+                    *working.self_ground_x.get_unchecked_mut(i) = Some(frame.get_f32());
+                }
+
+                // version < 3.8.0
+                if !frame.has_remaining() {
+                    *working.hitlag_remaining.get_unchecked_mut(i) = None;
+                } else {
+                    *working.hitlag_remaining.get_unchecked_mut(i) = Some(frame.get_f32());
+                }
+
+                // version < 3.11.0
+                if !frame.has_remaining() {
+                    *working.animation_index.get_unchecked_mut(i) = None;
+                } else {
+                    *working.animation_index.get_unchecked_mut(i) = Some(frame.get_u32());
+                }
+            }
+        }
+    }
+
+    p_frames
 }

@@ -1,9 +1,7 @@
 use std::sync::{Arc, RwLock};
 
-use polars::prelude::DataFrame;
-use pyo3::exceptions::PyValueError;
+
 use pyo3::prelude::*;
-use pyo3::types::PyList;
 use pyo3_polars::PyDataFrame;
 use slpprocess::player::Player;
 
