@@ -1,12 +1,16 @@
 [package]
 name = "slpprocess"
+authors = ["Walnut356"]
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/Walnut356/SlpProcess"
+readme = "./README.md"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-polars = { version = "0.31.1", features = [
+polars = { version = "0.32.1", features = [
     "lazy",
     "performant",
     "dtype-u16",
