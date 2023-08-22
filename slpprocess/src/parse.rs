@@ -14,19 +14,18 @@ use std::sync::RwLock;
 use std::time::Duration;
 
 use crate::enums::character::Character;
-use crate::events::game_end::{parse_gameend, GameEnd};
+use crate::events::game_end::parse_gameend;
 use crate::events::item::parse_itemframes;
 use crate::player::Frames;
 use crate::{
     events::{
-        game_start::{GameStart, Version},
+        game_start::GameStart,
         post_frame::parse_postframes,
         pre_frame::parse_preframes,
     },
-    player::Player,
     utils::ParseError,
 };
-use crate::{ubjson, Port};
+use crate::{ubjson, Game};
 
 trait AsFrames {
     fn as_frames(&self) -> u64;
@@ -68,47 +67,18 @@ fn expect_bytes<R: Read>(stream: &mut R, expected: &[u8]) -> std::io::Result<()>
     }
 }
 
-pub struct Game {
-    pub start: GameStart,
-    pub end: Option<GameEnd>, // There's an unresolved bug where sometiems game end events don't appear
-    pub duration: Duration,
-    pub version: Version,
-    pub players: [Arc<RwLock<Player>>; 2],
-    pub item_frames: DataFrame,
-}
 
 impl Game {
-    /// Creates a new game object from the given Path.
-    ///
-    /// Can panic if replay is severely malformed (Payload size doesn't match Payload Sizes listing, metadata event
-    /// missing, etc.)
-    pub fn new(path: &Path) -> Result<Self> {
-        ensure!(path.is_file() && path.extension().unwrap() == "slp");
-        let file_data = Self::get_file_contents(path)?;
-        Game::parse(file_data)
+    pub(crate) fn get_file_contents(path: &Path) -> Result<Bytes> {
+        let mut f = File::open(path)?;
+        let file_length = f.metadata()?.len() as usize;
+        let mut file_data = vec![0; file_length];
+        f.read_exact(&mut file_data).unwrap();
+
+        Ok(Bytes::from(file_data))
     }
 
-    pub fn get_port(&self, port: Port) -> Result<&RwLock<Player>> {
-        for player in self.players.as_ref().iter() {
-            if player.read().unwrap().port == port {
-                return Ok(player);
-            }
-        }
-
-        Err(anyhow!("Unable to find player with port {:?}", port))
-    }
-
-    pub fn get_port_mut(&mut self, port: Port) -> Result<&RwLock<Player>> {
-        for player in self.players.iter() {
-            if player.write().unwrap().port == port {
-                return Ok(player);
-            }
-        }
-
-        Err(anyhow!("Unable to find player with port {:?}", port))
-    }
-
-    fn get_event_sizes<R>(file: &mut R) -> Result<IntMap<u8, u16>>
+        fn get_event_sizes<R>(file: &mut R) -> Result<IntMap<u8, u16>>
     where
         R: Read,
     {
@@ -137,15 +107,6 @@ impl Game {
         }
 
         Ok(event_map)
-    }
-
-    fn get_file_contents(path: &Path) -> Result<Bytes> {
-        let mut f = File::open(path)?;
-        let file_length = f.metadata()?.len() as usize;
-        let mut file_data = vec![0; file_length];
-        f.read_exact(&mut file_data).unwrap();
-
-        Ok(Bytes::from(file_data))
     }
 
     /// Accepts a tokio Bytes object, returns a Game object. Useful if you already have the file in
@@ -230,16 +191,20 @@ impl Game {
             ],
         )?;
 
+        let mut frame_count = 0;
+
         let mut duration: Duration = Duration::default();
         let metadata = ubjson::to_map(&mut stream)?;
         if let serde_json::Value::Number(lastframe) = &metadata["lastFrame"] {
-            // duration, in frames is translated to seconds
-            // values below 0 are clamped to 0 so that the duration matches the in-game timer
-            let framecount = lastframe.as_i64().unwrap();
-            let seconds = framecount.min(0) / 60;
+            // duration, in frames, is translated to seconds. 123 is subtracted from the frame count
+            // to match the duration to the in-game timer. The total frame count is easily
+            // found from player.frames.len()
+            let last = lastframe.as_u64().unwrap();
+            frame_count = last + 124;
+            let millis = ((last.max(0) as f32 / 60.0) * 1000.0) as u64;
 
             // i shouldn't have to do any checks on this conversion
-            duration = Duration::from_secs(seconds as u64);
+            duration = Duration::from_millis(millis);
         }
 
         let mut game_end = None;
@@ -258,8 +223,8 @@ impl Game {
         let item_frames = parse_itemframes(&mut item_bytes);
 
         let (mut pre_frames, mut post_frames) = rayon::join(
-            || parse_preframes(&mut pre_bytes, ports, ics),
-            || parse_postframes(&mut post_bytes, ports, ics),
+            || parse_preframes(&mut pre_bytes, frame_count as u64, ports, ics),
+            || parse_postframes(&mut post_bytes, frame_count as u64, ports, ics),
         );
 
         for player in players.iter_mut() {
@@ -280,6 +245,7 @@ impl Game {
             start: game_start,
             end: game_end,
             duration,
+            total_frames: frame_count,
             players: players.map(|x| Arc::new(RwLock::new(x))),
             version,
             item_frames,

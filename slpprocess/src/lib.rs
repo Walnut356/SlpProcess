@@ -1,7 +1,9 @@
 #![allow(non_upper_case_globals)]
 
 pub mod enums {
+    pub mod attack;
     pub mod character;
+    pub mod general;
     pub mod stage;
 }
 pub mod events {
@@ -11,12 +13,14 @@ pub mod events {
     pub mod post_frame;
     pub mod pre_frame;
 }
+pub mod columns;
+pub mod game;
 pub mod parse;
 pub mod player;
 pub(crate) mod ubjson;
 pub mod utils;
 
-pub use parse::Game;
+pub use crate::game::Game;
 use rayon::prelude::*;
 use std::{
     fs,
@@ -89,71 +93,23 @@ pub fn parse(path: &str) -> Vec<Game> {
     panic!()
 }
 
-pub mod columns {
-    use strum_macros::{Display, EnumString};
-    #[derive(Debug, Clone, Copy, Display, EnumString)]
-    pub enum Post {
-        #[strum(serialize = "frame number")]
-        FrameNumber,
-        #[strum(serialize = "character")]
-        Character,
-        #[strum(serialize = "action state")]
-        ActionState,
-        #[strum(serialize = "position x")]
-        PositionX,
-        #[strum(serialize = "position y")]
-        PositionY,
-        #[strum(serialize = "facing")]
-        Facing,
-        #[strum(serialize = "percent")]
-        Percent,
-        #[strum(serialize = "shield health")]
-        ShieldHealth,
-        #[strum(serialize = "last attack landed")]
-        LastAttackLanded,
-        #[strum(serialize = "combo count")]
-        ComboCount,
-        #[strum(serialize = "last hit by")]
-        LastHitBy,
-        #[strum(serialize = "stocks")]
-        Stocks,
-        #[strum(serialize = "state frame")]
-        StateFrame,
-        #[strum(serialize = "flags 1")]
-        Flags1,
-        #[strum(serialize = "flags 2")]
-        Flags2,
-        #[strum(serialize = "flags 3")]
-        Flags3,
-        #[strum(serialize = "flags 4")]
-        Flags4,
-        #[strum(serialize = "flags 5")]
-        Flags5,
-        #[strum(serialize = "misc as")]
-        MiscAS,
-        #[strum(serialize = "is grounded")]
-        IsGrounded,
-        #[strum(serialize = "last ground id")]
-        LastGroundID,
-        #[strum(serialize = "jumps remaining")]
-        JumpsRemaining,
-        #[strum(serialize = "l cancel")]
-        LCancel,
-        #[strum(serialize = "hurtbox state")]
-        HurtboxState,
-        #[strum(serialize = "self air x")]
-        SelfAirX,
-        #[strum(serialize = "self y")]
-        SelfY,
-        #[strum(serialize = "knockback x")]
-        KnockbackX,
-        #[strum(serialize = "knockback y")]
-        KnockbackY,
-        #[strum(serialize = "self ground x")]
-        SelfGroundX,
-        #[strum(serialize = "hitlag remaining")]
-        HitlagRemaining,
-        #[strum(serialize = "animation index")]
-        AnimationIndex,
+#[cfg(test)]
+mod test {
+    use std::path::Path;
+
+    use crate::{parse, Port};
+
+    #[test]
+    fn test_ics() {
+        let replay = r"G:/Coding and Programming/My Projects/VSC/py-slippi-stats/test/Bench Replays/ics_ditto.slp";
+        let game = parse(replay).pop().unwrap();
+
+        let player = game.get_port(Port::P1).unwrap().read().unwrap();
+
+        assert_eq!((game.duration.as_millis() as f32 / 1000.0 * 60.0) as u64 + 124, 16408);
+        // asserts in parsing code itself should take care of out of bounds access
+        // game.total_frames is 16408, this was also manually checked against py-slippi
+        assert!(player.frames.pre.shape().0 == game.total_frames as usize);
+        assert!(player.nana_frames.as_ref().unwrap().post.shape().0 == game.total_frames as usize);
     }
 }
