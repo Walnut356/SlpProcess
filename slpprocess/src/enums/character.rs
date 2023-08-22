@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
+use strum_macros::EnumString;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, EnumString)]
 pub enum Character {
     CaptainFalcon = 0,
     DonkeyKong = 1,

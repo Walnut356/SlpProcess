@@ -5,13 +5,19 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[derive(Debug, Copy, Clone, TryFromPrimitive, IntoPrimitive, PartialEq)]
 #[repr(u16)]
 pub enum Stage {
+    // Tournament
     FOUNTAIN_OF_DREAMS = 2,
     POKEMON_STADIUM = 3,
+    YOSHIS_STORY = 8,
+    DREAM_LAND_N64 = 28,
+    BATTLEFIELD = 31,
+    FINAL_DESTINATION = 32,
+
+    // Casual
     PRINCESS_PEACHS_CASTLE = 4,
     KONGO_JUNGLE = 5,
     BRINSTAR = 6,
     CORNERIA = 7,
-    YOSHIS_STORY = 8,
     ONETT = 9,
     MUTE_CITY = 10,
     RAINBOW_CRUISE = 11,
@@ -30,9 +36,7 @@ pub enum Stage {
     ICICLE_MOUNTAIN = 25,
     ICETOP = 26,
     FLAT_ZONE = 27,
-    DREAM_LAND_N64 = 28,
     YOSHIS_ISLAND_N64 = 29,
     KONGO_JUNGLE_N64 = 30,
-    BATTLEFIELD = 31,
-    FINAL_DESTINATION = 32,
+
 }
