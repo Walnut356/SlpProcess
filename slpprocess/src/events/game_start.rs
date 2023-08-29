@@ -7,8 +7,8 @@ use polars::prelude::*;
 use std::time::Duration;
 
 use crate::{
-    enums::{character::Character, stage::Stage},
-    player::{Frames, Player, UCFToggles},
+    enums::{character::Character, stage::StageID},
+    player::{Frames, Player, UCFToggles, Stats},
     Port,
 };
 
@@ -54,7 +54,7 @@ pub enum ControllerFix {
 pub struct GameStart {
     pub random_seed: u32,
     pub is_teams: bool,
-    pub stage: Stage,
+    pub stage: StageID,
     pub timer: Duration,
     pub damage_ratio: f32,
     pub is_pal: Option<bool>,
@@ -74,7 +74,7 @@ impl GameStart {
         raw.advance(8); // skip past game bitfields 1-4 and bomb rain
         let is_teams = raw.get_u8() != 0;
         raw.advance(5); // skip item spawn rate and self destruct score value
-        let stage = Stage::try_from(raw.get_u16()).unwrap();
+        let stage = StageID::from_repr(raw.get_u16()).unwrap();
         // timer value is given in seconds, can only be changed by full-minute increments in-game
         let timer_length = Duration::from_secs(raw.get_u32() as u64);
         raw.advance(28); // skip past item spawn bitfields
@@ -108,6 +108,8 @@ impl GameStart {
         let mut game_number = None;
         let mut tiebreak_number = None;
 
+        let dummy = Stats::default();
+
         if !raw.has_remaining() {
             // version < 1.0.0
             let mut players: [Player; 2] = [Player::default(), Player::default()];
@@ -121,7 +123,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: (),
+                        stats: dummy.clone(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -173,7 +175,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: (),
+                        stats: dummy.clone(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -218,7 +220,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: (),
+                        stats: dummy.clone(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -263,7 +265,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: (),
+                        stats: dummy.clone(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -308,7 +310,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: (),
+                        stats: dummy.clone(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -354,7 +356,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: (),
+                        stats: dummy.clone(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -396,10 +398,12 @@ impl GameStart {
         for val in connect_codes.iter_mut() {
             let mut cc_bytes = vec![0; 10];
             raw.copy_to_slice(&mut cc_bytes);
-            let end = cc_bytes.iter().position(|&x| x == 0).unwrap_or(30);
+            let end = cc_bytes.iter().position(|&x| x == 0).unwrap_or(10);
             cc_bytes.truncate(end);
             let (connect_code, _, _) = SHIFT_JIS.decode(&cc_bytes);
-            *val = Some(connect_code.to_string());
+            // replace the full width hash symbol with the ascii variant so people can actually type them
+            let adjusted = connect_code.replace('＃', "#");
+            *val = Some(adjusted);
         }
 
         if !raw.has_remaining() {
@@ -415,7 +419,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: (),
+                        stats: dummy.clone(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -470,7 +474,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: (),
+                        stats: dummy.clone(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -515,7 +519,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: (),
+                        stats: dummy.clone(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -576,7 +580,7 @@ impl GameStart {
                     connect_code: connect_codes[i].clone(),
                     display_name: display_names[i].clone(),
                     is_winner: None,
-                    stats: (),
+                    stats: dummy.clone(),
                     combos: (),
                     frames: Frames::default(),
                     nana_frames: None,

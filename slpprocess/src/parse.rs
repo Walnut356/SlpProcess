@@ -223,8 +223,8 @@ impl Game {
         let item_frames = parse_itemframes(&mut item_bytes);
 
         let (mut pre_frames, mut post_frames) = rayon::join(
-            || parse_preframes(&mut pre_bytes, frame_count as u64, ports, ics),
-            || parse_postframes(&mut post_bytes, frame_count as u64, ports, ics),
+            || parse_preframes(&mut pre_bytes, frame_count, ports, ics),
+            || parse_postframes(&mut post_bytes, frame_count, ports, ics),
         );
 
         for player in players.iter_mut() {
