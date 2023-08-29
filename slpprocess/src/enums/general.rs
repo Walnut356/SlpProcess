@@ -1,19 +1,18 @@
 #![allow(non_camel_case_types)]
 #![allow(clippy::upper_case_acronyms)]
 
-use enumflags2::bitflags;
-use num_enum::{FromPrimitive, IntoPrimitive, TryFromPrimitive};
-use strum_macros::EnumString;
+
+use strum_macros::{EnumString, Display, IntoStaticStr, FromRepr};
 
 /// The current direction the character is facing, can be LEFT, RIGHT, or DOWN*
 ///
 /// *Down is technically only used for warpstar item animation, but it's useful to give it a
 /// default value of 0 for stats
 #[derive(
-    Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd, EnumString,
+    Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr
 )]
 #[repr(i8)]
-enum Orientation {
+pub enum Orientation {
     LEFT = -1,
     DOWN = 0,
     RIGHT = 1,
@@ -21,10 +20,9 @@ enum Orientation {
 
 /// L cancel status, active for 1 frame upon landing during an aerial attack, which indicates
 /// either SUCCESS or FAILURE. Value is NOT_APPLICABLE at all other times
-#[derive(Debug, Clone, Copy, FromPrimitive, IntoPrimitive, PartialEq, PartialOrd, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr)]
 #[repr(u8)]
-enum LCancel {
-    #[default]
+pub enum LCancel {
     NOT_APPLICABLE = 0,
     SUCCESS = 1,
     FAILURE = 2,
@@ -32,10 +30,10 @@ enum LCancel {
 
 /// Hurtbox state. Can be VULNERABLE, INVULNERABLE, or INTANGIBLE
 #[derive(
-    Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd, EnumString,
+    Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr
 )]
 #[repr(u8)]
-enum Hurtbox {
+pub enum Hurtbox {
     VULNERABLE,
     /// Attacks collide with hurtboxes, incurring hitlag but dealing no damage
     INVULNERABLE,
@@ -46,27 +44,28 @@ enum Hurtbox {
 /// Post-frame bitfield 1
 ///
 /// Known Bits:
-/// * Bit 2 - ABSORBER_BUBBLE
+/// * Bit 2 - ABSORB_BUBBLE
 /// * Bit 4 - REFLECT_NO_STEAL
 /// * Bit 5 - REFLECT_BUBBLE
-#[bitflags]
 #[derive(
-    Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd, EnumString,
+    Debug, Clone, Copy, PartialEq, EnumString, Display, FromRepr, IntoStaticStr
 )]
 #[repr(u8)]
-enum Flags1 {
-    BIT_1 = 0b0000_0001,
+pub enum Flags1 {
+    None = 0,
+    BIT_1 = 1 << 0,
     /// Active when any absorber hitbox is active (ness down b)
-    ABSORBER_BUBBLE = 0b0000_0010,
-    BIT_3 = 0b0000_0100,
+    ABSORB_BUBBLE = 1 << 1,
+    BIT_3 = 1 << 2,
     /// Active when REFLECT_BUBBLE is active, but the reflected projectile does not change ownership
-    ///  (e.g. Mewtwo side b)
-    REFLECT_NO_STEAL = 0b0000_1000,
+    /// (e.g. Mewtwo side b)
+    REFLECT_NO_STEAL = 1 << 3,
     /// Active when any projectile reflect bubble is active
-    REFLECT_BUBBLE = 0b0001_0000,
-    BIT_6 = 0b0010_0000,
-    BIT_7 = 0b0100_0000,
-    BIT_8 = 0b1000_0000,
+    REFLECT_BUBBLE = 1 << 4,
+    BIT_6 = 1 << 5,
+    BIT_7 = 1 << 6,
+    BIT_8 = 1 << 7,
+    Raw(u8)
 }
 
 /// Post-frame bitfield 2
@@ -76,27 +75,28 @@ enum Flags1 {
 /// * BIT 4 - FASTFALL
 /// * BIT 5 - DEFENDER_HITLAG
 /// * BIT 6 - HITLAG
-#[bitflags]
 #[derive(
-    Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd, EnumString,
+    Debug, Clone, Copy, PartialEq, EnumString, Display, FromRepr, IntoStaticStr
 )]
 #[repr(u8)]
-enum Flags2 {
-    BIT_1 = 0b0000_0001,
-    BIT_2 = 0b0000_0010,
-    /// "Active when a character recieves intangibility or invulnerability due to a subaction, that
+pub enum Flags2 {
+    None = 0,
+    BIT_1 = 1 << 0,
+    BIT_2 = 1 << 1,
+    /// "Active when a character recieves intangibility or invulnerability due to a subaction that
     /// is removed when the subaction ends" - per UnclePunch. Little else is known besides this
     /// description.
-    SUBACTION_INVULN = 0b0000_0100,
+    SUBACTION_INVULN = 1 << 2,
     /// Active when the character is fastfalling
-    FASTFALL = 0b0000_1000,
+    FASTFALL = 1 << 3,
     /// Active when the character is in hitlag, and is the one being hit. Can be thought of as
     /// `CAN_SDI`
-    DEFENDER_HITLAG = 0b0001_0000,
+    DEFENDER_HITLAG = 1 << 4,
     /// Active when the character is in hitlag
-    HITLAG = 0b0010_0000,
-    BIT_7 = 0b0100_0000,
-    BIT_8 = 0b1000_0000,
+    HITLAG = 1 << 5,
+    BIT_7 = 1 << 6,
+    BIT_8 = 1 << 7,
+    Raw(u8)
 }
 
 /// Post-frame bitfield 3
@@ -104,12 +104,12 @@ enum Flags2 {
 /// Known Bits:
 /// * Bit 3 - GRAB_HOLD
 /// * Bit 8 - SHIELDING
-#[bitflags]
 #[derive(
-    Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd, EnumString,
+    Debug, Clone, Copy, PartialEq, EnumString, Display, FromRepr, IntoStaticStr
 )]
 #[repr(u8)]
-enum Flags3 {
+pub enum Flags3 {
+    None = 0,
     BIT_1 = 0b0000_0001,
     BIT_2 = 0b0000_0010,
     /// Active when the character has grabbed another character and is holding them
@@ -120,6 +120,7 @@ enum Flags3 {
     BIT_7 = 0b0100_0000,
     /// Active when the character is shielding
     SHIELDING = 0b1000_0000,
+    Raw(u8)
 }
 
 /// Post-frame bitfield 4
@@ -128,12 +129,12 @@ enum Flags3 {
 /// * Bit 2 - HITSTUN
 /// * Bit 3 - HITBOX_TOUCHING_SHIELD
 /// * Bit 6 - POWERSHIELD_BUBBLE
-#[bitflags]
 #[derive(
-    Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd, EnumString,
+    Debug, Clone, Copy, PartialEq, EnumString, Display, FromRepr, IntoStaticStr
 )]
 #[repr(u8)]
-enum Flags4 {
+pub enum Flags4 {
+    None = 0,
     BIT_1 = 0b0000_0001,
     /// Active when character is in hitstun
     HITSTUN = 0b0000_0010,
@@ -146,6 +147,7 @@ enum Flags4 {
     PWERSHIELD_BUBBLE = 0b0010_0000,
     BIT_7 = 0b0100_0000,
     BIT_8 = 0b1000_0000,
+    Raw(u8)
 }
 
 /// Post-frame bitfield 5
@@ -156,12 +158,12 @@ enum Flags4 {
 /// * Bit 5 - INACTIVE
 /// * Bit 7 - DEAD
 /// * Bit 8 - OFFSCREEN
-#[bitflags]
 #[derive(
-    Debug, Clone, Copy, TryFromPrimitive, IntoPrimitive, PartialEq, PartialOrd, EnumString,
+    Debug, Clone, Copy, PartialEq, EnumString, Display, FromRepr, IntoStaticStr
 )]
 #[repr(u8)]
-enum Flags5 {
+pub enum Flags5 {
+    None = 0,
     BIT_1 = 0b0000_0001,
     /// Active when character is invisible due to cloaking device item/special mode toggle
     CLOAKING_DEVICE = 0b0000_0010,
@@ -183,4 +185,5 @@ enum Flags5 {
     DEAD = 0b0100_0000,
     /// Active when character is in the magnifying glass
     OFFSCREEN = 0b1000_0000,
+    Raw(u8)
 }

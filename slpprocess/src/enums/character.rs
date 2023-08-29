@@ -1,11 +1,36 @@
 use anyhow::{anyhow, Result};
 use strum_macros::EnumString;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, EnumString)]
+/// All in-game characters, including non-playable character such as the wireframes and masterhand.
+///
+/// In-game and Character Select Screen **do not** use the same numbering system. When retrieving
+/// a character, match your number's source to the correct `try_from`
+/// ```rust
+/// # use slpprocess::enums::character::Character;
+/// let char_1 = Character::try_from_css(0);
+/// let char_2 = Character::try_from_internal(0);
+/// assert!(char_1.is_ok_and(|char| char == Character::CaptainFalcon));
+/// assert!(char_2.is_ok_and(|char| char == Character::Mario));
+/// ```
+/// Several colloquial names for some characters are also valid, these are also case-insensitive
+/// ```
+/// # use slpprocess::enums::character::Character;
+/// let char_3 = Character::try_from("jiggs").unwrap();
+/// let char_4 = Character::try_from("puff").unwrap();
+/// let char_5 = Character::try_from("jIgGlYpUfF").unwrap();
+/// assert_eq!(char_3, Character::Jigglypuff);
+/// assert_eq!(char_4, Character::Jigglypuff);
+/// assert_eq!(char_5, Character::Jigglypuff);
+/// ```
+#[derive(Debug, Clone, Default, Copy, PartialEq, EnumString)]
+#[strum(ascii_case_insensitive)]
 pub enum Character {
+    #[strum(serialize="falcon", serialize="captainfalcon")]
     CaptainFalcon = 0,
+    #[strum(serialize="dk", serialize="donkeykong")]
     DonkeyKong = 1,
     Fox = 2,
+    #[strum(serialize="gnw", serialize="gameandwatch")]
     GameAndWatch = 3,
     Kirby = 4,
     Bowser = 5,
@@ -13,11 +38,33 @@ pub enum Character {
     Luigi = 7,
     Mario = 8,
     Marth = 9,
+    #[strum(serialize="mew2", serialize="m2", serialize="mewtwo")]
     Mewtwo = 10,
     Ness = 11,
     Peach = 12,
+    #[strum(serialize="pika", serialize="pikachu")]
     Pikachu = 13,
+    /// Individaul climbers can be accessed via
+    /// ```
+    /// # use slpprocess::enums::character::Character;
+    /// let poo = Character::Popo;
+    /// let nana = Character::Nana;
+    /// ```
+    /// via their in-engine codes
+    /// ```
+    /// # use slpprocess::enums::character::Character;
+    /// let popo = Character::try_from_internal(10).unwrap();
+    /// let nana = Character::try_from_internal(11).unwrap();
+    /// ```
+    /// and via their string names (not case sensitive)
+    /// ```
+    /// # use slpprocess::enums::character::Character;
+    /// let popo = Character::try_from("Popo").unwrap();
+    /// let nana = Character::try_from("Nana").unwrap();
+    /// ```
+    #[strum(serialize="ics", serialize="iceclimbers")]
     IceClimbers = 14,
+    #[strum(serialize="puff", serialize="jigglypuff", serialize="jigglypuff")]
     Jigglypuff = 15,
     Samus = 16,
     Yoshi = 17,
@@ -25,10 +72,13 @@ pub enum Character {
     Sheik = 19,
     Falco = 20,
     #[default] // for whatever reason, empty ports have young link as the default character
+    #[strum(serialize="ylink", serialize="younglink")]
     YoungLink = 21,
+    #[strum(serialize="doc", serialize="drmario")]
     DrMario = 22,
     Roy = 23,
     Pichu = 24,
+    #[strum(serialize="ganon", serialize="ganondorf")]
     Ganondorf = 25,
     MasterHand = 26,
     WireframeMale = 27,
@@ -41,7 +91,6 @@ pub enum Character {
 }
 
 impl Character {
-
     /// Attempts to match the given ID with a character on the Character Select Screen
     pub fn try_from_css(id: u8) -> Result<Self> {
         use Character::*;
@@ -86,7 +135,8 @@ impl Character {
         }
     }
 
-    /// Attempts to match the given ID to a character as they are represented in memory during a match
+    /// Attempts to match the given ID to a character as they are represented in memory during a
+    /// match
     pub fn try_from_internal(id: u8) -> Result<Self> {
         use Character::*;
         match id {
