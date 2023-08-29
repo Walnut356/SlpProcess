@@ -2,9 +2,12 @@
 
 pub mod enums {
     pub mod attack;
+    pub mod buttons;
     pub mod character;
     pub mod general;
     pub mod stage;
+    pub mod state;
+    mod bitflag_impl;
 }
 pub mod events {
     pub mod game_end;
@@ -12,6 +15,11 @@ pub mod events {
     pub mod item;
     pub mod post_frame;
     pub mod pre_frame;
+}
+pub mod stats {
+    pub mod actions;
+    pub mod helpers;
+    pub mod lcancel;
 }
 pub mod columns;
 pub mod game;
@@ -90,7 +98,7 @@ pub fn parse(path: &str) -> Vec<Game> {
 
         return result;
     }
-    panic!()
+    panic!("invalid file path")
 }
 
 #[cfg(test)]
@@ -101,12 +109,15 @@ mod test {
 
     #[test]
     fn test_ics() {
-        let replay = r"G:/Coding and Programming/My Projects/VSC/py-slippi-stats/test/Bench Replays/ics_ditto.slp";
+        let replay = r"../../py-slippi-stats/test/Bench Replays/ics_ditto.slp";
         let game = parse(replay).pop().unwrap();
 
-        let player = game.get_port(Port::P1).unwrap().read().unwrap();
+        let player = game.player_by_port(Port::P1).unwrap();
 
-        assert_eq!((game.duration.as_millis() as f32 / 1000.0 * 60.0) as u64 + 124, 16408);
+        assert_eq!(
+            (game.duration.as_millis() as f32 / 1000.0 * 60.0) as u64 + 124,
+            16408
+        );
         // asserts in parsing code itself should take care of out of bounds access
         // game.total_frames is 16408, this was also manually checked against py-slippi
         assert!(player.frames.pre.shape().0 == game.total_frames as usize);
