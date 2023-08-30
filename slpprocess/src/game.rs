@@ -1,6 +1,6 @@
 use std::path::Path;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use anyhow::{anyhow, ensure, Result};
 use polars::prelude::DataFrame;

@@ -25,9 +25,9 @@ pub fn get_actionstate() {
 
 }
 
-pub fn just_input_lcancel(frames: &[Option<u32>], i: usize) -> bool {
-    let current = EngineInput::from(frames[i].unwrap());
-    let previous = EngineInput::from(frames[i.saturating_sub(1)].unwrap());
+pub fn just_input_lcancel(frames: &[u32], i: usize) -> bool {
+    let current = EngineInput::from(frames[i]);
+    let previous = EngineInput::from(frames[i.saturating_sub(1)]);
 
     let mask:u32 = (EngineInput::Z | EngineInput::ANY_TRIGGER).into();
 

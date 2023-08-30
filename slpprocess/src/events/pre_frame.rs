@@ -5,24 +5,24 @@ use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PreFrames {
-    frame_number: Box<[i32]>,
-    random_seed: Box<[u32]>,
-    action_state: Box<[u16]>,
-    position_x: Box<[f32]>,
-    position_y: Box<[f32]>,
-    orientation: Box<[f32]>,
-    joystick_x: Box<[f32]>,
-    joystick_y: Box<[f32]>,
-    cstick_x: Box<[f32]>,
-    cstick_y: Box<[f32]>,
-    engine_trigger: Box<[f32]>,
-    engine_buttons: Box<[u32]>,
-    controller_buttons: Box<[u16]>,
-    controller_l: Box<[f32]>,
-    controller_r: Box<[f32]>,
-    percent: Box<[Option<f32>]>,
+    pub frame_number: Box<[i32]>,
+    pub random_seed: Box<[u32]>,
+    pub action_state: Box<[u16]>,
+    pub position_x: Box<[f32]>,
+    pub position_y: Box<[f32]>,
+    pub orientation: Box<[f32]>,
+    pub joystick_x: Box<[f32]>,
+    pub joystick_y: Box<[f32]>,
+    pub cstick_x: Box<[f32]>,
+    pub cstick_y: Box<[f32]>,
+    pub engine_trigger: Box<[f32]>,
+    pub engine_buttons: Box<[u32]>,
+    pub controller_buttons: Box<[u16]>,
+    pub controller_l: Box<[f32]>,
+    pub controller_r: Box<[f32]>,
+    pub percent: Box<[Option<f32>]>,
 }
 
 impl PreFrames {
@@ -151,29 +151,27 @@ impl PreFrames {
     }
 }
 
-// preframes objects are purely a temporary container to make the code clearer, so i impl Into
-// rather than From (and implicitly Into) because I intentionally want to disallow translation back.
 #[allow(clippy::from_over_into)]
-impl Into<DataFrame> for PreFrames {
-    fn into(self) -> DataFrame {
+impl From<PreFrames> for DataFrame {
+    fn from(val: PreFrames) -> DataFrame {
         use crate::columns::Pre::*;
         let vec_series = vec![
-            Series::new(&FrameNumber.to_string(), self.frame_number),
-            Series::new(&RandomSeed.to_string(), self.random_seed),
-            Series::new(&ActionState.to_string(), self.action_state),
-            Series::new(&PositionX.to_string(), self.position_x),
-            Series::new(&PositionY.to_string(), self.position_y),
-            Series::new(&Orientation.to_string(), self.orientation),
-            Series::new(&JoystickX.to_string(), self.joystick_x),
-            Series::new(&JoystickY.to_string(), self.joystick_y),
-            Series::new(&CstickX.to_string(), self.cstick_x),
-            Series::new(&CstickY.to_string(), self.cstick_y),
-            Series::new(&EngineTrigger.to_string(), self.engine_trigger),
-            Series::new(&EngineButtons.to_string(), self.engine_buttons),
-            Series::new(&ControllerButtons.to_string(), self.controller_buttons),
-            Series::new(&ControllerL.to_string(), self.controller_l),
-            Series::new(&ControllerR.to_string(), self.controller_r),
-            Series::new(&Percent.to_string(), self.percent),
+            Series::new(&FrameNumber.to_string(), val.frame_number),
+            Series::new(&RandomSeed.to_string(), val.random_seed),
+            Series::new(&ActionState.to_string(), val.action_state),
+            Series::new(&PositionX.to_string(), val.position_x),
+            Series::new(&PositionY.to_string(), val.position_y),
+            Series::new(&Orientation.to_string(), val.orientation),
+            Series::new(&JoystickX.to_string(), val.joystick_x),
+            Series::new(&JoystickY.to_string(), val.joystick_y),
+            Series::new(&CstickX.to_string(), val.cstick_x),
+            Series::new(&CstickY.to_string(), val.cstick_y),
+            Series::new(&EngineTrigger.to_string(), val.engine_trigger),
+            Series::new(&EngineButtons.to_string(), val.engine_buttons),
+            Series::new(&ControllerButtons.to_string(), val.controller_buttons),
+            Series::new(&ControllerL.to_string(), val.controller_l),
+            Series::new(&ControllerR.to_string(), val.controller_r),
+            Series::new(&Percent.to_string(), val.percent),
         ];
 
         DataFrame::new(vec_series).unwrap()
@@ -185,7 +183,7 @@ pub fn parse_preframes(
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
-) -> IntMap<u8, (DataFrame, Option<DataFrame>)> {
+) -> IntMap<u8, (PreFrames, Option<PreFrames>)> {
     let p_frames = {
         /* splitting these out saves us a small amount of time in conditional logic, and allows for
         exact iterator chunk sizes. */
@@ -199,7 +197,7 @@ pub fn parse_preframes(
     let mut result = IntMap::default();
 
     for (port, (player_frames, nana_frames)) in p_frames {
-        result.insert(port, (player_frames.into(), nana_frames.map(|x| x.into())));
+        result.insert(port, (player_frames, nana_frames));
     }
 
     result

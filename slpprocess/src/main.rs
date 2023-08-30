@@ -1,10 +1,5 @@
 use std::time::Instant;
 
-use polars::lazy::dsl::col;
-use polars::prelude::*;
-use slpprocess::columns::*;
-use slpprocess::enums::buttons::ControllerInput;
-use slpprocess::enums::buttons::EngineInput;
 use slpprocess::parse;
 
 pub fn main() {

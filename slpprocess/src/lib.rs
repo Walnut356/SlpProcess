@@ -2,12 +2,12 @@
 
 pub mod enums {
     pub mod attack;
+    mod bitflag_impl;
     pub mod buttons;
     pub mod character;
     pub mod general;
     pub mod stage;
     pub mod state;
-    mod bitflag_impl;
 }
 pub mod events {
     pub mod game_end;
@@ -103,8 +103,6 @@ pub fn parse(path: &str) -> Vec<Game> {
 
 #[cfg(test)]
 mod test {
-    use std::path::Path;
-
     use crate::{parse, Port};
 
     #[test]
@@ -120,7 +118,10 @@ mod test {
         );
         // asserts in parsing code itself should take care of out of bounds access
         // game.total_frames is 16408, this was also manually checked against py-slippi
-        assert!(player.frames.pre.shape().0 == game.total_frames as usize);
-        assert!(player.nana_frames.as_ref().unwrap().post.shape().0 == game.total_frames as usize);
+        assert!(player.frames.pre.frame_number.len() == game.total_frames as usize);
+        assert!(
+            player.nana_frames.as_ref().unwrap().post.frame_number.len()
+                == game.total_frames as usize
+        );
     }
 }

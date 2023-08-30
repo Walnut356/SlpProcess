@@ -1,12 +1,5 @@
 #![allow(non_camel_case_types)]
 
-use std::ops::{BitAnd, BitOr, BitXor};
-
-use num_traits::{PrimInt, Num};
-
-use crate::utils::BitFlags;
-
-
 /// Maximum accepted analog trigger value
 pub const TRIGGER_MAX: f32 = 1.0;
 /// Minimum accepted analog trigger value

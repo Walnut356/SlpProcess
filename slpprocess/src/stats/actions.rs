@@ -1,10 +1,7 @@
-use circular_queue::CircularQueue;
 use polars::prelude::*;
-use std::iter::zip;
 
-use crate::{columns::Pre, enums::buttons::*, player::Frames};
+use crate::{enums::buttons::*, player::Frames};
 
-const BUTTON_MASK: u32 = 0xf0000fff;
 const JOYSTICK_MASK: u32 = 0xf0000;
 const CSTICK_MASK: u32 = 0xf00000;
 const ANYTRIGGER_MASK: u32 = 0x8000_0000;
@@ -35,23 +32,9 @@ const DIGITAL_TRIGGER_MASK: u32 = 0x60;
 // }
 
 pub fn find_actions(frames: &Frames, duration: u64) -> DataFrame {
-    let en_btn = frames
-        .pre
-        .column(Pre::EngineButtons.into())
-        .unwrap()
-        .u32()
-        .unwrap()
-        .to_vec_null_aware()
-        .expect_left("Possible malformed replay, pre-frame buttons contains null values");
+    let en_btn = &frames.pre.engine_buttons;
 
-    let ctrl_btn = frames
-        .pre
-        .column(Pre::ControllerButtons.into())
-        .unwrap()
-        .u16()
-        .unwrap()
-        .to_vec_null_aware()
-        .expect_left("Possible malformed replay, pre-frame buttons contains null values");
+    let ctrl_btn = &frames.pre.controller_buttons;
 
     let mut digital_counts = 0;
     let mut stick_counts = 0;
@@ -92,7 +75,8 @@ pub fn find_actions(frames: &Frames, duration: u64) -> DataFrame {
         // special handling to detect analog trigger
         if en_changed & ANYTRIGGER_MASK != 0 // if anytrigger was just pressed
             && en_changed & DIGITAL_TRIGGER_MASK == 0 // and we didn't just digital press
-            && ctrl_changed & u16::from(ControllerInput::Z) == 0 // and we didn't just start pressing Z
+            && ctrl_changed & u16::from(ControllerInput::Z) == 0
+        // and we didn't just start pressing Z
         {
             trigger_counts += 1;
         }

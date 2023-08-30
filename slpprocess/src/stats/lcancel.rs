@@ -38,7 +38,7 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
     )
     .enumerate()
     {
-        if just_input_lcancel(&pre_buttons, i) {
+        if just_input_lcancel(pre_buttons, i) {
             l_input_frame = Some(i as i32);
             during_hitlag = is_in_hitlag(flags2.unwrap());
         }
@@ -60,13 +60,13 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
         // there was a late l cancel
         if *lcancel == Some(LCancel::FAILURE as u8) && l_input_frame.is_some() {
             for j in 0..6 {
-                if just_input_lcancel(&pre_buttons, i + j) {
+                if just_input_lcancel(pre_buttons, i + j) {
                     l_input_frame = Some(j as i32)
                 }
             }
         }
 
-        let attack = match ActionState::from_repr(state.unwrap()) {
+        let attack = match ActionState::from_repr(*state) {
             Some(ActionState::LANDING_AIR_N) | Some(ActionState::ATTACK_AIR_N) => {
                 Some(Attack::NAIR)
             }
@@ -92,14 +92,14 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
         let temp: &'static str = attack.unwrap().into();
 
         frame_index_col.push(i as i32 - 123);
-        stocks_col.push(stocks_remaining.unwrap());
+        stocks_col.push(*stocks_remaining);
         attack_col.push(temp);
         lcancelled_col.push(LCancel::from_repr(lcancel.unwrap()) == Some(LCancel::SUCCESS));
         l_input_col.push(l_input_frame);
         position_col.push(stage.ground_from_id(last_ground_id.unwrap()).into());
         fastfall_col.push(is_fastfalling(flags2.unwrap()));
         hitlag_col.push(during_hitlag);
-        percent_col.push(percent.unwrap());
+        percent_col.push(*percent);
     }
 
     df!(LCancels::FrameIndex.into() => frame_index_col,
@@ -117,63 +117,35 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
 fn get_lcancel_columns(
     frames: &Frames,
 ) -> (
-    Vec<Option<u8>>,
-    Vec<Option<u16>>,
-    Vec<Option<u8>>,
-    Vec<Option<u16>>,
-    Vec<Option<f32>>,
-    Vec<Option<u8>>,
-    Vec<Option<u32>>,
+    &Box<[Option<u8>]>,
+    &Box<[u16]>,
+    &Box<[u8]>,
+    &Box<[Option<u16>]>,
+    &Box<[f32]>,
+    &Box<[Option<u8>]>,
+    &Box<[u32]>,
 ) {
     (
-        frames
+        &frames
             .post
-            .column(Post::LCancel.into())
-            .unwrap()
-            .u8()
-            .unwrap()
-            .to_vec(),
-        frames
+            .l_cancel,
+        &frames
             .post
-            .column(Post::ActionState.into())
-            .unwrap()
-            .u16()
-            .unwrap()
-            .to_vec(),
-        frames
+            .action_state,
+        &frames
             .post
-            .column(Post::Stocks.into())
-            .unwrap()
-            .u8()
-            .unwrap()
-            .to_vec(),
-        frames
+            .stocks,
+        &frames
             .post
-            .column(Post::LastGroundID.into())
-            .unwrap()
-            .u16()
-            .unwrap()
-            .to_vec(),
-        frames
+            .last_ground_id,
+        &frames
             .post
-            .column(Post::Percent.into())
-            .unwrap()
-            .f32()
-            .unwrap()
-            .to_vec(),
-        frames
+            .percent,
+        &frames
             .post
-            .column(Post::Flags2.into())
-            .unwrap()
-            .u8()
-            .unwrap()
-            .to_vec(),
-        frames
+            .flags_2,
+        &frames
             .pre
-            .column(Pre::EngineButtons.into())
-            .unwrap()
-            .u32()
-            .unwrap()
-            .to_vec(),
+            .engine_buttons,
     )
 }

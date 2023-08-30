@@ -1,8 +1,8 @@
 use polars::prelude::DataFrame;
 
-use crate::{enums::character::Character, events::game_start::ControllerFix, Port};
+use crate::{enums::character::Character, events::{game_start::ControllerFix, pre_frame::PreFrames, post_frame::PostFrames}, Port};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct Player {
     pub character: Character,
     pub costume: u8,
@@ -23,15 +23,15 @@ pub struct UCFToggles {
     pub shield_drop: ControllerFix,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default,)]
 pub struct Frames {
-    pub pre: DataFrame,
-    pub post: DataFrame,
+    pub pre: PreFrames,
+    pub post: PostFrames,
 }
 
 impl Frames {
     pub fn len(&self) -> usize {
-        self.pre.shape().0
+        self.pre.frame_number.len()
     }
 
     pub fn is_empty(&self) -> bool {

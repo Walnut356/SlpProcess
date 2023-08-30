@@ -6,38 +6,39 @@ use polars::prelude::*;
 
 use crate::{columns::Post, Port};
 
+#[derive(Debug, Default)]
 pub struct PostFrames {
-    frame_number: Box<[i32]>,
-    character: Box<[u8]>,
-    action_state: Box<[u16]>,
-    position_x: Box<[f32]>,
-    position_y: Box<[f32]>,
-    orientation: Box<[f32]>,
-    percent: Box<[f32]>,
-    shield_health: Box<[f32]>,
-    last_attack_landed: Box<[u8]>,
-    combo_count: Box<[u8]>,
-    last_hit_by: Box<[u8]>,
-    stocks: Box<[u8]>,
-    state_frame: Box<[Option<f32>]>,
-    flags_1: Box<[Option<u8>]>,
-    flags_2: Box<[Option<u8>]>,
-    flags_3: Box<[Option<u8>]>,
-    flags_4: Box<[Option<u8>]>,
-    flags_5: Box<[Option<u8>]>,
-    misc_as: Box<[Option<f32>]>,
-    is_grounded: Box<[Option<bool>]>,
-    last_ground_id: Box<[Option<u16>]>,
-    jumps_remaining: Box<[Option<u8>]>,
-    l_cancel: Box<[Option<u8>]>,
-    hurtbox_state: Box<[Option<u8>]>,
-    air_vel_x: Box<[Option<f32>]>,
-    vel_y: Box<[Option<f32>]>,
-    knockback_x: Box<[Option<f32>]>,
-    knockback_y: Box<[Option<f32>]>,
-    ground_vel_x: Box<[Option<f32>]>,
-    hitlag_remaining: Box<[Option<f32>]>,
-    animation_index: Box<[Option<u32>]>,
+    pub frame_number: Box<[i32]>,
+    pub character: Box<[u8]>,
+    pub action_state: Box<[u16]>,
+    pub position_x: Box<[f32]>,
+    pub position_y: Box<[f32]>,
+    pub orientation: Box<[f32]>,
+    pub percent: Box<[f32]>,
+    pub shield_health: Box<[f32]>,
+    pub last_attack_landed: Box<[u8]>,
+    pub combo_count: Box<[u8]>,
+    pub last_hit_by: Box<[u8]>,
+    pub stocks: Box<[u8]>,
+    pub state_frame: Box<[Option<f32>]>,
+    pub flags_1: Box<[Option<u8>]>,
+    pub flags_2: Box<[Option<u8>]>,
+    pub flags_3: Box<[Option<u8>]>,
+    pub flags_4: Box<[Option<u8>]>,
+    pub flags_5: Box<[Option<u8>]>,
+    pub misc_as: Box<[Option<f32>]>,
+    pub is_grounded: Box<[Option<bool>]>,
+    pub last_ground_id: Box<[Option<u16>]>,
+    pub jumps_remaining: Box<[Option<u8>]>,
+    pub l_cancel: Box<[Option<u8>]>,
+    pub hurtbox_state: Box<[Option<u8>]>,
+    pub air_vel_x: Box<[Option<f32>]>,
+    pub vel_y: Box<[Option<f32>]>,
+    pub knockback_x: Box<[Option<f32>]>,
+    pub knockback_y: Box<[Option<f32>]>,
+    pub ground_vel_x: Box<[Option<f32>]>,
+    pub hitlag_remaining: Box<[Option<f32>]>,
+    pub animation_index: Box<[Option<u32>]>,
 }
 
 impl PostFrames {
@@ -263,44 +264,42 @@ impl PostFrames {
     }
 }
 
-// postframe objects are purely a temporary container to make the code clearer, so I impl `Into` rather than `From` (and
-// implicitly `Into`) because I intentionally want to disallow translation back.
 #[allow(clippy::from_over_into)]
-impl Into<DataFrame> for PostFrames {
-    fn into(self) -> DataFrame {
+impl From<PostFrames> for DataFrame {
+    fn from(val: PostFrames) -> DataFrame {
         use Post::*;
         let vec_series = vec![
-            Series::new(&FrameNumber.to_string(), self.frame_number),
-            Series::new(&Character.to_string(), self.character),
-            Series::new(&ActionState.to_string(), self.action_state),
-            Series::new(&PositionX.to_string(), self.position_x),
-            Series::new(&PositionY.to_string(), self.position_y),
-            Series::new(&Orientation.to_string(), self.orientation),
-            Series::new(&Percent.to_string(), self.percent),
-            Series::new(&ShieldHealth.to_string(), self.shield_health),
-            Series::new(&LastAttackLanded.to_string(), self.last_attack_landed),
-            Series::new(&ComboCount.to_string(), self.combo_count),
-            Series::new(&LastHitBy.to_string(), self.last_hit_by),
-            Series::new(&Stocks.to_string(), self.stocks),
-            Series::new(&StateFrame.to_string(), self.state_frame),
-            Series::new(&Flags1.to_string(), self.flags_1),
-            Series::new(&Flags2.to_string(), self.flags_2),
-            Series::new(&Flags3.to_string(), self.flags_3),
-            Series::new(&Flags4.to_string(), self.flags_4),
-            Series::new(&Flags5.to_string(), self.flags_5),
-            Series::new(&MiscAS.to_string(), self.misc_as),
-            Series::new(&IsGrounded.to_string(), self.is_grounded),
-            Series::new(&LastGroundID.to_string(), self.last_ground_id),
-            Series::new(&JumpsRemaining.to_string(), self.jumps_remaining),
-            Series::new(&LCancel.to_string(), self.l_cancel),
-            Series::new(&HurtboxState.to_string(), self.hurtbox_state),
-            Series::new(&AirVelX.to_string(), self.air_vel_x),
-            Series::new(&VelY.to_string(), self.vel_y),
-            Series::new(&KnockbackX.to_string(), self.knockback_x),
-            Series::new(&KnockbackY.to_string(), self.knockback_y),
-            Series::new(&GroundVelX.to_string(), self.ground_vel_x),
-            Series::new(&HitlagRemaining.to_string(), self.hitlag_remaining),
-            Series::new(&AnimationIndex.to_string(), self.animation_index),
+            Series::new(&FrameNumber.to_string(), val.frame_number),
+            Series::new(&Character.to_string(), val.character),
+            Series::new(&ActionState.to_string(), val.action_state),
+            Series::new(&PositionX.to_string(), val.position_x),
+            Series::new(&PositionY.to_string(), val.position_y),
+            Series::new(&Orientation.to_string(), val.orientation),
+            Series::new(&Percent.to_string(), val.percent),
+            Series::new(&ShieldHealth.to_string(), val.shield_health),
+            Series::new(&LastAttackLanded.to_string(), val.last_attack_landed),
+            Series::new(&ComboCount.to_string(), val.combo_count),
+            Series::new(&LastHitBy.to_string(), val.last_hit_by),
+            Series::new(&Stocks.to_string(), val.stocks),
+            Series::new(&StateFrame.to_string(), val.state_frame),
+            Series::new(&Flags1.to_string(), val.flags_1),
+            Series::new(&Flags2.to_string(), val.flags_2),
+            Series::new(&Flags3.to_string(), val.flags_3),
+            Series::new(&Flags4.to_string(), val.flags_4),
+            Series::new(&Flags5.to_string(), val.flags_5),
+            Series::new(&MiscAS.to_string(), val.misc_as),
+            Series::new(&IsGrounded.to_string(), val.is_grounded),
+            Series::new(&LastGroundID.to_string(), val.last_ground_id),
+            Series::new(&JumpsRemaining.to_string(), val.jumps_remaining),
+            Series::new(&LCancel.to_string(), val.l_cancel),
+            Series::new(&HurtboxState.to_string(), val.hurtbox_state),
+            Series::new(&AirVelX.to_string(), val.air_vel_x),
+            Series::new(&VelY.to_string(), val.vel_y),
+            Series::new(&KnockbackX.to_string(), val.knockback_x),
+            Series::new(&KnockbackY.to_string(), val.knockback_y),
+            Series::new(&GroundVelX.to_string(), val.ground_vel_x),
+            Series::new(&HitlagRemaining.to_string(), val.hitlag_remaining),
+            Series::new(&AnimationIndex.to_string(), val.animation_index),
         ];
 
         DataFrame::new(vec_series).unwrap()
@@ -312,7 +311,7 @@ pub fn parse_postframes(
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
-) -> IntMap<u8, (DataFrame, Option<DataFrame>)> {
+) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
     let p_frames = {
         /* splitting these out saves us a small amount of time in conditional logic, and allows for
         exact iterator chunk sizes. */
@@ -326,7 +325,7 @@ pub fn parse_postframes(
     let mut result = IntMap::default();
 
     for (port, (player_frames, nana_frames)) in p_frames {
-        result.insert(port, (player_frames.into(), nana_frames.map(|x| x.into())));
+        result.insert(port, (player_frames, nana_frames));
     }
 
     result
@@ -459,7 +458,7 @@ pub fn unpack_frames_ics(
         // since we can't chunk the frames, enumeration won't work. We can still get an
         // always-in-bounds index from the frame number though.
         let i = (frame_number + 123) as usize;
-                assert!(
+        assert!(
             i < len,
             "Frame index incorrect, index ({i}) is greater than or equal to the max length of the container ({len})."
         );
