@@ -135,3 +135,14 @@ pub enum LCancels {
     Fastfall,
     InputDuringHitlag,
 }
+
+#[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
+pub enum Inputs {
+    Digital,
+    Joystick,
+    Cstick,
+    AnalogTrigger,
+    APM,
+    TriggerPref,
+    JumpPref,
+}

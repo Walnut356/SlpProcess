@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use crate::enums::general::*;
 use crate::enums::stage::Stage;
-use crate::stats::actions::find_actions;
+use crate::stats::inputs::find_inputs;
 use crate::utils::BitFlags;
 use crate::{
     enums::{buttons::*, general::*, state::*},
@@ -17,19 +17,17 @@ pub fn get_stats(game: &mut Game) {
         let opponent = players[1].as_ref().read().unwrap();
 
         player.stats.l_cancel = find_lcancels(&player.frames, Stage::from_id(game.start.stage));
-        player.stats.actions = find_actions(&player.frames, game.total_frames);
+        player.stats.actions = find_inputs(&player.frames, game.total_frames);
     }
 }
 
-pub fn get_actionstate() {
-
-}
+pub fn get_actionstate() {}
 
 pub fn just_input_lcancel(frames: &[u32], i: usize) -> bool {
     let current = EngineInput::from(frames[i]);
     let previous = EngineInput::from(frames[i.saturating_sub(1)]);
 
-    let mask:u32 = (EngineInput::Z | EngineInput::ANY_TRIGGER).into();
+    let mask: u32 = (EngineInput::Z | EngineInput::ANY_TRIGGER).into();
 
     current.intersects(mask) && !previous.intersects(mask)
 }

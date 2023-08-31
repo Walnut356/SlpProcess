@@ -17,7 +17,7 @@ pub mod events {
     pub mod pre_frame;
 }
 pub mod stats {
-    pub mod actions;
+    pub mod inputs;
     pub mod helpers;
     pub mod lcancel;
 }
