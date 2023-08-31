@@ -3,7 +3,7 @@
 use bytes::{Buf, Bytes};
 use polars::prelude::*;
 
-pub struct Items {
+pub struct ItemFrames {
     frame_number: Box<[i32]>,
     item_id: Box<[u16]>,
     state: Box<[u8]>,
@@ -22,9 +22,9 @@ pub struct Items {
     owner: Box<[Option<i8>]>,
 }
 
-impl Items {
+impl ItemFrames {
     pub fn new(len: usize) -> Self {
-        Items {
+        ItemFrames {
             frame_number: unsafe {
                 let mut temp = Vec::with_capacity(len);
                 temp.set_len(len);
@@ -110,7 +110,7 @@ impl Items {
 }
 
 #[allow(clippy::from_over_into)]
-impl Into<DataFrame> for Items {
+impl Into<DataFrame> for ItemFrames {
     fn into(self) -> DataFrame {
         let vec_series = vec![
             Series::new("frame number", self.frame_number),
@@ -135,8 +135,8 @@ impl Into<DataFrame> for Items {
     }
 }
 
-pub fn parse_itemframes(frames: &mut [Bytes]) -> DataFrame {
-    let mut working = Items::new(frames.len());
+pub fn parse_itemframes(frames: &mut [Bytes]) -> ItemFrames {
+    let mut working = ItemFrames::new(frames.len());
 
     for (i, frame) in frames.iter_mut().enumerate() {
         unsafe {
@@ -169,5 +169,5 @@ pub fn parse_itemframes(frames: &mut [Bytes]) -> DataFrame {
         }
     }
 
-    working.into()
+    working
 }

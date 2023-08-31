@@ -3,8 +3,8 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
 
 use anyhow::{anyhow, ensure, Result};
-use polars::prelude::DataFrame;
 
+use crate::events::item::ItemFrames;
 use crate::stats::helpers::get_stats;
 use crate::Port;
 use crate::{
@@ -24,7 +24,7 @@ pub struct Game {
     pub total_frames: u64,
     pub version: Version,
     pub players: [Arc<RwLock<Player>>; 2],
-    pub item_frames: DataFrame,
+    pub item_frames: ItemFrames,
 }
 
 impl Game {
@@ -64,7 +64,11 @@ impl Game {
         for p_lock in self.players.iter() {
             let player = p_lock.read().map_err(|x| anyhow!("{:?}", x.to_string()))?;
 
-            if player.connect_code.as_ref().is_some_and(|x| x.as_str() == connect_code) {
+            if player
+                .connect_code
+                .as_ref()
+                .is_some_and(|x| x.as_str() == connect_code)
+            {
                 return Ok(player);
             }
         }
