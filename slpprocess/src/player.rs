@@ -1,6 +1,10 @@
 use polars::prelude::DataFrame;
 
-use crate::{enums::character::Character, events::{game_start::ControllerFix, pre_frame::PreFrames, post_frame::PostFrames}, Port};
+use crate::{
+    enums::character::Character,
+    events::{game_start::ControllerFix, post_frame::PostFrames, pre_frame::PreFrames},
+    Port,
+};
 
 #[derive(Debug, Default)]
 pub struct Player {
@@ -23,7 +27,7 @@ pub struct UCFToggles {
     pub shield_drop: ControllerFix,
 }
 
-#[derive(Debug, Default,)]
+#[derive(Debug, Default)]
 pub struct Frames {
     pub pre: PreFrames,
     pub post: PostFrames,
@@ -43,4 +47,6 @@ impl Frames {
 pub struct Stats {
     pub l_cancel: DataFrame,
     pub actions: DataFrame,
+    pub items: DataFrame,
+    pub defense: DataFrame,
 }

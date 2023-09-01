@@ -4,22 +4,25 @@ use bytes::{Buf, Bytes};
 use polars::prelude::*;
 
 pub struct ItemFrames {
-    frame_number: Box<[i32]>,
-    item_id: Box<[u16]>,
-    state: Box<[u8]>,
-    orientation: Box<[f32]>,
-    velocity_x: Box<[f32]>,
-    velocity_y: Box<[f32]>,
-    position_x: Box<[f32]>,
-    position_y: Box<[f32]>,
-    damage_taken: Box<[u16]>,
-    expiration_timer: Box<[f32]>,
-    spawn_id: Box<[u32]>,
-    missile_type: Box<[Option<u8>]>,
-    turnip_type: Box<[Option<u8>]>,
-    is_launched: Box<[Option<bool>]>,
-    charge_power: Box<[Option<u8>]>,
-    owner: Box<[Option<i8>]>,
+    pub frame_number: Box<[i32]>,
+    /// The ID corresponding to the type of item that this frame data is about.
+    pub item_id: Box<[u16]>,
+    pub state: Box<[u8]>,
+    pub orientation: Box<[f32]>,
+    pub velocity_x: Box<[f32]>,
+    pub velocity_y: Box<[f32]>,
+    pub position_x: Box<[f32]>,
+    pub position_y: Box<[f32]>,
+    pub damage_taken: Box<[u16]>,
+    pub expiration_timer: Box<[f32]>,
+    /// A unique ID artificially given to each projectile to help differentiate it from other items spawned
+    /// during the same game.
+    pub spawn_id: Box<[u32]>,
+    pub missile_type: Box<[Option<u8>]>,
+    pub turnip_type: Box<[Option<u8>]>,
+    pub is_launched: Box<[Option<bool>]>,
+    pub charge_power: Box<[Option<u8>]>,
+    pub owner: Box<[Option<i8>]>,
 }
 
 impl ItemFrames {

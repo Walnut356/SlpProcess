@@ -8,18 +8,21 @@ pub mod enums {
     pub mod general;
     pub mod stage;
     pub mod state;
+    pub mod item;
 }
 pub mod events {
     pub mod game_end;
     pub mod game_start;
-    pub mod item;
+    pub mod item_frames;
     pub mod post_frame;
     pub mod pre_frame;
 }
 pub mod stats {
-    pub mod inputs;
     pub mod helpers;
+    pub mod inputs;
+    pub mod items;
     pub mod lcancel;
+    pub mod defense;
 }
 pub mod columns;
 pub mod game;

@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use strum_macros::EnumString;
+use strum_macros::{EnumString, Display};
 
 /// All in-game characters, including non-playable character such as the wireframes and masterhand.
 ///
@@ -22,7 +22,7 @@ use strum_macros::EnumString;
 /// assert_eq!(char_4, Character::Jigglypuff);
 /// assert_eq!(char_5, Character::Jigglypuff);
 /// ```
-#[derive(Debug, Clone, Default, Copy, PartialEq, EnumString)]
+#[derive(Debug, Clone, Default, Copy, PartialEq, EnumString, Display)]
 #[strum(ascii_case_insensitive)]
 pub enum Character {
     #[strum(serialize="falcon", serialize="captainfalcon")]

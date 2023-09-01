@@ -612,7 +612,7 @@ impl GameStart {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Version {
     major: u8,
     minor: u8,

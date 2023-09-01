@@ -15,7 +15,7 @@ use std::time::Duration;
 
 use crate::enums::character::Character;
 use crate::events::game_end::parse_gameend;
-use crate::events::item::parse_itemframes;
+use crate::events::item_frames::parse_itemframes;
 use crate::player::Frames;
 use crate::{
     events::{
