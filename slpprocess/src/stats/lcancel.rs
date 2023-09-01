@@ -28,7 +28,7 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
     let (lcancels, states, stocks, last_ground_ids, percents, flags, pre_buttons) =
         get_lcancel_columns(frames);
 
-    for (i, (lcancel, state, stocks_remaining, last_ground_id, percent, flags2)) in izip!(
+    for (i, (lcancel, state, stocks_remaining, last_ground_id, percent, bitflags)) in izip!(
         lcancels.iter(),
         states.iter(),
         stocks.iter(),
@@ -40,7 +40,7 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
     {
         if just_input_lcancel(pre_buttons, i) {
             l_input_frame = Some(i as i32);
-            during_hitlag = is_in_hitlag(flags2.unwrap());
+            during_hitlag = is_in_hitlag(bitflags.unwrap());
         }
 
         if *lcancel == Some(LCancel::NOT_APPLICABLE as u8) {
@@ -97,7 +97,7 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
         lcancelled_col.push(LCancel::from_repr(lcancel.unwrap()) == Some(LCancel::SUCCESS));
         l_input_col.push(l_input_frame);
         position_col.push(stage.ground_from_id(last_ground_id.unwrap()).into());
-        fastfall_col.push(is_fastfalling(flags2.unwrap()));
+        fastfall_col.push(is_fastfalling(bitflags.unwrap()));
         hitlag_col.push(during_hitlag);
         percent_col.push(*percent);
     }
@@ -122,7 +122,7 @@ fn get_lcancel_columns(
     &Box<[u8]>,
     &Box<[Option<u16>]>,
     &Box<[f32]>,
-    &Box<[Option<u8>]>,
+    &Box<[Option<u64>]>,
     &Box<[u32]>,
 ) {
     (
@@ -143,7 +143,7 @@ fn get_lcancel_columns(
             .percent,
         &frames
             .post
-            .flags_2,
+            .flags,
         &frames
             .pre
             .engine_buttons,

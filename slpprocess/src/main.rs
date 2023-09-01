@@ -13,7 +13,7 @@ pub fn main() {
     let game = games.pop().unwrap();
 
     let player = game.player_by_code("NUT#356").unwrap();
-    println!("{:?}", player.stats.actions);
+    println!("{:?}", player.stats.items);
 
     // // let stats = &game.players[0].read().unwrap().stats;
     // // println!("{:?}", stats.actions);

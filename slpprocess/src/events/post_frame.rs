@@ -21,11 +21,7 @@ pub struct PostFrames {
     pub last_hit_by: Box<[u8]>,
     pub stocks: Box<[u8]>,
     pub state_frame: Box<[Option<f32>]>,
-    pub flags_1: Box<[Option<u8>]>,
-    pub flags_2: Box<[Option<u8>]>,
-    pub flags_3: Box<[Option<u8>]>,
-    pub flags_4: Box<[Option<u8>]>,
-    pub flags_5: Box<[Option<u8>]>,
+    pub flags: Box<[Option<u64>]>,
     pub misc_as: Box<[Option<f32>]>,
     pub is_grounded: Box<[Option<bool>]>,
     pub last_ground_id: Box<[Option<u16>]>,
@@ -109,27 +105,7 @@ impl PostFrames {
                 temp.set_len(len);
                 temp.into_boxed_slice()
             },
-            flags_1: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
-                temp.into_boxed_slice()
-            },
-            flags_2: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
-                temp.into_boxed_slice()
-            },
-            flags_3: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
-                temp.into_boxed_slice()
-            },
-            flags_4: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
-                temp.into_boxed_slice()
-            },
-            flags_5: unsafe {
+            flags: unsafe {
                 let mut temp = Vec::with_capacity(len);
                 temp.set_len(len);
                 temp.into_boxed_slice()
@@ -242,11 +218,7 @@ impl PostFrames {
 
             // finally, freedom
             state_frame: vec![None; duration].into_boxed_slice(),
-            flags_1: vec![None; duration].into_boxed_slice(),
-            flags_2: vec![None; duration].into_boxed_slice(),
-            flags_3: vec![None; duration].into_boxed_slice(),
-            flags_4: vec![None; duration].into_boxed_slice(),
-            flags_5: vec![None; duration].into_boxed_slice(),
+            flags: vec![None; duration].into_boxed_slice(),
             misc_as: vec![None; duration].into_boxed_slice(),
             is_grounded: vec![None; duration].into_boxed_slice(),
             last_ground_id: vec![None; duration].into_boxed_slice(),
@@ -282,11 +254,7 @@ impl From<PostFrames> for DataFrame {
             Series::new(&LastHitBy.to_string(), val.last_hit_by),
             Series::new(&Stocks.to_string(), val.stocks),
             Series::new(&StateFrame.to_string(), val.state_frame),
-            Series::new(&Flags1.to_string(), val.flags_1),
-            Series::new(&Flags2.to_string(), val.flags_2),
-            Series::new(&Flags3.to_string(), val.flags_3),
-            Series::new(&Flags4.to_string(), val.flags_4),
-            Series::new(&Flags5.to_string(), val.flags_5),
+            Series::new(&Flags.to_string(), val.flags),
             Series::new(&MiscAS.to_string(), val.misc_as),
             Series::new(&IsGrounded.to_string(), val.is_grounded),
             Series::new(&LastGroundID.to_string(), val.last_ground_id),
@@ -370,11 +338,7 @@ pub fn unpack_frames(
                 // version 2.0.0
                 if !frame.has_remaining() {
                     *working.state_frame.get_unchecked_mut(i) = None;
-                    *working.flags_1.get_unchecked_mut(i) = None;
-                    *working.flags_2.get_unchecked_mut(i) = None;
-                    *working.flags_3.get_unchecked_mut(i) = None;
-                    *working.flags_4.get_unchecked_mut(i) = None;
-                    *working.flags_5.get_unchecked_mut(i) = None;
+                    *working.flags.get_unchecked_mut(i) = None;
                     *working.misc_as.get_unchecked_mut(i) = None;
                     *working.is_grounded.get_unchecked_mut(i) = None;
                     *working.last_ground_id.get_unchecked_mut(i) = None;
@@ -382,11 +346,17 @@ pub fn unpack_frames(
                     *working.l_cancel.get_unchecked_mut(i) = None;
                 } else {
                     *working.state_frame.get_unchecked_mut(i) = Some(frame.get_f32());
-                    *working.flags_1.get_unchecked_mut(i) = Some(frame.get_u8());
-                    *working.flags_2.get_unchecked_mut(i) = Some(frame.get_u8());
-                    *working.flags_3.get_unchecked_mut(i) = Some(frame.get_u8());
-                    *working.flags_4.get_unchecked_mut(i) = Some(frame.get_u8());
-                    *working.flags_5.get_unchecked_mut(i) = Some(frame.get_u8());
+                    let flags_1 = frame.get_u8() as u64;
+                    let flags_2 = frame.get_u8() as u64;
+                    let flags_3 = frame.get_u8() as u64;
+                    let flags_4 = frame.get_u8() as u64;
+                    let flags_5 = frame.get_u8() as u64;
+                    let flags: u64 = flags_1
+                        & (flags_2 << 8)
+                        & (flags_3 << 16)
+                        & (flags_4 << 24)
+                        & (flags_5 << 32);
+                    *working.flags.get_unchecked_mut(i) = Some(flags);
                     *working.misc_as.get_unchecked_mut(i) = Some(frame.get_f32());
                     *working.is_grounded.get_unchecked_mut(i) = Some(frame.get_u8() != 0);
                     *working.last_ground_id.get_unchecked_mut(i) = Some(frame.get_u16());
@@ -491,11 +461,7 @@ pub fn unpack_frames_ics(
             // version 2.0.0
             if !frame.has_remaining() {
                 *working.state_frame.get_unchecked_mut(i) = None;
-                *working.flags_1.get_unchecked_mut(i) = None;
-                *working.flags_2.get_unchecked_mut(i) = None;
-                *working.flags_3.get_unchecked_mut(i) = None;
-                *working.flags_4.get_unchecked_mut(i) = None;
-                *working.flags_5.get_unchecked_mut(i) = None;
+                *working.flags.get_unchecked_mut(i) = None;
                 *working.misc_as.get_unchecked_mut(i) = None;
                 *working.is_grounded.get_unchecked_mut(i) = None;
                 *working.last_ground_id.get_unchecked_mut(i) = None;
@@ -503,11 +469,14 @@ pub fn unpack_frames_ics(
                 *working.l_cancel.get_unchecked_mut(i) = None;
             } else {
                 *working.state_frame.get_unchecked_mut(i) = Some(frame.get_f32());
-                *working.flags_1.get_unchecked_mut(i) = Some(frame.get_u8());
-                *working.flags_2.get_unchecked_mut(i) = Some(frame.get_u8());
-                *working.flags_3.get_unchecked_mut(i) = Some(frame.get_u8());
-                *working.flags_4.get_unchecked_mut(i) = Some(frame.get_u8());
-                *working.flags_5.get_unchecked_mut(i) = Some(frame.get_u8());
+                let flags_1 = frame.get_u8() as u64;
+                let flags_2 = frame.get_u8() as u64;
+                let flags_3 = frame.get_u8() as u64;
+                let flags_4 = frame.get_u8() as u64;
+                let flags_5 = frame.get_u8() as u64;
+                let flags: u64 =
+                    flags_1 & (flags_2 << 8) & (flags_3 << 16) & (flags_4 << 24) & (flags_5 << 32);
+                *working.flags.get_unchecked_mut(i) = Some(flags);
                 *working.misc_as.get_unchecked_mut(i) = Some(frame.get_f32());
                 *working.is_grounded.get_unchecked_mut(i) = Some(frame.get_u8() != 0);
                 *working.last_ground_id.get_unchecked_mut(i) = Some(frame.get_u16());

@@ -7,7 +7,7 @@ use std::ops::{BitAnd, BitOr, BitXor};
 use crate::{
     enums::{
         buttons::{ControllerInput, EngineInput},
-        general::{Flags1, Flags2, Flags3, Flags4, Flags5},
+        general::Flags,
     },
     utils::BitFlags,
 };
@@ -170,260 +170,89 @@ impl<T: std::fmt::Debug + Into<u16> + Copy> BitXor<T> for ControllerInput {
 
 // ------------------------------------------- Flags1 ------------------------------------------- //
 
-impl From<u8> for Flags1 {
-    fn from(val: u8) -> Self {
+impl From<u64> for Flags {
+    fn from(val: u64) -> Self {
+        assert_eq!(
+            val & 0xFFFF_FF00_0000_0000,
+            0,
+            "Cannot construct flags, value '{val}' contains invalid bits"
+        );
         Self::Raw(val)
     }
 }
 
-impl From<Flags1> for u8 {
-    fn from(val: Flags1) -> Self {
-        use Flags1::*;
+impl From<Flags> for u64 {
+    fn from(val: Flags) -> Self {
+        use Flags::*;
         match val {
-            Flags1::Raw(x) => x,
+            Flags::Raw(x) => x,
             None => 0,
-            BIT_1 => 1 << 0,
+            BIT_1_1 => 1 << 0,
             ABSORB_BUBBLE => 1 << 1,
-            BIT_3 => 1 << 2,
+            BIT_1_3 => 1 << 2,
             REFLECT_NO_STEAL => 1 << 3,
             REFLECT_BUBBLE => 1 << 4,
-            BIT_6 => 1 << 5,
-            BIT_7 => 1 << 6,
-            BIT_8 => 1 << 7,
+            BIT_1_6 => 1 << 5,
+            BIT_1_7 => 1 << 6,
+            BIT_1_8 => 1 << 7,
+            BIT_2_1 => 1 << 8,
+            BIT_2_2 => 1 << 9,
+            SUBACTION_INVULN => 1 << 10,
+            FASTFALL => 1 << 11,
+            DEFENDER_HITLAG => 1 << 12,
+            HITLAG => 1 << 13,
+            BIT_2_7 => 1 << 14,
+            BIT_2_8 => 1 << 15,
+            BIT_3_1 => 1 << 16,
+            BIT_3_2 => 1 << 17,
+            GRAB_HOLD => 1 << 18,
+            BIT_3_4 => 1 << 19,
+            BIT_3_5 => 1 << 20,
+            BIT_3_6 => 1 << 21,
+            BIT_3_7 => 1 << 22,
+            SHIELDING => 1 << 23,
+            BIT_4_1 => 1 << 24,
+            HITSTUN => 1 << 25,
+            HITBOX_TOUCHING_SHIELD => 1 << 26,
+            BIT_4_4 => 1 << 27,
+            BIT_4_5 => 1 << 28,
+            PWERSHIELD_BUBBLE => 1 << 29,
+            BIT_4_7 => 1 << 30,
+            BIT_4_8 => 1 << 31,
+            BIT_5_1 => 1 << 32,
+            CLOAKING_DEVICE => 1 << 33,
+            BIT_5_3 => 1 << 34,
+            FOLLOWER => 1 << 35,
+            INACTIVE => 1 << 36,
+            BIT_5_6 => 1 << 37,
+            DEAD => 1 << 38,
+            OFFSCREEN => 1 << 39,
         }
     }
 }
 
-impl BitFlags<u8> for Flags1 {}
+impl BitFlags<u64> for Flags {}
 
-impl<T: std::fmt::Debug + Into<u8>> BitOr<T> for Flags1 {
+impl<T: std::fmt::Debug + Into<u64>> BitOr<T> for Flags {
     type Output = Self;
 
     fn bitor(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) | rhs.into())
+        Self::Raw(u64::from(self) | rhs.into())
     }
 }
 
-impl<T: std::fmt::Debug + Into<u8>> BitAnd<T> for Flags1 {
+impl<T: std::fmt::Debug + Into<u64>> BitAnd<T> for Flags {
     type Output = Self;
 
     fn bitand(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) & rhs.into())
+        Self::Raw(u64::from(self) & rhs.into())
     }
 }
 
-impl<T: std::fmt::Debug + Into<u8>> BitXor<T> for Flags1 {
+impl<T: std::fmt::Debug + Into<u64>> BitXor<T> for Flags {
     type Output = Self;
 
     fn bitxor(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) ^ rhs.into())
-    }
-}
-
-// ------------------------------------------- Flags2 ------------------------------------------- //
-
-impl From<u8> for Flags2 {
-    fn from(val: u8) -> Self {
-        Self::Raw(val)
-    }
-}
-
-impl From<Flags2> for u8 {
-    fn from(val: Flags2) -> Self {
-        use Flags2::*;
-        match val {
-            Flags2::Raw(x) => x,
-            None => 0,
-            BIT_1 => 1 << 0,
-            BIT_2 => 1 << 1,
-            SUBACTION_INVULN => 1 << 2,
-            FASTFALL => 1 << 3,
-            DEFENDER_HITLAG => 1 << 4,
-            HITLAG => 1 << 5,
-            BIT_7 => 1 << 6,
-            BIT_8 => 1 << 7,
-        }
-    }
-}
-
-impl BitFlags<u8> for Flags2 {}
-
-impl<T: std::fmt::Debug + Into<u8>> BitOr<T> for Flags2 {
-    type Output = Self;
-
-    fn bitor(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) | rhs.into())
-    }
-}
-
-impl<T: std::fmt::Debug + Into<u8>> BitAnd<T> for Flags2 {
-    type Output = Self;
-
-    fn bitand(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) & rhs.into())
-    }
-}
-
-impl<T: std::fmt::Debug + Into<u8>> BitXor<T> for Flags2 {
-    type Output = Self;
-
-    fn bitxor(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) ^ rhs.into())
-    }
-}
-
-// ------------------------------------------- Flags3 ------------------------------------------- //
-
-impl From<u8> for Flags3 {
-    fn from(val: u8) -> Self {
-        Self::Raw(val)
-    }
-}
-
-impl From<Flags3> for u8 {
-    fn from(val: Flags3) -> Self {
-        use Flags3::*;
-        match val {
-            Flags3::Raw(x) => x,
-            None => 0,
-            BIT_1 => 0b0000_0001,
-            BIT_2 => 0b0000_0010,
-            GRAB_HOLD => 0b0000_0100,
-            BIT_4 => 0b0000_1000,
-            BIT_5 => 0b0001_0000,
-            BIT_6 => 0b0010_0000,
-            BIT_7 => 0b0100_0000,
-            SHIELDING => 0b1000_0000,
-        }
-    }
-}
-
-impl BitFlags<u8> for Flags3 {}
-
-impl<T: std::fmt::Debug + Into<u8>> BitOr<T> for Flags3 {
-    type Output = Self;
-
-    fn bitor(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) | rhs.into())
-    }
-}
-
-impl<T: std::fmt::Debug + Into<u8>> BitAnd<T> for Flags3 {
-    type Output = Self;
-
-    fn bitand(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) & rhs.into())
-    }
-}
-
-impl<T: std::fmt::Debug + Into<u8>> BitXor<T> for Flags3 {
-    type Output = Self;
-
-    fn bitxor(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) ^ rhs.into())
-    }
-}
-
-// ------------------------------------------- Flags4 ------------------------------------------- //
-
-impl From<u8> for Flags4 {
-    fn from(val: u8) -> Self {
-        Self::Raw(val)
-    }
-}
-
-impl From<Flags4> for u8 {
-    fn from(val: Flags4) -> Self {
-        use Flags4::*;
-        match val {
-            Flags4::Raw(x) => x,
-            None => 0,
-            BIT_1 => 0b0000_0001,
-            HITSTUN => 0b0000_0010,
-            HITBOX_TOUCHING_SHIELD => 0b0000_0100,
-            BIT_4 => 0b0000_1000,
-            BIT_5 => 0b0001_0000,
-            PWERSHIELD_BUBBLE => 0b0010_0000,
-            BIT_7 => 0b0100_0000,
-            BIT_8 => 0b1000_0000,
-        }
-    }
-}
-
-impl BitFlags<u8> for Flags4 {}
-
-impl<T: std::fmt::Debug + Into<u8>> BitOr<T> for Flags4 {
-    type Output = Self;
-
-    fn bitor(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) | rhs.into())
-    }
-}
-
-impl<T: std::fmt::Debug + Into<u8>> BitAnd<T> for Flags4 {
-    type Output = Self;
-
-    fn bitand(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) & rhs.into())
-    }
-}
-
-impl<T: std::fmt::Debug + Into<u8>> BitXor<T> for Flags4 {
-    type Output = Self;
-
-    fn bitxor(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) ^ rhs.into())
-    }
-}
-
-// ------------------------------------------- Flags5 ------------------------------------------- //
-
-impl From<u8> for Flags5 {
-    fn from(val: u8) -> Self {
-        Self::Raw(val)
-    }
-}
-
-impl From<Flags5> for u8 {
-    fn from(val: Flags5) -> Self {
-        use Flags5::*;
-        match val {
-            Flags5::Raw(x) => x,
-            None => 0,
-            BIT_1 => 0b0000_0001,
-            CLOAKING_DEVICE => 0b0000_0010,
-            BIT_3 => 0b0000_0100,
-            FOLLOWER => 0b0000_1000,
-            INACTIVE => 0b0001_0000,
-            BIT_6 => 0b0010_0000,
-            DEAD => 0b0100_0000,
-            OFFSCREEN => 0b1000_0000,
-        }
-    }
-}
-
-impl BitFlags<u8> for Flags5 {}
-
-impl<T: std::fmt::Debug + Into<u8>> BitOr<T> for Flags5 {
-    type Output = Self;
-
-    fn bitor(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) | rhs.into())
-    }
-}
-
-impl<T: std::fmt::Debug + Into<u8>> BitAnd<T> for Flags5 {
-    type Output = Self;
-
-    fn bitand(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) & rhs.into())
-    }
-}
-
-impl<T: std::fmt::Debug + Into<u8>> BitXor<T> for Flags5 {
-    type Output = Self;
-
-    fn bitxor(self, rhs: T) -> Self::Output {
-        Self::Raw(u8::from(self) ^ rhs.into())
+        Self::Raw(u64::from(self) ^ rhs.into())
     }
 }

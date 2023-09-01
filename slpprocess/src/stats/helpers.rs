@@ -9,19 +9,22 @@ use crate::{
     Game,
 };
 
+use super::defense::find_defense;
+use super::items::find_items;
 use super::lcancel::find_lcancels;
 
 pub fn get_stats(game: &mut Game) {
     for players in game.players.iter().permutations(2) {
         let mut player = players[0].as_ref().write().unwrap();
         let opponent = players[1].as_ref().read().unwrap();
+        let items = &game.item_frames;
 
         player.stats.l_cancel = find_lcancels(&player.frames, Stage::from_id(game.start.stage));
         player.stats.actions = find_inputs(&player.frames, game.total_frames);
+        player.stats.items = find_items(&player.frames, player.port, items);
+        player.stats.defense = find_defense(&player.frames, &opponent.frames);
     }
 }
-
-pub fn get_actionstate() {}
 
 pub fn just_input_lcancel(frames: &[u32], i: usize) -> bool {
     let current = EngineInput::from(frames[i]);
@@ -32,12 +35,19 @@ pub fn just_input_lcancel(frames: &[u32], i: usize) -> bool {
     current.intersects(mask) && !previous.intersects(mask)
 }
 
-/// Requires the Flags2 bitfield
-pub fn is_in_hitlag(flags2: u8) -> bool {
-    Flags2::from(flags2).contains(Flags2::HITLAG.into())
+pub fn is_in_hitlag(flags: u64) -> bool {
+    Flags::from(flags).contains(Flags::HITLAG.into())
 }
 
-/// Requires the Flags2 bitfield
-pub fn is_fastfalling(flags2: u8) -> bool {
-    Flags2::from(flags2).contains(Flags2::FASTFALL.into())
+
+
+pub fn is_fastfalling(flags: u64) -> bool {
+    Flags::from(flags).contains(Flags::FASTFALL.into())
+}
+
+/// Returns true if the player is in any tumble or reeling animation, or if they are in the jab reset animation
+pub fn is_damaged(state: u16) -> bool {
+    (ActionRange::DAMAGE_START as u16 <= state && state <= ActionRange::DAMAGE_END as u16)
+        || state == ActionState::DOWN_DAMAGE_D as u16
+        || state == ActionState::DOWN_DAMAGE_U as u16
 }
