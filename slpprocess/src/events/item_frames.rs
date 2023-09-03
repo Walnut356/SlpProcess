@@ -4,7 +4,7 @@ use bytes::{Buf, Bytes};
 use polars::prelude::*;
 
 pub struct ItemFrames {
-    pub frame_number: Box<[i32]>,
+    pub frame_index: Box<[i32]>,
     /// The ID corresponding to the type of item that this frame data is about.
     pub item_id: Box<[u16]>,
     pub state: Box<[u8]>,
@@ -28,7 +28,7 @@ pub struct ItemFrames {
 impl ItemFrames {
     pub fn new(len: usize) -> Self {
         ItemFrames {
-            frame_number: unsafe {
+            frame_index: unsafe {
                 let mut temp = Vec::with_capacity(len);
                 temp.set_len(len);
                 temp.into_boxed_slice()
@@ -116,7 +116,7 @@ impl ItemFrames {
 impl Into<DataFrame> for ItemFrames {
     fn into(self) -> DataFrame {
         let vec_series = vec![
-            Series::new("frame number", self.frame_number),
+            Series::new("frame number", self.frame_index),
             Series::new("item id", self.item_id),
             Series::new("state", self.state),
             Series::new("facing", self.orientation),
@@ -143,7 +143,7 @@ pub fn parse_itemframes(frames: &mut [Bytes]) -> ItemFrames {
 
     for (i, frame) in frames.iter_mut().enumerate() {
         unsafe {
-            *working.frame_number.get_unchecked_mut(i) = frame.get_i32();
+            *working.frame_index.get_unchecked_mut(i) = frame.get_i32();
             *working.item_id.get_unchecked_mut(i) = frame.get_u16();
             *working.state.get_unchecked_mut(i) = frame.get_u8();
             *working.orientation.get_unchecked_mut(i) = frame.get_f32();

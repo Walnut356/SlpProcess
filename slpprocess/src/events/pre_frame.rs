@@ -7,7 +7,7 @@ use polars::prelude::*;
 
 #[derive(Debug, Default)]
 pub struct PreFrames {
-    pub frame_number: Box<[i32]>,
+    pub frame_index: Box<[i32]>,
     pub random_seed: Box<[u32]>,
     pub action_state: Box<[u16]>,
     pub position_x: Box<[f32]>,
@@ -31,7 +31,7 @@ impl PreFrames {
         reason to 0-initialize the memory when we're immediately overwriting it anyway. Saves
         a fair few cycles */
         PreFrames {
-            frame_number: unsafe {
+            frame_index: unsafe {
                 let mut temp = Vec::with_capacity(len);
                 temp.set_len(len);
                 temp.into_boxed_slice()
@@ -128,7 +128,7 @@ impl PreFrames {
     fn ics(duration: usize) -> Self {
         let len = (duration - 123) as i32;
         PreFrames {
-            frame_number: ((-123)..len).collect::<Vec<i32>>().into_boxed_slice(),
+            frame_index: ((-123)..len).collect::<Vec<i32>>().into_boxed_slice(),
             random_seed: vec![0; duration].into_boxed_slice(),
             // Initialize to ActionState::Sleep, since that's what nana will be in when frames are
             // skipped
@@ -156,7 +156,7 @@ impl From<PreFrames> for DataFrame {
     fn from(val: PreFrames) -> DataFrame {
         use crate::columns::Pre::*;
         let vec_series = vec![
-            Series::new(&FrameNumber.to_string(), val.frame_number),
+            Series::new(&FrameIndex.to_string(), val.frame_index),
             Series::new(&RandomSeed.to_string(), val.random_seed),
             Series::new(&ActionState.to_string(), val.action_state),
             Series::new(&PositionX.to_string(), val.position_x),
@@ -229,7 +229,7 @@ pub fn unpack_frames(
             // i has to be 0..frames_iter.len(), and that length was used to construct all of the
             // vecs that make up the PreFrames objects.
             unsafe {
-                *working.frame_number.get_unchecked_mut(i) = frame_number;
+                *working.frame_index.get_unchecked_mut(i) = frame_number;
                 *working.random_seed.get_unchecked_mut(i) = frame.get_u32();
                 *working.action_state.get_unchecked_mut(i) = frame.get_u16();
                 *working.position_x.get_unchecked_mut(i) = frame.get_f32();
@@ -299,7 +299,7 @@ pub fn unpack_frames_ics(
         };
 
         unsafe {
-            *working.frame_number.get_unchecked_mut(i) = frame_number;
+            *working.frame_index.get_unchecked_mut(i) = frame_number;
             *working.random_seed.get_unchecked_mut(i) = frame.get_u32();
             *working.action_state.get_unchecked_mut(i) = frame.get_u16();
             *working.position_x.get_unchecked_mut(i) = frame.get_f32();

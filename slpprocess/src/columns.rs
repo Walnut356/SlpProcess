@@ -5,7 +5,7 @@ pub enum Pre {
     /// All versions
     ///
     /// i32
-    FrameNumber,
+    FrameIndex,
     /// All versions
     ///
     /// u32
@@ -70,7 +70,7 @@ pub enum Pre {
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
 pub enum Post {
-    FrameNumber,
+    FrameIndex,
     Character,
     ActionState,
     PositionX,
@@ -101,7 +101,7 @@ pub enum Post {
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
 pub enum Items {
-    FrameNumber,
+    FrameIndex,
     ItemID,
     State,
     Orientation,
