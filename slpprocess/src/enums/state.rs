@@ -8,7 +8,7 @@ use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 /// ```
 /// ActionRange::AERIAL_ATTACK_START <= x <= ActionRange::AERIAL_ATTACK_END;
 /// ```
-#[derive(Debug, Clone, PartialEq, PartialOrd, FromRepr)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, FromRepr)]
 #[repr(u16)]
 pub enum ActionRange {
     DAMAGE_START = 75,
@@ -54,7 +54,7 @@ pub enum ActionRange {
 /// Individual Action State IDs. See ActionRange for state ranges.
 ///
 /// ID's match debug mode names, see docstrings for additional context
-#[derive(Debug, Clone, PartialEq, PartialOrd, EnumString, IntoStaticStr, Display, FromRepr)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, IntoStaticStr, Display, FromRepr)]
 #[repr(u16)]
 pub enum ActionState {
     /// Bottom blast zone death

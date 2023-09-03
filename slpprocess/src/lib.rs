@@ -6,9 +6,9 @@ pub mod enums {
     pub mod buttons;
     pub mod character;
     pub mod general;
+    pub mod item;
     pub mod stage;
     pub mod state;
-    pub mod item;
 }
 pub mod events {
     pub mod game_end;
@@ -18,11 +18,11 @@ pub mod events {
     pub mod pre_frame;
 }
 pub mod stats {
+    pub mod defense;
     pub mod helpers;
     pub mod inputs;
     pub mod items;
     pub mod lcancel;
-    pub mod defense;
 }
 pub mod columns;
 pub mod game;
@@ -121,9 +121,9 @@ mod test {
         );
         // asserts in parsing code itself should take care of out of bounds access
         // game.total_frames is 16408, this was also manually checked against py-slippi
-        assert!(player.frames.pre.frame_number.len() == game.total_frames as usize);
+        assert!(player.frames.pre.frame_index.len() == game.total_frames as usize);
         assert!(
-            player.nana_frames.as_ref().unwrap().post.frame_number.len()
+            player.nana_frames.as_ref().unwrap().post.frame_index.len()
                 == game.total_frames as usize
         );
     }

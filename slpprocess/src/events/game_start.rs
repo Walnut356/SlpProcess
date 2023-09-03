@@ -108,8 +108,6 @@ impl GameStart {
         let mut game_number = None;
         let mut tiebreak_number = None;
 
-        let dummy = Stats::default();
-
         if !raw.has_remaining() {
             // version < 1.0.0
             let mut players: [Player; 2] = [Player::default(), Player::default()];
@@ -123,7 +121,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: dummy.clone(),
+                        stats: Stats::default(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -175,7 +173,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: dummy.clone(),
+                        stats: Stats::default(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -220,7 +218,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: dummy.clone(),
+                        stats: Stats::default(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -265,7 +263,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: dummy.clone(),
+                        stats: Stats::default(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -310,7 +308,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: dummy.clone(),
+                        stats: Stats::default(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -356,7 +354,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: dummy.clone(),
+                        stats: Stats::default(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -419,7 +417,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: dummy.clone(),
+                        stats: Stats::default(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -474,7 +472,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: dummy.clone(),
+                        stats: Stats::default(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -519,7 +517,7 @@ impl GameStart {
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
-                        stats: dummy.clone(),
+                        stats: Stats::default(),
                         combos: (),
                         frames: Frames::default(),
                         nana_frames: None,
@@ -580,7 +578,7 @@ impl GameStart {
                     connect_code: connect_codes[i].clone(),
                     display_name: display_names[i].clone(),
                     is_winner: None,
-                    stats: dummy.clone(),
+                    stats: Stats::default(),
                     combos: (),
                     frames: Frames::default(),
                     nana_frames: None,

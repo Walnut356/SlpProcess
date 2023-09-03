@@ -35,7 +35,7 @@ pub struct Frames {
 
 impl Frames {
     pub fn len(&self) -> usize {
-        self.pre.frame_number.len()
+        self.pre.frame_index.len()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -45,8 +45,8 @@ impl Frames {
 
 #[derive(Debug, Default, Clone)]
 pub struct Stats {
-    pub l_cancel: DataFrame,
-    pub actions: DataFrame,
-    pub items: DataFrame,
-    pub defense: DataFrame,
+    pub l_cancel: Option<DataFrame>,
+    pub actions: Option<DataFrame>,
+    pub items: Option<DataFrame>,
+    pub defense: Option<DataFrame>,
 }

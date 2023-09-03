@@ -18,11 +18,7 @@ use crate::events::game_end::parse_gameend;
 use crate::events::item_frames::parse_itemframes;
 use crate::player::Frames;
 use crate::{
-    events::{
-        game_start::GameStart,
-        post_frame::parse_postframes,
-        pre_frame::parse_preframes,
-    },
+    events::{game_start::GameStart, post_frame::parse_postframes, pre_frame::parse_preframes},
     utils::ParseError,
 };
 use crate::{ubjson, Game};
@@ -67,7 +63,6 @@ fn expect_bytes<R: Read>(stream: &mut R, expected: &[u8]) -> std::io::Result<()>
     }
 }
 
-
 impl Game {
     pub(crate) fn get_file_contents(path: &Path) -> Result<Bytes> {
         let mut f = File::open(path)?;
@@ -78,7 +73,7 @@ impl Game {
         Ok(Bytes::from(file_data))
     }
 
-        fn get_event_sizes<R>(file: &mut R) -> Result<IntMap<u8, u16>>
+    fn get_event_sizes<R>(file: &mut R) -> Result<IntMap<u8, u16>>
     where
         R: Read,
     {
@@ -242,7 +237,7 @@ impl Game {
         }
 
         Ok(Game {
-            start: game_start,
+            metadata: game_start,
             end: game_end,
             duration,
             total_frames: frame_count,

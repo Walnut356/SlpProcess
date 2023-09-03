@@ -3,10 +3,15 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
 
 use anyhow::{anyhow, ensure, Result};
+use itertools::Itertools;
 
+use crate::enums::stage::Stage;
 use crate::events::item_frames::ItemFrames;
-use crate::stats::helpers::get_stats;
 use crate::Port;
+use crate::stats::defense::find_defense;
+use crate::stats::inputs::find_inputs;
+use crate::stats::items::find_items;
+use crate::stats::lcancel::find_lcancels;
 use crate::{
     events::{
         game_end::GameEnd,
@@ -16,7 +21,7 @@ use crate::{
 };
 
 pub struct Game {
-    pub start: GameStart,
+    pub metadata: GameStart,
     pub end: Option<GameEnd>, // There's an unresolved bug where sometiems game end events don't appear
     /// Duration of the game, accurate to the **ingame timer**. For the -123 indexed total frame
     /// count, see `.total_frames`
@@ -37,7 +42,7 @@ impl Game {
         let file_data = Self::get_file_contents(path)?;
         let mut game = Game::parse(file_data)?;
         // let now = Instant::now();
-        get_stats(&mut game);
+        game.get_stats();
         // let dur = now.elapsed();
         // println!("{:?}", dur);
 
@@ -93,4 +98,20 @@ impl Game {
 
         Err(anyhow!("Unable to find player with port {:?}", port))
     }
+
+    pub fn get_stats(&mut self) {
+    for players in self.players.iter().permutations(2) {
+        let mut player = players[0].as_ref().write().unwrap();
+        let opponent = players[1].as_ref().read().unwrap();
+        let items = &self.item_frames;
+
+        player.stats.l_cancel = Some(find_lcancels(
+            &player.frames,
+            Stage::from_id(self.metadata.stage),
+        ));
+        player.stats.actions = Some(find_inputs(&player.frames, self.total_frames));
+        player.stats.items = Some(find_items(&player.frames, player.port, items));
+        player.stats.defense = find_defense(&player.frames, &opponent.frames).ok();
+    }
+}
 }
