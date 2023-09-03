@@ -2,10 +2,6 @@ use polars::prelude::*;
 
 use crate::{columns::Inputs, enums::buttons::*, player::Frames};
 
-const JOYSTICK_MASK: u32 = 0xf0000;
-const CSTICK_MASK: u32 = 0xf00000;
-const ANYTRIGGER_MASK: u32 = 0x8000_0000;
-const DIGITAL_TRIGGER_MASK: u32 = 0x60;
 
 // #[derive(Debug, Default)]
 // struct ButtonCounts {
