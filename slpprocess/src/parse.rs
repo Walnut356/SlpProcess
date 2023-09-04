@@ -215,11 +215,15 @@ impl Game {
             players[1].character == Character::IceClimbers,
         ];
 
-        let item_frames = parse_itemframes(&mut item_bytes);
+        let mut item_frames = None;
+
+        if version.at_least(3, 0, 0) {
+            item_frames = Some(parse_itemframes(version, &mut item_bytes));
+        }
 
         let (mut pre_frames, mut post_frames) = rayon::join(
-            || parse_preframes(&mut pre_bytes, frame_count, ports, ics),
-            || parse_postframes(&mut post_bytes, frame_count, ports, ics),
+            || parse_preframes(version, &mut pre_bytes, frame_count, ports, ics),
+            || parse_postframes(version, &mut post_bytes, frame_count, ports, ics),
         );
 
         for player in players.iter_mut() {

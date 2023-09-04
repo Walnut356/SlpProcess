@@ -1,5 +1,7 @@
 #![allow(clippy::type_complexity)]
 
+use std::ops::Deref;
+
 use crate::{
     columns::*,
     enums::{attack::Attack, general::LCancel, stage::Stage, state::ActionState},
@@ -12,21 +14,26 @@ use polars::prelude::*;
 use super::helpers::{is_in_hitlag, just_input_lcancel};
 
 pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
-    let mut frame_index_col = Vec::new();
-    let mut stocks_col = Vec::new();
-    let mut attack_col = Vec::new();
-    let mut lcancelled_col = Vec::new();
-    let mut l_input_col = Vec::new();
+    let mut frame_index_col: Vec<i32> = Vec::new();
+    let mut stocks_col: Vec<u8> = Vec::new();
+    let mut attack_col: Vec<&str> = Vec::new();
+    let mut lcancelled_col: Vec<bool> = Vec::new();
+    let mut l_input_col: Vec<Option<i32>> = Vec::new();
     let mut position_col: Vec<&str> = Vec::new();
-    let mut fastfall_col = Vec::new();
-    let mut hitlag_col = Vec::new();
-    let mut percent_col = Vec::new();
+    let mut fastfall_col: Vec<bool> = Vec::new();
+    let mut hitlag_col: Vec<bool> = Vec::new();
+    let mut percent_col: Vec<f32> = Vec::new();
 
-    let mut l_input_frame = None;
-    let mut during_hitlag = false;
+    let mut l_input_frame: Option<i32> = None;
+    let mut during_hitlag: bool = false;
 
-    let (lcancels, states, stocks, last_ground_ids, percents, flags, pre_buttons) =
-        get_lcancel_columns(frames);
+    let lcancels: &[u8] = frames.post.l_cancel.as_deref().unwrap();
+    let states: &[u16] = frames.post.action_state.deref();
+    let stocks: &[u8] = frames.post.stocks.deref();
+    let last_ground_ids: &[u16] = frames.post.last_ground_id.as_deref().unwrap();
+    let percents: &[f32] = frames.post.percent.deref();
+    let flags: &[u64] = frames.post.flags.as_deref().unwrap();
+    let pre_buttons: &[u32] = frames.pre.engine_buttons.deref();
 
     for (i, (lcancel, state, stocks_remaining, last_ground_id, percent, bitflags)) in izip!(
         lcancels.iter(),
@@ -40,10 +47,10 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
     {
         if just_input_lcancel(pre_buttons, i) {
             l_input_frame = Some(i as i32);
-            during_hitlag = is_in_hitlag(bitflags.unwrap());
+            during_hitlag = is_in_hitlag(*bitflags);
         }
 
-        if *lcancel == Some(LCancel::NOT_APPLICABLE as u8) {
+        if *lcancel == LCancel::NOT_APPLICABLE as u8 {
             continue;
         }
 
@@ -58,7 +65,7 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
 
         // if there's no l cancel input that was too early, and the input failed, check the next 5 frames to see if
         // there was a late l cancel
-        if *lcancel == Some(LCancel::FAILURE as u8) && l_input_frame.is_some() {
+        if *lcancel == LCancel::FAILURE as u8 && l_input_frame.is_some() {
             for j in 0..6 {
                 if just_input_lcancel(pre_buttons, i + j) {
                     l_input_frame = Some(j as i32)
@@ -94,10 +101,10 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
         frame_index_col.push(i as i32 - 123);
         stocks_col.push(*stocks_remaining);
         attack_col.push(temp);
-        lcancelled_col.push(LCancel::from_repr(lcancel.unwrap()) == Some(LCancel::SUCCESS));
+        lcancelled_col.push(LCancel::from_repr(*lcancel) == Some(LCancel::SUCCESS));
         l_input_col.push(l_input_frame);
-        position_col.push(stage.ground_from_id(last_ground_id.unwrap()).into());
-        fastfall_col.push(is_fastfalling(bitflags.unwrap()));
+        position_col.push(stage.ground_from_id(*last_ground_id).into());
+        fastfall_col.push(is_fastfalling(*bitflags));
         hitlag_col.push(during_hitlag);
         percent_col.push(*percent);
     }
@@ -112,40 +119,4 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
     LCancels::Fastfall.into() => fastfall_col,
     LCancels::InputDuringHitlag.into() => hitlag_col, )
     .unwrap()
-}
-
-fn get_lcancel_columns(
-    frames: &Frames,
-) -> (
-    &Box<[Option<u8>]>,
-    &Box<[u16]>,
-    &Box<[u8]>,
-    &Box<[Option<u16>]>,
-    &Box<[f32]>,
-    &Box<[Option<u64>]>,
-    &Box<[u32]>,
-) {
-    (
-        &frames
-            .post
-            .l_cancel,
-        &frames
-            .post
-            .action_state,
-        &frames
-            .post
-            .stocks,
-        &frames
-            .post
-            .last_ground_id,
-        &frames
-            .post
-            .percent,
-        &frames
-            .post
-            .flags,
-        &frames
-            .pre
-            .engine_buttons,
-    )
 }

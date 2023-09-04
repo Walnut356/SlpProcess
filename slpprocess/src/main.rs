@@ -1,35 +1,26 @@
 use std::time::Instant;
+use std::hint::black_box;
 
-use slpprocess::parse;
+use slpprocess::{parse, enums::buttons::{StickRegion, EngineInput}};
 
 pub fn main() {
 
+    let val: u64 = 0b1111;
+    let thing: EngineInput = unsafe{ std::mem::transmute(val) };
 
-    let now = Instant::now();
-    // let replay = r"G:/temp";
-    let replay = r"./Game_20230526T020459.slp";
-    let mut games = parse(replay);
+    println!("{}", thing);
 
-    let game = games.pop().unwrap();
+    // let now = Instant::now();
+    // // let replay = r"G:/temp";
+    // let replay = r"./Game_20230526T020459.slp";
+    // let mut games = parse(replay);
 
-    let player = game.player_by_code("NUT#356").unwrap();
-    println!("{:?}", player.stats.items);
+    // let game = games.pop().unwrap();
 
-    // // let stats = &game.players[0].read().unwrap().stats;
-    // // println!("{:?}", stats.actions);
+    // let player = game.player_by_code("NUT#356").unwrap();
+    // println!("{:?}", player.stats.items);
 
-    // for game in games {
-    //     let Ok(player) = game.player_by_code("NUT#356") else {
-    //         println!("Could not find player");
-    //         continue;
-    //     };
+    // let dur = now.elapsed();
 
-    //     let mut exit = false;
-
-    //     let pre = player.frames.pre.clone();
-    // }
-
-    let dur = now.elapsed();
-
-    println!("{:?}", dur);
+    // println!("{:?}", dur);
 }

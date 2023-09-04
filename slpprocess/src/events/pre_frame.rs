@@ -1,12 +1,13 @@
 #![allow(clippy::uninit_vec)]
 
-use crate::Port;
+use crate::{Port, events::game_start::Version};
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
 
 #[derive(Debug, Default)]
 pub struct PreFrames {
+    pub version: Version,
     pub frame_index: Box<[i32]>,
     pub random_seed: Box<[u32]>,
     pub action_state: Box<[u16]>,
@@ -22,97 +23,103 @@ pub struct PreFrames {
     pub controller_buttons: Box<[u16]>,
     pub controller_l: Box<[f32]>,
     pub controller_r: Box<[f32]>,
-    pub percent: Box<[Option<f32>]>,
+    pub percent: Option<Box<[f32]>>,
 }
 
 impl PreFrames {
-    fn new(len: usize) -> Self {
+    fn new(duration: usize, version: Version) -> Self {
         /* Because this is only used internally and only exists in this function, there's no real
         reason to 0-initialize the memory when we're immediately overwriting it anyway. Saves
         a fair few cycles */
         PreFrames {
+            version,
             frame_index: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             random_seed: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             action_state: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             position_x: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             position_y: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             orientation: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             joystick_x: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             joystick_y: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             cstick_x: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             cstick_y: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             engine_trigger: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             engine_buttons: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             controller_buttons: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             controller_l: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             controller_r: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             percent: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
-                temp.into_boxed_slice()
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
+                Some(temp.into_boxed_slice())
             },
         }
     }
+
+    pub fn len(&self) -> usize {
+        self.frame_index.len()
+    }
+
 
     /// When nana is dead, she is considered `inactive`, which is the variable checked by slippi to
     /// determine what characters to record frames for. As a result, we cannot rely on the same
@@ -125,9 +132,10 @@ impl PreFrames {
     /// a (possibly) nice result of this is that, unlike other parsers, we can guarantee that nana
     /// frames (if they exist) will always be the same length as leader frames, even if some of the
     /// data is filled with dummy "null" values.
-    fn ics(duration: usize) -> Self {
+    fn ics(duration: usize, version: Version) -> Self {
         let len = (duration - 123) as i32;
         PreFrames {
+            version,
             frame_index: ((-123)..len).collect::<Vec<i32>>().into_boxed_slice(),
             random_seed: vec![0; duration].into_boxed_slice(),
             // Initialize to ActionState::Sleep, since that's what nana will be in when frames are
@@ -146,7 +154,7 @@ impl PreFrames {
             controller_buttons: vec![0; duration].into_boxed_slice(),
             controller_l: vec![0.0; duration].into_boxed_slice(),
             controller_r: vec![0.0; duration].into_boxed_slice(),
-            percent: vec![None; duration].into_boxed_slice(),
+            percent: Some(vec![0.0; duration].into_boxed_slice()),
         }
     }
 }
@@ -154,8 +162,10 @@ impl PreFrames {
 #[allow(clippy::from_over_into)]
 impl From<PreFrames> for DataFrame {
     fn from(val: PreFrames) -> DataFrame {
+        let len = val.len();
+
         use crate::columns::Pre::*;
-        let vec_series = vec![
+        let mut vec_series = vec![
             Series::new(&FrameIndex.to_string(), val.frame_index),
             Series::new(&RandomSeed.to_string(), val.random_seed),
             Series::new(&ActionState.to_string(), val.action_state),
@@ -170,15 +180,19 @@ impl From<PreFrames> for DataFrame {
             Series::new(&EngineButtons.to_string(), val.engine_buttons),
             Series::new(&ControllerButtons.to_string(), val.controller_buttons),
             Series::new(&ControllerL.to_string(), val.controller_l),
-            Series::new(&ControllerR.to_string(), val.controller_r),
-            Series::new(&Percent.to_string(), val.percent),
-        ];
+            Series::new(&ControllerR.to_string(), val.controller_r),];
+        if val.version.at_least(1, 4, 0) {
+            vec_series.push(Series::new(&Percent.to_string(), val.percent.unwrap()));
+        } else {
+            vec_series.push(Series::new_null(&Percent.to_string(), len));
+        }
 
         DataFrame::new(vec_series).unwrap()
     }
 }
 
 pub fn parse_preframes(
+    version: Version,
     frames: &mut [Bytes],
     duration: u64,
     ports: [Port; 2],
@@ -188,9 +202,9 @@ pub fn parse_preframes(
         /* splitting these out saves us a small amount of time in conditional logic, and allows for
         exact iterator chunk sizes. */
         if !ics[0] && !ics[1] {
-            unpack_frames(frames, ports)
+            unpack_frames(frames, ports, version)
         } else {
-            unpack_frames_ics(frames, duration, ports, ics)
+            unpack_frames_ics(frames, duration, ports, ics, version)
         }
     };
 
@@ -206,6 +220,7 @@ pub fn parse_preframes(
 pub fn unpack_frames(
     frames: &mut [Bytes],
     ports: [Port; 2],
+    version: Version,
 ) -> IntMap<u8, (PreFrames, Option<PreFrames>)> {
     /* TODO defining it like this *should* eliminate bounds checks, but i need to inspect the
     assembly to be sure. It's gonna start looking real gross if it's having trouble seeing through
@@ -215,8 +230,8 @@ pub fn unpack_frames(
     let len = frames_iter.len();
 
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
-    p_frames.insert(ports[0].into(), (PreFrames::new(len), None));
-    p_frames.insert(ports[1].into(), (PreFrames::new(len), None));
+    p_frames.insert(ports[0].into(), (PreFrames::new(len, version), None));
+    p_frames.insert(ports[1].into(), (PreFrames::new(len, version), None));
 
     for (i, frames_raw) in frames_iter {
         for frame in frames_raw {
@@ -253,7 +268,7 @@ pub fn unpack_frames(
                     // version < 1.4.0
                     continue;
                 }
-                *working.percent.get_unchecked_mut(i) = Some(frame.get_f32());
+                *working.percent.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
             }
         }
     }
@@ -266,17 +281,18 @@ pub fn unpack_frames_ics(
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
+    version: Version,
 ) -> IntMap<u8, (PreFrames, Option<PreFrames>)> {
     let len = duration as usize;
 
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
     p_frames.insert(
         ports[0].into(),
-        (PreFrames::new(len), ics[0].then(|| PreFrames::ics(len))),
+        (PreFrames::new(len, version), ics[0].then(|| PreFrames::ics(len, version))),
     );
     p_frames.insert(
         ports[1].into(),
-        (PreFrames::new(len), ics[1].then(|| PreFrames::ics(len))),
+        (PreFrames::new(len, version), ics[1].then(|| PreFrames::ics(len, version))),
     );
 
     for frame in frames.iter_mut() {
@@ -321,9 +337,9 @@ pub fn unpack_frames_ics(
             frame.advance(1);
             if !frame.has_remaining() {
                 // version < 1.4.0
-                *working.percent.get_unchecked_mut(i) = None;
+                continue;
             } else {
-                *working.percent.get_unchecked_mut(i) = Some(frame.get_f32());
+                *working.percent.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
             }
         }
     }

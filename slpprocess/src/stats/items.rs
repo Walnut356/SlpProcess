@@ -13,9 +13,9 @@ use crate::{
 pub fn find_items(frames: &Frames, port: Port, item_frames: &ItemFrames) -> DataFrame {
     let ids = &item_frames.item_id;
     let spawn_ids = &item_frames.spawn_id;
-    let missiles = &item_frames.missile_type;
-    let turnips = &item_frames.turnip_type;
-    let owners = &item_frames.owner;
+    let missiles = item_frames.missile_type.as_ref().unwrap();
+    let turnips = item_frames.turnip_type.as_ref().unwrap();
+    let owners = item_frames.owner.as_ref().unwrap();
 
     let mut item_counter: IntMap<u16, u32> = IntMap::default();
     let mut unique: HashSet<u32> = HashSet::default();
@@ -27,7 +27,7 @@ pub fn find_items(frames: &Frames, port: Port, item_frames: &ItemFrames) -> Data
     assert_eq!(turnips.len(), owners.len());
 
     for i in 0..ids.len() {
-        if owners[i] != Some((port as u8).try_into().unwrap()) {
+        if owners[i] != std::convert::TryInto::<i8>::try_into(port as u8).unwrap() {
             continue;
         }
 

@@ -45,8 +45,12 @@ impl Frames {
 
 #[derive(Debug, Default, Clone)]
 pub struct Stats {
+    /// Minimum Replay Version: Any
+    pub inputs: DataFrame,
+    /// Minimum Replay Version:
     pub l_cancel: Option<DataFrame>,
-    pub actions: Option<DataFrame>,
+    /// Minimum Replay Version:
     pub items: Option<DataFrame>,
+    /// Minimum Replay Version
     pub defense: Option<DataFrame>,
 }

@@ -70,16 +70,21 @@ impl GameStart {
     // the awkward return type here is because this will only ever be constructed internally, and because it will help
     // a LOT down the line to have the players contained in the top level Game object rather than the GameStart event.
     pub fn parse(mut raw: Bytes) -> (Self, Version, [Player; 2]) {
-        let version = Version::new([raw.get_u8(), raw.get_u8(), raw.get_u8(), raw.get_u8()]);
-        raw.advance(8); // skip past game bitfields 1-4 and bomb rain
+        let version = Version::new(raw.get_u8(), raw.get_u8(), raw.get_u8());
+        raw.advance(9); // skip past revision number, game bitfields 1-4 and bomb rain
+
         let is_teams = raw.get_u8() != 0;
         raw.advance(5); // skip item spawn rate and self destruct score value
+
         let stage = StageID::from_repr(raw.get_u16()).unwrap();
+
         // timer value is given in seconds, can only be changed by full-minute increments in-game
         let timer_length = Duration::from_secs(raw.get_u32() as u64);
         raw.advance(28); // skip past item spawn bitfields
+
         let damage_ratio = raw.get_f32();
         raw.advance(44);
+
         let mut temp_players = Vec::new();
         for _ in 0..4 {
             let character = Character::try_from_css(raw.get_u8()).unwrap();
@@ -614,16 +619,28 @@ impl GameStart {
 pub struct Version {
     major: u8,
     minor: u8,
-    revision: u8,
+    build: u8,
 }
 
 impl Version {
-    pub fn new(data: [u8; 4]) -> Self {
+    pub fn new(major: u8, minor: u8, build: u8) -> Self {
         Self {
-            major: data[0],
-            minor: data[1],
-            revision: data[2],
+            major,
+            minor,
+            build,
         }
+    }
+
+    /// Returns true if self is at least (greater than or equal to) the given version
+    pub fn at_least(&self, major: u8, minor: u8, build: u8) -> bool {
+        *self >= Version{major, minor, build}
+    }
+}
+
+impl Default for Version {
+    /// Returns Version{0, 1, 0}, the first slippi release version
+    fn default() -> Self {
+        Self { major: 0, minor: 1, build: 0 }
     }
 }
 

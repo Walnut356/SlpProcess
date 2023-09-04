@@ -7,11 +7,11 @@ use itertools::Itertools;
 
 use crate::enums::stage::Stage;
 use crate::events::item_frames::ItemFrames;
-use crate::Port;
 use crate::stats::defense::find_defense;
 use crate::stats::inputs::find_inputs;
 use crate::stats::items::find_items;
 use crate::stats::lcancel::find_lcancels;
+use crate::Port;
 use crate::{
     events::{
         game_end::GameEnd,
@@ -29,7 +29,7 @@ pub struct Game {
     pub total_frames: u64,
     pub version: Version,
     pub players: [Arc<RwLock<Player>>; 2],
-    pub item_frames: ItemFrames,
+    pub item_frames: Option<ItemFrames>,
 }
 
 impl Game {
@@ -100,18 +100,27 @@ impl Game {
     }
 
     pub fn get_stats(&mut self) {
-    for players in self.players.iter().permutations(2) {
-        let mut player = players[0].as_ref().write().unwrap();
-        let opponent = players[1].as_ref().read().unwrap();
-        let items = &self.item_frames;
+        let version = self.version;
 
-        player.stats.l_cancel = Some(find_lcancels(
-            &player.frames,
-            Stage::from_id(self.metadata.stage),
-        ));
-        player.stats.actions = Some(find_inputs(&player.frames, self.total_frames));
-        player.stats.items = Some(find_items(&player.frames, player.port, items));
-        player.stats.defense = find_defense(&player.frames, &opponent.frames).ok();
+        for players in self.players.iter().permutations(2) {
+            let mut player = players[0].as_ref().write().unwrap();
+            let opponent = players[1].as_ref().read().unwrap();
+            let items = &self.item_frames;
+
+            player.stats.inputs = find_inputs(&player.frames, self.total_frames);
+
+            player.stats.l_cancel = version
+                .at_least(2, 0, 0)
+                .then(|| find_lcancels(&player.frames, Stage::from_id(self.metadata.stage)));
+
+            // TODO make newer features optiona;
+            player.stats.items = version.at_least(3, 6, 0).then(|| find_items(
+                    &player.frames,
+                    player.port,
+                    items.as_ref().unwrap(),
+                ));
+
+            player.stats.defense = version.at_least(2, 0, 0).then(|| find_defense(&player.frames, &opponent.frames));
+        }
     }
-}
 }
