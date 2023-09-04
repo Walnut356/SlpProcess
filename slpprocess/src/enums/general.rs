@@ -1,15 +1,14 @@
 #![allow(non_camel_case_types)]
 #![allow(clippy::upper_case_acronyms)]
 
-
-use strum_macros::{EnumString, Display, IntoStaticStr, FromRepr};
+use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 
 /// The current direction the character is facing, can be LEFT, RIGHT, or DOWN*
 ///
 /// *Down is technically only used for warpstar item animation, but it's useful to give it a
 /// default value of 0 for stats
 #[derive(
-    Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr
+    Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
 )]
 #[repr(i8)]
 pub enum Orientation {
@@ -20,7 +19,9 @@ pub enum Orientation {
 
 /// L cancel status, active for 1 frame upon landing during an aerial attack, which indicates
 /// either SUCCESS or FAILURE. Value is NOT_APPLICABLE at all other times
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
+)]
 #[repr(u8)]
 pub enum LCancel {
     NOT_APPLICABLE = 0,
@@ -30,7 +31,7 @@ pub enum LCancel {
 
 /// Hurtbox state. Can be VULNERABLE, INVULNERABLE, or INTANGIBLE
 #[derive(
-    Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr
+    Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
 )]
 #[repr(u8)]
 pub enum Hurtbox {
@@ -77,9 +78,7 @@ pub enum Hurtbox {
 /// * Bit 5 - INACTIVE
 /// * Bit 7 - DEAD
 /// * Bit 8 - OFFSCREEN
-#[derive(
-    Debug, Clone, Copy, PartialEq, EnumString, Display, FromRepr, IntoStaticStr
-)]
+#[derive(Clone, Copy, PartialEq)]
 #[repr(u64)]
 pub enum Flags {
     None = 0,
@@ -129,7 +128,7 @@ pub enum Flags {
     BIT_4_4 = 1 << 27,
     BIT_4_5 = 1 << 28,
     /// Active when character's physical OR projectile Powershield bubble is active
-    PWERSHIELD_BUBBLE = 1 << 29,
+    POWERSHIELD_BUBBLE = 1 << 29,
     BIT_4_7 = 1 << 30,
     BIT_4_8 = 1 << 31,
     BIT_5_1 = 1 << 32,
@@ -153,5 +152,5 @@ pub enum Flags {
     DEAD = 1 << 38,
     /// Active when character is in the magnifying glass
     OFFSCREEN = 1 << 39,
-    Raw(u64)
+    Raw(u64),
 }

@@ -1,6 +1,7 @@
+use std::convert::Into;
 use std::ops::{BitAnd, BitOr, BitXor};
 
-use num_traits::{Num, NumOps, ops::bytes::NumBytes, PrimInt};
+use num_traits::{ops::bytes::NumBytes, Num, NumOps, PrimInt, Zero};
 use thiserror::Error;
 
 use crate::utils;
@@ -27,24 +28,23 @@ impl Point {
     }
 }
 
-pub trait BitFlags<T>: Copy + Into<T>
-where
-    T: PrimInt
-{
-    fn contains(self, other: T) -> bool {
-        std::convert::Into::<T>::into(self) & other == other
+pub trait BitFlags: Into<Self::Other> {
+    type Other: PrimInt;
+
+    fn contains(self, other: Self::Other) -> bool {
+        Into::<Self::Other>::into(self) & other == other
     }
 
-    fn intersects(self, other: T) -> bool {
-        std::convert::Into::<T>::into(self) & other != T::zero()
+    fn intersects(self, other: Self::Other) -> bool {
+        Into::<Self::Other>::into(self) & other != Self::Other::zero()
     }
 
     fn count_ones(self) -> u32 {
-        std::convert::Into::<T>::into(self).count_ones()
+        Into::<Self::Other>::into(self).count_ones()
     }
 
     fn count_zeroes(self) -> u32 {
-        std::convert::Into::<T>::into(self).count_zeros()
+        Into::<Self::Other>::into(self).count_zeros()
     }
 }
 

@@ -1,6 +1,7 @@
 #![allow(non_camel_case_types)]
 
 use num_traits::Signed;
+use num_enum::FromPrimitive;
 use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 
 use crate::utils::BitFlags;
@@ -35,7 +36,7 @@ pub const DIGITAL_TRIGGER_MASK: u32 = 0x60;
 /// >= 0.30
 ///
 #[rustfmt::skip]
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 #[repr(u32)]
 pub enum EngineInput {
     None = 0,
@@ -89,7 +90,7 @@ pub enum EngineInput {
 /// `ANY_TRIGGER` is active when either L or R is active, and/or when there is an analog value
 /// >= 0.30
 #[rustfmt::skip]
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 #[repr(u16)]
 pub enum ControllerInput {
     None = 0,

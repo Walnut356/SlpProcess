@@ -2,59 +2,12 @@
 
 use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 
-/// Used to simplify checks for clusters of action states
-///
-/// ranges are inclusive, comparisons should be GT/Eq or LT/Eq:
-/// ```
-/// ActionRange::AERIAL_ATTACK_START <= x <= ActionRange::AERIAL_ATTACK_END;
-/// ```
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, FromRepr)]
-#[repr(u16)]
-pub enum ActionRange {
-    DAMAGE_START = 75,
-    DAMAGE_END = 91,
-    CAPTURE_START = 223,
-    CAPTURE_END = 232,
-    GUARD_START = 178,
-    GUARD_END = 182,
-    GUARD_BREAK_START = 205,
-    GUARD_BREAK_END = 211,
-    GROUNDED_CONTROL_START = 14,
-    GROUNDED_CONTROL_END = 24,
-    LEDGE_ACTION_START = 252,
-    LEDGE_ACTION_END = 263,
-    SQUAT_START = 39,
-    SQUAT_END = 41,
-    DOWN_START = 183,
-    DOWN_END = 198,
-    TECH_START = 199,
-    TECH_END = 204,
-    DODGE_START = 233,
-    DODGE_END = 236,
-    DYING_START = 0,
-    DYING_END = 10,
-    GROUND_ATTACK_START = 44,
-    GROUND_ATTACK_END = 64,
-    AERIAL_ATTACK_START = 65,
-    AERIAL_ATTACK_END = 69,
-    FALL_SPECIAL_START = 35,
-    FALL_SPECIAL_END = 37,
-    AERIAL_LAND_LAG_START = 70,
-    AERIAL_LAND_LAG_END = 74,
-    ACTIONABLE_AIR_START = 25,
-    ACTIONABLE_AIR_END = 34,
-    THROWN_START = 239,
-    THROWN_END = 243,
-    COMMAND_GRAB_RANGE1_START = 266,
-    COMMAND_GRAB_RANGE1_END = 304,
-    COMMAND_GRAB_RANGE2_START = 327,
-    COMMAND_GRAB_RANGE2_END = 338,
-}
-
 /// Individual Action State IDs. See ActionRange for state ranges.
 ///
 /// ID's match debug mode names, see docstrings for additional context
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, IntoStaticStr, Display, FromRepr)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, EnumString, IntoStaticStr, Display, FromRepr,
+)]
 #[repr(u16)]
 pub enum ActionState {
     /// Bottom blast zone death
@@ -651,4 +604,77 @@ pub enum ActionState {
     CAPTURE_WAIT_CRAZY_HAND = 338,
     THROWN_CRAZY_HAND = 339,
     BARREL_CANNON_WAIT = 340,
+}
+
+impl PartialEq<u16> for ActionState {
+    fn eq(&self, other: &u16) -> bool {
+        *self as u16 == *other
+    }
+}
+
+impl PartialOrd<u16> for ActionState {
+    fn partial_cmp(&self, other: &u16) -> Option<std::cmp::Ordering> {
+        (*self as u16).partial_cmp(other)
+    }
+}
+
+/// Used to simplify checks for clusters of action states
+///
+/// ranges are inclusive, comparisons should be GT/Eq or LT/Eq:
+/// ```
+/// ActionRange::AERIAL_ATTACK_START <= x <= ActionRange::AERIAL_ATTACK_END;
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, FromRepr)]
+#[repr(u16)]
+pub enum ActionRange {
+    DAMAGE_START = 75,
+    DAMAGE_END = 91,
+    CAPTURE_START = 223,
+    CAPTURE_END = 232,
+    GUARD_START = 178,
+    GUARD_END = 182,
+    GUARD_BREAK_START = 205,
+    GUARD_BREAK_END = 211,
+    GROUNDED_CONTROL_START = 14,
+    GROUNDED_CONTROL_END = 24,
+    LEDGE_ACTION_START = 252,
+    LEDGE_ACTION_END = 263,
+    SQUAT_START = 39,
+    SQUAT_END = 41,
+    DOWN_START = 183,
+    DOWN_END = 198,
+    TECH_START = 199,
+    TECH_END = 204,
+    DODGE_START = 233,
+    DODGE_END = 236,
+    DYING_START = 0,
+    DYING_END = 10,
+    GROUND_ATTACK_START = 44,
+    GROUND_ATTACK_END = 64,
+    AERIAL_ATTACK_START = 65,
+    AERIAL_ATTACK_END = 69,
+    FALL_SPECIAL_START = 35,
+    FALL_SPECIAL_END = 37,
+    AERIAL_LAND_LAG_START = 70,
+    AERIAL_LAND_LAG_END = 74,
+    ACTIONABLE_AIR_START = 25,
+    ACTIONABLE_AIR_END = 34,
+    THROWN_START = 239,
+    THROWN_END = 243,
+    COMMAND_GRAB_RANGE1_START = 266,
+    COMMAND_GRAB_RANGE1_END = 304,
+    COMMAND_GRAB_RANGE2_START = 327,
+    COMMAND_GRAB_RANGE2_END = 338,
+}
+
+impl PartialEq<u16> for ActionRange {
+    fn eq(&self, other: &u16) -> bool {
+        *self as u16 == *other
+    }
+}
+
+impl PartialOrd<u16> for ActionRange {
+    fn partial_cmp(&self, other: &u16) -> Option<std::cmp::Ordering> {
+        (*self as u16).partial_cmp(other)
+    }
 }
