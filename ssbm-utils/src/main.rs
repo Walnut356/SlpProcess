@@ -1,4 +1,4 @@
-use ssbm_utils::{attack::*, character::Character, *};
+use ssbm_utils::{enums::character::*, calc::attack::*};
 
 fn main() {
     let fox = Character::Fox.get_stats();

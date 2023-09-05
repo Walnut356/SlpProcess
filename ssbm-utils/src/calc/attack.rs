@@ -1,17 +1,11 @@
 #![allow(clippy::too_many_arguments)]
 
-use std::{
-    cmp,
-    f32::consts::TAU,
-};
+use std::{cmp, f32::consts::TAU};
 
 use crate::{
-    character::*, BATTLEFIELD_BLASTZONES, DREAMLAND_BLASTZONES, FD_BLASTZONES, FOUNTAIN_BLASTZONES,
-    STADIUM_BLASTZONES, YOSHIS_BLASTZONES,
+    constants::{KB_DECAY, TUMBLE_THRESHOLD, Z_ANALOG},
+    enums::{character::*, stage::*},
 };
-
-#[cfg(test)]
-mod test;
 
 pub fn knockback(
     damage_staled: f32,
@@ -131,7 +125,6 @@ pub fn hitlag(damage: f32, electric: bool, crouch_cancel: bool) -> u32 {
 pub fn hitstun(knockback: f32) -> u32 {
     (knockback * 0.4).floor() as u32
 }
-
 
 /// Velocity imparted on the defender when their shield is hit. Decays by the defender's traction
 /// per frame.
@@ -268,44 +261,35 @@ pub fn initial_y_velocity(knockback: f32, angle: f32, grounded: bool) -> f32 {
 
 /// Rate at which horizontal knockback velocity decreases per frame
 pub fn get_horizontal_decay(angle: f32) -> f32 {
-    0.051 * angle.to_radians().cos()
+    KB_DECAY * angle.to_radians().cos()
 }
 
 /// Rate at which vertical knockback velocity decreases per frame
 /// Gravity also plays a role, but that is done in knockback_travel
 pub fn get_vertical_decay(angle: f32) -> f32 {
-    0.051 * angle.to_radians().sin()
+    KB_DECAY * angle.to_radians().sin()
 }
 
 pub fn will_tumble(kb: f32) -> bool {
-    kb > 80.0
+    kb > TUMBLE_THRESHOLD
 }
 
 /// Accepts a tournament legal stage's in-game id and a pair of X, Y coordinates.
 /// Returns true if the player is outside of the stage's blast zones.
 pub fn is_past_blastzone(stage: u16, position_x: f32, position_y: f32) -> bool {
-    let blast_zones = match stage {
-        2 => FOUNTAIN_BLASTZONES,
-        3 => STADIUM_BLASTZONES,
-        8 => YOSHIS_BLASTZONES,
-        28 => DREAMLAND_BLASTZONES,
-        31 => BATTLEFIELD_BLASTZONES,
-        32 => FD_BLASTZONES,
-        _ => panic!("invalid stage ID"),
-    };
-    use crate::BlastZone::*;
+    let blast_zones = Stage::try_from(stage).unwrap().blastzones;
 
-    !(position_x < blast_zones[Right as usize]
-        && position_x > blast_zones[Left as usize]
-        && position_y < blast_zones[Top as usize]
-        && position_y > blast_zones[Bottom as usize])
+    !(position_x < blast_zones.right
+        && position_x > blast_zones.left
+        && position_y < blast_zones.top
+        && position_y > blast_zones.bottom)
 }
 
 pub fn point_to_angle(x: f32, y: f32) -> f32 {
     (f32::atan2(y, x) + TAU) % TAU
 }
 
-pub enum Direction {
+enum Direction {
     Left,
     Right,
     Up,
@@ -362,4 +346,87 @@ pub fn knockback_travel(
     }
 
     result
+}
+
+use approx::*;
+
+#[test]
+fn test_knockback() {
+    let fox = Character::Fox.get_stats();
+    // marth's tipper fsmash
+    // trajectory: 361.0
+    let kb = knockback(
+        20.0, 20.0, 70, 80, 0, false, &fox, 80.0, false, false, false, false, false, false,
+    );
+    assert_relative_eq!(kb, 215.8);
+
+    // falco shine
+    // trajectory: 84.0
+    let kb = knockback(
+        8.0, 8.0, 50, 110, 0, false, &fox, 80.0, false, false, false, false, false, false,
+    );
+
+    assert_relative_eq!(kb, 154.2);
+}
+
+#[test]
+fn test_shield_stun() {
+    // the values for these are equal parts manually tested and not.
+    // i'm not sure how uncle punch displays shield stun, but i don't think it quite lines up with how
+    // the community defines it or how it works intuitively? I'm not sure. But UP's values are universally 1 higher than
+    // these, maybe because the last frame of hitlag and the first frame of hitstun decrement at the same time?
+    let ss = shield_stun(17.0, 1.0, false);
+    assert_eq!(ss, 9);
+
+    let ss = shield_stun(12.0, Z_ANALOG, false);
+    assert_eq!(ss, 18);
+
+    // tests weird animation shortening
+    let ss = shield_stun(20.0, 1.0, false);
+    assert_eq!(ss, 10);
+}
+
+#[test]
+fn test_hitstun() {
+    let fox = Character::Fox.get_stats();
+    // marth's tipper fsmash
+    // trajectory: 361.0
+    let kb = knockback(
+        20.0, 20.0, 70, 80, 0, false, &fox, 80.0, false, false, false, false, false, false,
+    );
+    let hs = hitstun(kb);
+
+    assert_eq!(hs, 86);
+
+    // falco shine
+    // trajectory: 84.0
+    let kb = knockback(
+        8.0, 8.0, 50, 110, 0, false, &fox, 80.0, false, false, false, false, false, false,
+    );
+    let hs = hitstun(kb);
+
+    assert_eq!(hs, 61);
+}
+
+#[test]
+fn test_sakurai_angle() {
+    let falco = Character::Falco.get_stats();
+    // Marth sourspot jab
+    let kb = knockback(
+        4.0, 4.0, 50, 20, 0, false, &falco, 9.0, false, false, false, false, false, false,
+    );
+    let trajectory = 361.0;
+
+    assert_eq!(kb, 32.033333);
+    let modified = resolve_sakurai_angle(trajectory, kb, true);
+    assert_eq!(modified, 14.666443);
+
+    let dk = Character::DonkeyKong.get_stats();
+    // Marth sourspot jab, @ position 8 in the stale move queue
+    let kb = knockback(
+        3.92, 3.92, 50, 20, 0, false, &dk, 12.0, false, false, false, false, false, false,
+    );
+    assert_eq!(kb, 32.082825);
+    let modified = resolve_sakurai_angle(trajectory, kb, true);
+    assert_eq!(modified, 36.44287);
 }

@@ -1,16 +1,17 @@
 #![allow(non_upper_case_globals)]
 
+use std::time::Duration;
+
 use bytes::{Buf, Bytes};
 use encoding_rs::SHIFT_JIS;
 use num_enum::{FromPrimitive, IntoPrimitive, TryFromPrimitive};
 use polars::prelude::*;
-use std::time::Duration;
 
 use crate::{
-    enums::{character::Character, stage::StageID},
     player::{Frames, Player, UCFToggles, Stats},
     Port,
 };
+use ssbm_utils::enums::{character::Character, stage::StageID};
 
 #[derive(Debug, Clone, Copy, PartialEq, FromPrimitive)]
 #[repr(u8)]

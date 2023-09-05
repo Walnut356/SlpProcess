@@ -1,18 +1,9 @@
 #![allow(non_camel_case_types)]
 
 use num_traits::Signed;
-use num_enum::FromPrimitive;
 use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 
-use crate::utils::BitFlags;
-
-/// Maximum accepted analog trigger value
-pub const TRIGGER_MAX: f32 = 1.0;
-/// Minimum accepted analog trigger value
-pub const TRIGGER_MIN: f32 = 43.0 / 140.0;
-/// Analog value when holding Z
-pub const Z_TRIGGER: f32 = 49.0 / 140.0;
-
+use crate::enums::bitflag_impl::BitFlags;
 
 pub const JOYSTICK_MASK: u32 = 0xf0000;
 pub const CSTICK_MASK: u32 = 0xf00000;

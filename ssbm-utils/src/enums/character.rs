@@ -46,23 +46,23 @@ pub enum Character {
     Pikachu = 13,
     /// Individaul climbers can be accessed via
     /// ```
-    /// # use slpprocess::enums::character::Character;
+    /// # use ssbm_utils::enums::character::Character;
     /// let poo = Character::Popo;
     /// let nana = Character::Nana;
     /// ```
     /// via their in-engine codes
     /// ```
-    /// # use slpprocess::enums::character::Character;
+    /// # use ssbm_utils::enums::character::Character;
     /// let popo = Character::try_from_internal(10).unwrap();
     /// let nana = Character::try_from_internal(11).unwrap();
     /// ```
     /// and via their string names (not case sensitive)
     /// ```
-    /// # use slpprocess::enums::character::Character;
+    /// # use ssbm_utils::enums::character::Character;
     /// let popo = Character::try_from("Popo").unwrap();
     /// let nana = Character::try_from("Nana").unwrap();
     /// ```
-    #[strum(serialize = "ics", serialize = "iceclimbers")]
+    #[strum(serialize = "ics", serialize = "iceclimbers", )]
     IceClimbers = 14,
     #[strum(serialize = "puff", serialize = "jigglypuff", serialize = "jigglypuff")]
     Jigglypuff = 15,
@@ -71,7 +71,7 @@ pub enum Character {
     Zelda = 18,
     Sheik = 19,
     Falco = 20,
-    #[default] // for whatever reason, empty ports have young link as the default character
+    #[default] // for whatever reason, the game uses YL as the default/empty value for ports
     #[strum(serialize = "ylink", serialize = "younglink")]
     YoungLink = 21,
     #[strum(serialize = "doc", serialize = "drmario")]
@@ -221,38 +221,40 @@ impl Character {
     }
 
     pub fn into_internal(&self) -> u8 {
-        self as u8
+        *self as u8
     }
 
     pub fn get_stats(&self) -> Attributes {
         match *self {
             Character::Fox => Attributes::FOX,
             Character::Marth => Attributes::MARTH,
-            Character::Falcon => Attributes::FALCON,
+            Character::CaptainFalcon => Attributes::FALCON,
             Character::Falco => Attributes::FALCO,
             Character::Peach => Attributes::PEACH,
-            Character::Jiggs => Attributes::JIGGS,
+            Character::Jigglypuff => Attributes::JIGGS,
             Character::Pikachu => Attributes::PIKACHU,
             Character::Sheik => Attributes::SHEIK,
             Character::Samus => Attributes::SAMUS,
             Character::Ganondorf => Attributes::GANONDORF,
             Character::Roy => Attributes::ROY,
-            Character::Doc => Attributes::DOC,
+            Character::DrMario => Attributes::DOC,
             Character::Mario => Attributes::MARIO,
             Character::Luigi => Attributes::LUIGI,
             Character::Link => Attributes::LINK,
-            Character::Ylink => Attributes::YLINK,
-            Character::DK => Attributes::DK,
+            Character::YoungLink => Attributes::YLINK,
+            Character::DonkeyKong => Attributes::DK,
             Character::Bowser => Attributes::BOWSER,
-            Character::GNW => Attributes::GNW,
-            Character::Popo => Attributes::POPO,
-            Character::Nana => Attributes::NANA,
+            Character::GameAndWatch => Attributes::GNW,
+            Character::Popo => Attributes::ICECLIMBERS,
+            Character::Nana => Attributes::ICECLIMBERS,
             Character::Kirby => Attributes::KIRBY,
             Character::Mewtwo => Attributes::MEWTWO,
             Character::Ness => Attributes::NESS,
             Character::Pichu => Attributes::PICHU,
             Character::Yoshi => Attributes::YOSHI,
             Character::Zelda => Attributes::ZELDA,
+            Character::IceClimbers => Attributes::ICECLIMBERS,
+            _ => panic!("No attribute data available for non-playable characters")
         }
     }
 }
@@ -641,28 +643,10 @@ impl<'a> Attributes<'a> {
         dj_jump_force: 2.21,
         weight: 60,
     };
-    pub const POPO: Attributes<'a> = Attributes {
-        name: "Popo",
+    /// Popo and nana have identical stats
+    pub const ICECLIMBERS: Attributes<'a> = Attributes {
+        name: "IceClimbers",
         index: 10,
-        air_jumps: 1,
-        friction: 0.04,
-        size: 10,
-        gravity: 0.1,
-        terminal_velocity: 1.6,
-        max_walk_speed: 0.95,
-        fast_fall_speed: 2.0,
-        air_speed: 0.7,
-        air_friction: 0.02,
-        air_mobility: 0.05,
-        dj_x_speed: 0.88,
-        fh_jump_force: 2.6,
-        sh_jump_force: 1.4,
-        dj_jump_force: 2.5,
-        weight: 88,
-    };
-    pub const NANA: Attributes<'a> = Attributes {
-        name: "Nana",
-        index: 11,
         air_jumps: 1,
         friction: 0.04,
         size: 10,

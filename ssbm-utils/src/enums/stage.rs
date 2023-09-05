@@ -1,6 +1,7 @@
 #![allow(non_camel_case_types)]
 
 use strum_macros::{Display, EnumString, IntoStaticStr, FromRepr};
+use anyhow::{Error, anyhow, Result};
 
 use crate::utils::Point;
 
@@ -66,6 +67,33 @@ pub struct Stage {
     pub blastzones: BlastZones,
     pub ledges: [Point; 2],
     // TODO add dimensions, properties, etc.
+}
+
+impl TryFrom<u16> for Stage {
+    type Error = Error;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        let id = StageID::from_repr(value);
+        match id {
+            None => Err(anyhow!("Invalid stage value")),
+            Some(StageID::YOSHIS_STORY) => Ok(Self::YOSHIS),
+            Some(StageID::BATTLEFIELD) => Ok(Self::BATTLEFIELD),
+            Some(StageID::FINAL_DESTINATION) => Ok(Self::FINAL_DESTINATION),
+            Some(StageID::DREAM_LAND_N64) => Ok(Self::DREAMLAND),
+            Some(StageID::POKEMON_STADIUM) => Ok(Self::STADIUM),
+            Some(StageID::FOUNTAIN_OF_DREAMS) => Ok(Self::FOUNTAIN),
+            Some(x) => Ok(Self {
+                id: x,
+                blastzones: BlastZones {
+                    top: 999.9,
+                    bottom: -999.9,
+                    left: -999.9,
+                    right: 999.9,
+                },
+                ledges: [Point::new(-999.9, 0.0), Point::new(999.9, 0.0)],
+            })
+        }
+    }
 }
 
 impl Stage {

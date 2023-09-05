@@ -5,13 +5,32 @@
 use std::fmt::{Debug, Display};
 use std::ops::Deref;
 
-use crate::{
-    enums::{
+use num_traits::{PrimInt, Zero};
+
+use crate::enums::{
         buttons::{ControllerInput, EngineInput},
         general::Flags,
-    },
-    utils::BitFlags,
-};
+    };
+
+pub trait BitFlags: Into<Self::Other> {
+    type Other: PrimInt;
+
+    fn contains(self, other: Self::Other) -> bool {
+        Into::<Self::Other>::into(self) & other == other
+    }
+
+    fn intersects(self, other: Self::Other) -> bool {
+        Into::<Self::Other>::into(self) & other != Self::Other::zero()
+    }
+
+    fn count_ones(self) -> u32 {
+        Into::<Self::Other>::into(self).count_ones()
+    }
+
+    fn count_zeroes(self) -> u32 {
+        Into::<Self::Other>::into(self).count_zeros()
+    }
+}
 
 // ----------------------------------------- EngineInput ---------------------------------------- //
 

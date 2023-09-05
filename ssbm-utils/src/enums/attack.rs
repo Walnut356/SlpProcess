@@ -1,5 +1,6 @@
 #![allow(non_camel_case_types)]
 #![allow(clippy::upper_case_acronyms)]
+#![allow(non_upper_case_globals)]
 
 use num_enum::{FromPrimitive, IntoPrimitive};
 use strum_macros::{Display, EnumString, IntoStaticStr};

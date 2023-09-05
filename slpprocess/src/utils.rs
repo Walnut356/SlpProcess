@@ -1,10 +1,4 @@
-use std::convert::Into;
-use std::ops::{BitAnd, BitOr, BitXor};
-
-use num_traits::{ops::bytes::NumBytes, Num, NumOps, PrimInt, Zero};
 use thiserror::Error;
-
-use crate::utils;
 
 #[derive(Debug, Error)]
 pub enum ParseError {
@@ -16,37 +10,10 @@ pub enum ParseError {
     Value(String, String),
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Default)]
-pub struct Point {
-    pub x: f32,
-    pub y: f32,
-}
 
-impl Point {
-    pub const fn new(x: f32, y: f32) -> Self {
-        Self { x, y }
-    }
-}
 
-pub trait BitFlags: Into<Self::Other> {
-    type Other: PrimInt;
 
-    fn contains(self, other: Self::Other) -> bool {
-        Into::<Self::Other>::into(self) & other == other
-    }
 
-    fn intersects(self, other: Self::Other) -> bool {
-        Into::<Self::Other>::into(self) & other != Self::Other::zero()
-    }
-
-    fn count_ones(self) -> u32 {
-        Into::<Self::Other>::into(self).count_ones()
-    }
-
-    fn count_zeroes(self) -> u32 {
-        Into::<Self::Other>::into(self).count_zeros()
-    }
-}
 
 // use std::{ptr, cmp};
 
