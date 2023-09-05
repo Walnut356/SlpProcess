@@ -5,17 +5,14 @@ use std::time::Duration;
 use anyhow::{anyhow, ensure, Result};
 use itertools::Itertools;
 
-use crate::enums::stage::Stage;
-use crate::events::item_frames::ItemFrames;
-use crate::stats::defense::find_defense;
-use crate::stats::inputs::find_inputs;
-use crate::stats::items::find_items;
-use crate::stats::lcancel::find_lcancels;
-use crate::Port;
+use ssbm_utils::enums::{stage::Stage, Port};
+
 use crate::{
-    events::{
-        game_end::GameEnd,
-        game_start::{GameStart, Version},
+
+    events::{item_frames::ItemFrames, game_end::GameEnd,
+        game_start::{GameStart, Version},},
+    stats::{
+        defense::find_defense, inputs::find_inputs, items::find_items, lcancel::find_lcancels,
     },
     player::Player,
 };
@@ -114,13 +111,13 @@ impl Game {
                 .then(|| find_lcancels(&player.frames, Stage::from_id(self.metadata.stage)));
 
             // TODO make newer features optional where possible
-            player.stats.items = version.at_least(3, 6, 0).then(|| find_items(
-                    &player.frames,
-                    player.port,
-                    items.as_ref().unwrap(),
-                ));
+            player.stats.items = version
+                .at_least(3, 6, 0)
+                .then(|| find_items(&player.frames, player.port, items.as_ref().unwrap()));
 
-            player.stats.defense = version.at_least(3, 5, 0).then(|| find_defense(&player.frames, &opponent.frames));
+            player.stats.defense = version
+                .at_least(3, 5, 0)
+                .then(|| find_defense(&player.frames, &opponent.frames));
         }
     }
 }

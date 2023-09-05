@@ -1,17 +1,12 @@
 #![allow(clippy::type_complexity)]
 
+use ssbm_utils::checks::{is_fastfalling, is_in_hitlag, just_input_lcancel};
+use ssbm_utils::enums::{stage::Stage, ActionState, Attack, LCancel};
 use std::ops::Deref;
 
-use crate::{
-    columns::*,
-    enums::{attack::Attack, general::LCancel, stage::Stage, state::ActionState},
-    player::Frames,
-    stats::helpers::is_fastfalling,
-};
+use crate::{columns::*, player::Frames};
 use itertools::izip;
 use polars::prelude::*;
-
-use super::helpers::{is_in_hitlag, just_input_lcancel};
 
 pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
     let mut frame_index_col: Vec<i32> = Vec::new();
@@ -35,22 +30,15 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
     let flags: &[u64] = frames.post.flags.as_deref().unwrap();
     let pre_buttons: &[u32] = frames.pre.engine_buttons.deref();
 
-    for (i, (lcancel, state, stocks_remaining, last_ground_id, percent, bitflags)) in izip!(
-        lcancels.iter(),
-        states.iter(),
-        stocks.iter(),
-        last_ground_ids.iter(),
-        percents.iter(),
-        flags.iter(),
-    )
-    .enumerate()
-    {
-        if just_input_lcancel(pre_buttons, i) {
+    for i in 1..frames.len() {
+        let lcancel = lcancels[i];
+
+        if just_input_lcancel(pre_buttons[i], pre_buttons[i - 1]) {
             l_input_frame = Some(i as i32);
-            during_hitlag = is_in_hitlag(*bitflags);
+            during_hitlag = is_in_hitlag(flags[i]);
         }
 
-        if *lcancel == LCancel::NOT_APPLICABLE as u8 {
+        if lcancel == LCancel::NOT_APPLICABLE as u8 {
             continue;
         }
 
@@ -65,15 +53,17 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
 
         // if there's no l cancel input that was too early, and the input failed, check the next 5 frames to see if
         // there was a late l cancel
-        if *lcancel == LCancel::FAILURE as u8 && l_input_frame.is_some() {
+        if lcancel == LCancel::FAILURE as u8 && l_input_frame.is_some() {
             for j in 0..6 {
-                if just_input_lcancel(pre_buttons, i + j) {
+                let temp_index = i + j;
+                if temp_index > pre_buttons.len() { break; }
+                if just_input_lcancel(pre_buttons[i], pre_buttons[i + j]) {
                     l_input_frame = Some(j as i32)
                 }
             }
         }
 
-        let attack = match ActionState::from_repr(*state) {
+        let attack = match ActionState::from_repr(states[i]) {
             Some(ActionState::LANDING_AIR_N) | Some(ActionState::ATTACK_AIR_N) => {
                 Some(Attack::NAIR)
             }
@@ -99,14 +89,14 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
         let temp: &'static str = attack.unwrap().into();
 
         frame_index_col.push(i as i32 - 123);
-        stocks_col.push(*stocks_remaining);
+        stocks_col.push(stocks[i]);
         attack_col.push(temp);
-        lcancelled_col.push(LCancel::from_repr(*lcancel) == Some(LCancel::SUCCESS));
+        lcancelled_col.push(LCancel::from_repr(lcancel) == Some(LCancel::SUCCESS));
         l_input_col.push(l_input_frame);
-        position_col.push(stage.ground_from_id(*last_ground_id).into());
-        fastfall_col.push(is_fastfalling(*bitflags));
+        position_col.push(stage.ground_from_id(last_ground_ids[i]).into());
+        fastfall_col.push(is_fastfalling(flags[i]));
         hitlag_col.push(during_hitlag);
-        percent_col.push(*percent);
+        percent_col.push(percents[i]);
     }
 
     df!(LCancels::FrameIndex.into() => frame_index_col,

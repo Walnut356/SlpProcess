@@ -1,9 +1,5 @@
-use crate::enums::bitflag_impl::BitFlags;
-use crate::enums::general::*;
-use crate::enums::stage::Stage;
-use crate::enums::state::ActionRange as AR;
-use crate::enums::{buttons::*, general::*, state::*};
-
+use crate::enums::*;
+use crate::enums::ActionRange as AR;
 
 /// Returns true if the current state is different from the previous state
 ///

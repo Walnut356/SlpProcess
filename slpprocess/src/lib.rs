@@ -9,7 +9,6 @@ pub mod events {
 }
 pub mod stats {
     pub mod defense;
-    pub mod helpers;
     pub mod inputs;
     pub mod items;
     pub mod lcancel;
@@ -22,39 +21,15 @@ pub(crate) mod ubjson;
 pub mod utils;
 
 pub use crate::game::Game;
+pub use ssbm_utils::enums::Port;
+
+
 use rayon::prelude::*;
 use std::{
     fs,
     path::{Path, PathBuf},
 };
 
-use num_enum::{IntoPrimitive, TryFromPrimitive};
-
-#[derive(
-    Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, TryFromPrimitive, IntoPrimitive, Default,
-)]
-#[repr(u8)]
-pub enum Port {
-    #[default]
-    P1,
-    P2,
-    P3,
-    P4,
-}
-
-impl TryFrom<i8> for Port {
-    fn try_from(val: i8) -> Result<Self, Self::Error> {
-        match val {
-            0 => Ok(Port::P1),
-            1 => Ok(Port::P2),
-            2 => Ok(Port::P3),
-            3 => Ok(Port::P4),
-            _ => Err("Port must be a number 0-3 inclusive"),
-        }
-    }
-
-    type Error = &'static str;
-}
 
 /// Accepts a string file path to a single replay, or a directory containing replays. Returns a vector containing the
 /// resultant game object(s).
@@ -96,7 +71,8 @@ pub fn parse(path: &str) -> Vec<Game> {
 
 #[cfg(test)]
 mod test {
-    use crate::{parse, Port};
+    use crate::parse;
+    use ssbm_utils::enums::Port;
 
     #[test]
     fn test_ics() {

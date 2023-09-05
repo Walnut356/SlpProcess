@@ -5,13 +5,27 @@ pub mod calc {
 }
 pub mod enums {
     pub mod attack;
-    pub mod bitflag_impl;
+    pub use attack::Attack;
+
+    mod bitflag_impl;
+    pub use bitflag_impl::BitFlags;
     pub mod buttons;
+    pub use buttons::{EngineInput, ControllerInput, StickRegion};
+
     pub mod character;
-    pub mod general;
-    pub mod item;
+    pub use character::Character;
+
+    mod general;
+    pub use general::*;
+
+    mod item;
+    pub use item::*;
+
     pub mod stage;
-    pub mod state;
+    pub use stage::StageID;
+
+    mod state;
+    pub use state::*;
 }
 pub mod checks;
 pub mod constants {

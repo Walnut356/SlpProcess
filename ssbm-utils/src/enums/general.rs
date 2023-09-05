@@ -3,6 +3,30 @@
 
 use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, FromRepr, Default)]
+#[repr(u8)]
+pub enum Port {
+    #[default]
+    P1,
+    P2,
+    P3,
+    P4,
+}
+
+impl TryFrom<i8> for Port {
+    fn try_from(val: i8) -> Result<Self, Self::Error> {
+        match val {
+            0 => Ok(Port::P1),
+            1 => Ok(Port::P2),
+            2 => Ok(Port::P3),
+            3 => Ok(Port::P4),
+            _ => Err("Port must be a number 0-3 inclusive"),
+        }
+    }
+
+    type Error = &'static str;
+}
+
 /// The current direction the character is facing, can be LEFT, RIGHT, or DOWN*
 ///
 /// *Down is technically only used for warpstar item animation, but it's useful to give it a

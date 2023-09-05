@@ -13,15 +13,12 @@ use std::path::Path;
 use std::sync::RwLock;
 use std::time::Duration;
 
-use crate::enums::character::Character;
-use crate::events::game_end::parse_gameend;
-use crate::events::item_frames::parse_itemframes;
-use crate::player::Frames;
-use crate::{
-    events::{game_start::GameStart, post_frame::parse_postframes, pre_frame::parse_preframes},
-    utils::ParseError,
-};
-use crate::{ubjson, Game};
+use crate::{events::{
+    game_end::parse_gameend, game_start::GameStart, item_frames::parse_itemframes,
+    post_frame::parse_postframes, pre_frame::parse_preframes,
+}, player::Frames, utils::ParseError, ubjson, Game};
+
+use ssbm_utils::enums::character::Character;
 
 trait AsFrames {
     fn as_frames(&self) -> u64;
@@ -227,10 +224,10 @@ impl Game {
         );
 
         for player in players.iter_mut() {
-            let temp_pre = pre_frames.remove(&player.port.into()).unwrap();
+            let temp_pre = pre_frames.remove(&(player.port as u8)).unwrap();
             player.frames.pre = temp_pre.0;
 
-            let temp_post = post_frames.remove(&player.port.into()).unwrap();
+            let temp_post = post_frames.remove(&(player.port as u8)).unwrap();
             player.frames.post = temp_post.0;
             if temp_pre.1.is_some() {
                 player.nana_frames = Some(Frames {

@@ -1,10 +1,7 @@
 use polars::prelude::DataFrame;
+use ssbm_utils::enums::{Character, Port};
 
-use crate::{
-    enums::character::Character,
-    events::{game_start::ControllerFix, post_frame::PostFrames, pre_frame::PreFrames},
-    Port,
-};
+use crate::events::{game_start::ControllerFix, post_frame::PostFrames, pre_frame::PreFrames};
 
 #[derive(Debug, Default)]
 pub struct Player {

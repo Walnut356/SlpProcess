@@ -230,8 +230,8 @@ pub fn unpack_frames(
     let len = frames_iter.len();
 
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
-    p_frames.insert(ports[0].into(), (PreFrames::new(len, version), None));
-    p_frames.insert(ports[1].into(), (PreFrames::new(len, version), None));
+    p_frames.insert(ports[0] as u8, (PreFrames::new(len, version), None));
+    p_frames.insert(ports[1] as u8, (PreFrames::new(len, version), None));
 
     for (i, frames_raw) in frames_iter {
         for frame in frames_raw {
@@ -287,11 +287,11 @@ pub fn unpack_frames_ics(
 
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
     p_frames.insert(
-        ports[0].into(),
+        ports[0] as u8,
         (PreFrames::new(len, version), ics[0].then(|| PreFrames::ics(len, version))),
     );
     p_frames.insert(
-        ports[1].into(),
+        ports[1] as u8,
         (PreFrames::new(len, version), ics[1].then(|| PreFrames::ics(len, version))),
     );
 

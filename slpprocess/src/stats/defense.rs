@@ -1,14 +1,15 @@
 use anyhow::Result;
 use polars::prelude::*;
 
-use crate::{
-    enums::buttons::StickRegion,
-    player::Frames,
-    stats::helpers::{
-        get_damage_taken, is_in_hitlag, is_magnifying_damage, is_shielding_flag, just_took_damage,
+use ssbm_utils::{
+    checks::{
+        get_damage_taken, is_in_defender_hitlag, is_in_hitlag, is_magnifying_damage,
+        is_shielding_flag, just_took_damage,
     },
-    utils::Point,
+    enums::StickRegion,
 };
+
+use crate::player::Frames;
 
 #[derive(Debug, Default)]
 struct DefenseStats {
@@ -94,10 +95,10 @@ pub fn find_defense(plyr_frames: &Frames, opnt_frames: &Frames) -> DataFrame {
 
         let shielding = is_shielding_flag(flags[i]);
 
-        let damage_taken = get_damage_taken(&post.percent, i);
+        let damage_taken = get_damage_taken(post.percent[i], post.percent[i - 1]);
 
         // ------------------------------------- event detection ------------------------------------ //
-        if !was_in_hitlag && just_took_damage(&post.percent, i)
+        if !was_in_hitlag && just_took_damage(post.percent[i], post.percent[i - 1])
         // && !is_magnifying_damage(damage_taken, flags, i)
         {}
 

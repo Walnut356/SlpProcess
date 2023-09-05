@@ -1,7 +1,10 @@
 use polars::prelude::*;
+use ssbm_utils::enums::{
+    buttons::{ANYTRIGGER_MASK, CSTICK_MASK, DIGITAL_TRIGGER_MASK, JOYSTICK_MASK},
+    ControllerInput,
+};
 
-use crate::{columns::Inputs, enums::buttons::*, player::Frames};
-
+use crate::{columns::Inputs, player::Frames};
 
 // #[derive(Debug, Default)]
 // struct ButtonCounts {

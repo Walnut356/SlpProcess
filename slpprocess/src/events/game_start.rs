@@ -123,7 +123,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as u8).unwrap(),
+                        port: Port::try_from(i as i8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -175,7 +175,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as u8).unwrap(),
+                        port: Port::try_from(i as i8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -220,7 +220,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as u8).unwrap(),
+                        port: Port::try_from(i as i8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -265,7 +265,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as u8).unwrap(),
+                        port: Port::try_from(i as i8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -310,7 +310,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as u8).unwrap(),
+                        port: Port::try_from(i as i8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -356,7 +356,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as u8).unwrap(),
+                        port: Port::try_from(i as i8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -419,7 +419,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as u8).unwrap(),
+                        port: Port::try_from(i as i8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -474,7 +474,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as u8).unwrap(),
+                        port: Port::try_from(i as i8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -519,7 +519,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as u8).unwrap(),
+                        port: Port::try_from(i as i8).unwrap(),
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -580,7 +580,7 @@ impl GameStart {
             if temp_players[i].1 == PlayerType::Human {
                 players[count] = Player {
                     character: temp_players[i].0,
-                    port: Port::try_from(i as u8).unwrap(),
+                    port: Port::try_from(i as i8).unwrap(),
                     connect_code: connect_codes[i].clone(),
                     display_name: display_names[i].clone(),
                     is_winner: None,
