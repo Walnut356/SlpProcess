@@ -113,14 +113,14 @@ impl Game {
                 .at_least(2, 0, 0)
                 .then(|| find_lcancels(&player.frames, Stage::from_id(self.metadata.stage)));
 
-            // TODO make newer features optiona;
+            // TODO make newer features optional where possible
             player.stats.items = version.at_least(3, 6, 0).then(|| find_items(
                     &player.frames,
                     player.port,
                     items.as_ref().unwrap(),
                 ));
 
-            player.stats.defense = version.at_least(2, 0, 0).then(|| find_defense(&player.frames, &opponent.frames));
+            player.stats.defense = version.at_least(3, 5, 0).then(|| find_defense(&player.frames, &opponent.frames));
         }
     }
 }

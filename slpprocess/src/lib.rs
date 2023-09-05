@@ -1,15 +1,5 @@
 #![allow(non_upper_case_globals)]
 
-pub mod enums {
-    pub mod attack;
-    mod bitflag_impl;
-    pub mod buttons;
-    pub mod character;
-    pub mod general;
-    pub mod item;
-    pub mod stage;
-    pub mod state;
-}
 pub mod events {
     pub mod game_end;
     pub mod game_start;

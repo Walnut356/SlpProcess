@@ -1,5 +1,5 @@
 [workspace]
-members = ["./slpprocess"]
+members = ["./slpprocess", "./ssbm-utils"]
 
 [profile.dev.package."*"]
 opt-level = 3

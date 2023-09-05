@@ -1,14 +1,16 @@
 use std::time::Instant;
 use std::hint::black_box;
+use std::ops::Add;
 
 use slpprocess::{parse, enums::buttons::{StickRegion, EngineInput}};
 
 pub fn main() {
+    let input = EngineInput::DPAD_LEFT;
+    let val = EngineInput::Raw(0b1111);
 
-    let val: u64 = 0b1111;
-    let thing: EngineInput = unsafe{ std::mem::transmute(val) };
+    println!("{} {}", input, val);
 
-    println!("{}", thing);
+
 
     // let now = Instant::now();
     // // let replay = r"G:/temp";
