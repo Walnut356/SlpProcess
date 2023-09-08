@@ -1,7 +1,7 @@
 #![allow(non_camel_case_types)]
 
-use strum_macros::{Display, EnumString, IntoStaticStr, FromRepr};
-use anyhow::{Error, anyhow, Result};
+use anyhow::{anyhow, Error, Result};
+use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 
 use crate::utils::Point;
 
@@ -91,7 +91,7 @@ impl TryFrom<u16> for Stage {
                     right: 999.9,
                 },
                 ledges: [Point::new(-999.9, 0.0), Point::new(999.9, 0.0)],
-            })
+            }),
         }
     }
 }
@@ -121,7 +121,7 @@ impl Stage {
     pub const STADIUM: Stage = Stage {
         id: StageID::POKEMON_STADIUM,
         blastzones: BlastZones::STADIUM,
-        ledges: [Point::new(-87.75, 0.0), Point::new(87.75, 0.0)]
+        ledges: [Point::new(-87.75, 0.0), Point::new(87.75, 0.0)],
     };
     pub const FOUNTAIN: Stage = Stage {
         id: StageID::FOUNTAIN_OF_DREAMS,
@@ -150,13 +150,13 @@ impl Stage {
                     right: 999.9,
                 },
                 ledges: [Point::new(-999.9, 0.0), Point::new(999.9, 0.0)],
-            }
+            },
         }
     }
 
     pub fn ground_from_id(&self, id: u16) -> GroundID {
-        use StageID::*;
         use GroundID::*;
+        use StageID::*;
         match self.id {
             YOSHIS_STORY => match id {
                 0 => RANDALL,
@@ -181,7 +181,7 @@ impl Stage {
                 0 => LEFT_EDGE,
                 1 => MAIN_STAGE,
                 2 => RIGHT_EDGE,
-                _ => UNKNOWN
+                _ => UNKNOWN,
             },
             DREAM_LAND_N64 => match id {
                 0 => LEFT_PLATFORM,

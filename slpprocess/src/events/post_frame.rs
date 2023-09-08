@@ -505,7 +505,7 @@ pub fn unpack_frames_ics(
                     flags_1 & (flags_2 << 8) & (flags_3 << 16) & (flags_4 << 24) & (flags_5 << 32);
                 *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
                 *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8() != 0;
+                *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8() == 0;
                 *working.last_ground_id.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u16();
                 *working.jumps_remaining.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
                 *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();

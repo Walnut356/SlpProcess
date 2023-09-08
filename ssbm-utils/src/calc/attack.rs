@@ -7,6 +7,10 @@ use crate::{
     enums::{character::*, stage::*},
 };
 
+/// Calculates the raw knockback value given the circumstances of the hit.
+///
+/// *note: assumes Victim Defense Ratio, Attacker Offense Ratio, and Global Damage Ratio are 1, as
+/// they are in all tournament matches.
 pub fn knockback(
     damage_staled: f32,
     damage_unstaled: f32,
@@ -285,8 +289,17 @@ pub fn is_past_blastzone(stage: u16, position_x: f32, position_y: f32) -> bool {
         && position_y > blast_zones.bottom)
 }
 
+/// Accepts a point, returns an angle in radians
 pub fn point_to_angle(x: f32, y: f32) -> f32 {
     (f32::atan2(y, x) + TAU) % TAU
+}
+
+/// Accepts the initial knockback velocity, returns the flat knockback value
+pub fn kb_from_initial(x: f32, y: f32) -> f32 {
+    let angle = point_to_angle(x, y);
+
+
+    x / angle.cos() / 0.03
 }
 
 enum Direction {
@@ -295,6 +308,7 @@ enum Direction {
     Up,
     Down,
 }
+
 
 pub fn knockback_travel(
     knockback: f32,

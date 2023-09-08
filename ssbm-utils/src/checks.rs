@@ -142,7 +142,11 @@ pub fn is_cmd_grabbed(state: u16) -> bool {
 /// Minimum Slippi Version: 0.1.0
 pub fn is_teching(state: u16) -> bool {
     (AR::TECH_START as u16..=AR::TECH_END as u16).contains(&state)
-        || (AR::DOWN_START as u16..=AR::DOWN_END as u16).contains(&state)
-        || ActionState::FLY_REFLECT_CEIL == state
-        || ActionState::FLY_REFLECT_WALL == state
+        // || (AR::DOWN_START as u16..=AR::DOWN_END as u16).contains(&state)
+        // || ActionState::FLY_REFLECT_CEIL == state
+        // || ActionState::FLY_REFLECT_WALL == state
+}
+
+pub fn is_thrown(state: u16) -> bool {
+    (AR::THROWN_START as u16..=AR::THROWN_END as u16).contains(&state)
 }
