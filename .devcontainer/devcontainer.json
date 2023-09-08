@@ -3,23 +3,16 @@
 {
 	"name": "Rust",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/rust:0-1-bullseye",
+	"image": "mcr.microsoft.com/devcontainers/rust:1-1-bullseye",
 	"features": {
-		"ghcr.io/devcontainers/features/git:1": {
-			"ppa": true,
-			"version": "os-provided"
-		},
-		"ghcr.io/devcontainers/features/github-cli:1": {
-			"installDirectlyFromGitHubRelease": true,
-			"version": "latest"
-		},
 		"ghcr.io/devcontainers/features/python:1": {
 			"installTools": true,
-			"version": "latest"
+			"version": "os-provided"
 		},
 		"ghcr.io/devcontainers-contrib/features/black:2": {
 			"version": "latest"
-		}
+		},
+		"ghcr.io/warrenbuckley/codespace-features/sqlite:1": {}
 	}
 
 	// Use 'mounts' to make the cargo cache persistent in a Docker Volume.
