@@ -264,15 +264,28 @@ impl From<PostFrames> for DataFrame {
             Series::new(&LastAttackLanded.to_string(), val.last_attack_landed),
             Series::new(&ComboCount.to_string(), val.combo_count),
             Series::new(&LastHitBy.to_string(), val.last_hit_by),
-            Series::new(&Stocks.to_string(), val.stocks)];
+            Series::new(&Stocks.to_string(), val.stocks),
+        ];
 
         if val.version.at_least(2, 0, 0) {
-            vec_series.push(Series::new(&StateFrame.to_string(), val.state_frame.unwrap()));
+            vec_series.push(Series::new(
+                &StateFrame.to_string(),
+                val.state_frame.unwrap(),
+            ));
             vec_series.push(Series::new(&Flags.to_string(), val.flags.unwrap()));
             vec_series.push(Series::new(&MiscAS.to_string(), val.misc_as.unwrap()));
-            vec_series.push(Series::new(&IsGrounded.to_string(), val.is_grounded.unwrap()));
-            vec_series.push(Series::new(&LastGroundID.to_string(), val.last_ground_id.unwrap()));
-            vec_series.push(Series::new(&JumpsRemaining.to_string(), val.jumps_remaining.unwrap()));
+            vec_series.push(Series::new(
+                &IsGrounded.to_string(),
+                val.is_grounded.unwrap(),
+            ));
+            vec_series.push(Series::new(
+                &LastGroundID.to_string(),
+                val.last_ground_id.unwrap(),
+            ));
+            vec_series.push(Series::new(
+                &JumpsRemaining.to_string(),
+                val.jumps_remaining.unwrap(),
+            ));
             vec_series.push(Series::new(&LCancel.to_string(), val.l_cancel.unwrap()));
         } else {
             vec_series.push(Series::new_null(&StateFrame.to_string(), len));
@@ -285,7 +298,10 @@ impl From<PostFrames> for DataFrame {
         }
 
         if val.version.at_least(2, 1, 0) {
-            vec_series.push(Series::new(&HurtboxState.to_string(), val.hurtbox_state.unwrap()));
+            vec_series.push(Series::new(
+                &HurtboxState.to_string(),
+                val.hurtbox_state.unwrap(),
+            ));
         } else {
             vec_series.push(Series::new_null(&HurtboxState.to_string(), len));
         }
@@ -293,9 +309,18 @@ impl From<PostFrames> for DataFrame {
         if val.version.at_least(3, 5, 0) {
             vec_series.push(Series::new(&AirVelX.to_string(), val.air_vel_x.unwrap()));
             vec_series.push(Series::new(&VelY.to_string(), val.vel_y.unwrap()));
-            vec_series.push(Series::new(&KnockbackX.to_string(), val.knockback_x.unwrap()));
-            vec_series.push(Series::new(&KnockbackY.to_string(), val.knockback_y.unwrap()));
-            vec_series.push(Series::new(&GroundVelX.to_string(), val.ground_vel_x.unwrap()));
+            vec_series.push(Series::new(
+                &KnockbackX.to_string(),
+                val.knockback_x.unwrap(),
+            ));
+            vec_series.push(Series::new(
+                &KnockbackY.to_string(),
+                val.knockback_y.unwrap(),
+            ));
+            vec_series.push(Series::new(
+                &GroundVelX.to_string(),
+                val.ground_vel_x.unwrap(),
+            ));
         } else {
             vec_series.push(Series::new_null(&AirVelX.to_string(), len));
             vec_series.push(Series::new_null(&VelY.to_string(), len));
@@ -305,13 +330,19 @@ impl From<PostFrames> for DataFrame {
         }
 
         if val.version.at_least(3, 8, 0) {
-            vec_series.push(Series::new(&HitlagRemaining.to_string(), val.hitlag_remaining.unwrap()));
+            vec_series.push(Series::new(
+                &HitlagRemaining.to_string(),
+                val.hitlag_remaining.unwrap(),
+            ));
         } else {
             vec_series.push(Series::new_null(&HitlagRemaining.to_string(), len));
         }
 
         if val.version.at_least(3, 11, 0) {
-            vec_series.push(Series::new(&AnimationIndex.to_string(), val.animation_index.unwrap()));
+            vec_series.push(Series::new(
+                &AnimationIndex.to_string(),
+                val.animation_index.unwrap(),
+            ));
         } else {
             vec_series.push(Series::new_null(&AnimationIndex.to_string(), len));
         }
@@ -388,15 +419,24 @@ pub fn unpack_frames(
                     let flags_4 = frame.get_u8() as u64;
                     let flags_5 = frame.get_u8() as u64;
                     let flags: u64 = flags_1
-                        & (flags_2 << 8)
-                        & (flags_3 << 16)
-                        & (flags_4 << 24)
-                        & (flags_5 << 32);
+                        | (flags_2 << 8)
+                        | (flags_3 << 16)
+                        | (flags_4 << 24)
+                        | (flags_5 << 32);
                     *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
                     *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                    *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8() != 0;
-                    *working.last_ground_id.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u16();
-                    *working.jumps_remaining.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
+                    *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) =
+                        frame.get_u8() != 0;
+                    *working
+                        .last_ground_id
+                        .as_mut()
+                        .unwrap()
+                        .get_unchecked_mut(i) = frame.get_u16();
+                    *working
+                        .jumps_remaining
+                        .as_mut()
+                        .unwrap()
+                        .get_unchecked_mut(i) = frame.get_u8();
                     *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
                 }
 
@@ -422,14 +462,22 @@ pub fn unpack_frames(
                 if !frame.has_remaining() {
                     continue;
                 } else {
-                    *working.hitlag_remaining.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
+                    *working
+                        .hitlag_remaining
+                        .as_mut()
+                        .unwrap()
+                        .get_unchecked_mut(i) = frame.get_f32();
                 }
 
                 // version < 3.11.0
                 if !frame.has_remaining() {
                     continue;
                 } else {
-                    *working.animation_index.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u32();
+                    *working
+                        .animation_index
+                        .as_mut()
+                        .unwrap()
+                        .get_unchecked_mut(i) = frame.get_u32();
                 }
             }
         }
@@ -449,11 +497,17 @@ pub fn unpack_frames_ics(
     let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
     p_frames.insert(
         ports[0] as u8,
-        (PostFrames::new(len, version), ics[0].then(|| PostFrames::ics(len, version))),
+        (
+            PostFrames::new(len, version),
+            ics[0].then(|| PostFrames::ics(len, version)),
+        ),
     );
     p_frames.insert(
         ports[1] as u8,
-        (PostFrames::new(len, version), ics[1].then(|| PostFrames::ics(len, version))),
+        (
+            PostFrames::new(len, version),
+            ics[1].then(|| PostFrames::ics(len, version)),
+        ),
     );
 
     for frame in frames.iter_mut() {
@@ -506,8 +560,16 @@ pub fn unpack_frames_ics(
                 *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
                 *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
                 *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8() == 0;
-                *working.last_ground_id.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u16();
-                *working.jumps_remaining.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
+                *working
+                    .last_ground_id
+                    .as_mut()
+                    .unwrap()
+                    .get_unchecked_mut(i) = frame.get_u16();
+                *working
+                    .jumps_remaining
+                    .as_mut()
+                    .unwrap()
+                    .get_unchecked_mut(i) = frame.get_u8();
                 *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
             }
 
@@ -533,14 +595,22 @@ pub fn unpack_frames_ics(
             if !frame.has_remaining() {
                 continue;
             } else {
-                *working.hitlag_remaining.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
+                *working
+                    .hitlag_remaining
+                    .as_mut()
+                    .unwrap()
+                    .get_unchecked_mut(i) = frame.get_f32();
             }
 
             // version < 3.11.0
             if !frame.has_remaining() {
                 continue;
             } else {
-                *working.animation_index.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u32();
+                *working
+                    .animation_index
+                    .as_mut()
+                    .unwrap()
+                    .get_unchecked_mut(i) = frame.get_u32();
             }
         }
     }
