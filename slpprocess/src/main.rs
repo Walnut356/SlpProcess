@@ -1,7 +1,9 @@
+use std::fs::File;
 use std::time::Instant;
 use std::hint::black_box;
 
 
+use polars::prelude::*;
 use slpprocess::parse;
 
 pub fn main() {
@@ -13,9 +15,16 @@ pub fn main() {
     let game = games.pop().unwrap();
 
     let player = game.player_by_code("NUT#356").unwrap();
-    println!("{:?}", player.stats.items);
+    let df = player.stats.defense.as_ref().unwrap();
+    println!("{:?}", df);
 
     let dur = now.elapsed();
 
     println!("{:?}", dur);
+
+    let mut file = File::create("output.csv").expect("could not create file");
+    CsvWriter::new(&mut file)
+    .has_header(true)
+    .with_delimiter(b',')
+    .finish(&mut df.clone()).unwrap();
 }

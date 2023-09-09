@@ -8,13 +8,15 @@ use itertools::Itertools;
 use ssbm_utils::enums::{stage::Stage, Port};
 
 use crate::{
-
-    events::{item_frames::ItemFrames, game_end::GameEnd,
-        game_start::{GameStart, Version},},
+    events::{
+        game_end::GameEnd,
+        game_start::{GameStart, Version},
+        item_frames::ItemFrames,
+    },
+    player::Player,
     stats::{
         defense::find_defense, inputs::find_inputs, items::find_items, lcancel::find_lcancels,
     },
-    player::Player,
 };
 
 pub struct Game {
@@ -115,9 +117,14 @@ impl Game {
                 .at_least(3, 6, 0)
                 .then(|| find_items(&player.frames, player.port, items.as_ref().unwrap()));
 
-            player.stats.defense = version
-                .at_least(3, 5, 0)
-                .then(|| find_defense(&player.frames, &opponent.frames));
+            player.stats.defense = version.at_least(3, 5, 0).then(|| {
+                find_defense(
+                    &player.frames,
+                    &opponent.frames,
+                    self.metadata.stage as u16,
+                    player.character,
+                )
+            });
         }
     }
 }

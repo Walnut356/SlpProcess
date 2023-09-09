@@ -39,50 +39,11 @@ pub fn shield_drain_rate(analog: f32) -> f32 {
     (analog_scalar + 0.1) * 0.14
 }
 
-/// Calculates staled damage based on a damage value and stale move queue.
-///
-/// Stale move queue is assumed to be in order from **least** recent to **most** recent. Each `true` represents an
-/// instance of the move in the queue at that position. **Move order in the stale queue is very important**
-pub fn staled_damage(damage: f32, stale_queue: &[bool]) -> f32 {
-    assert_eq!(stale_queue.len(), 9);
-
-    let mut result: f32 = 0.0;
-    let mut scalar: f32 = 0.09;
-
-    for &i in stale_queue {
-        if i {
-            result += scalar
-        }
-        scalar -= 0.01;
-    }
-
-    damage * (1.0 - result)
-}
-
-/// Calculates unstaled damage based on damage dealt and stale move queue.
-///
-/// Stale move queue is assumed to be in order from **least** recent to **most** recent. Each `true` represents an
-/// instance of the move in the queue at that position. **Move order in the stale queue is very important**
-pub fn unstaled_damage(damage: f32, stale_queue: &[bool]) -> f32 {
-    assert_eq!(stale_queue.len(), 9);
-    let mut result = 0.0;
-    let mut scalar: f32 = 0.09;
-
-    for &i in stale_queue {
-        if i {
-            result += scalar
-        }
-        scalar -= 0.01;
-    }
-
-    damage / (1.0 - result)
-}
-
 use approx::*;
 
 use crate::{
     constants::{TRIGGER_MIN, Z_ANALOG},
-    enums::character::Character,
+    enums::{character::Character, stage::Stage},
 };
 
 #[test]
@@ -153,22 +114,7 @@ fn test_sh_jump_arc() {
     );
 }
 
-#[test]
-fn test_stale_damage() {
-    let sd = staled_damage(
-        15.0,
-        &[true, true, false, false, false, true, false, false, false],
-    );
 
-    assert_relative_eq!(sd, 11.85);
-
-    let usd = unstaled_damage(
-        sd,
-        &[true, true, false, false, false, true, false, false, false],
-    );
-
-    assert_eq!(usd, 15.0);
-}
 
 #[test]
 fn test_drain_rate() {

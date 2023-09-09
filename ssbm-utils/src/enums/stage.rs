@@ -216,6 +216,13 @@ impl Stage {
             _ => UNKNOWN,
         }
     }
+
+    pub fn is_past_blastzone(&self, pos_x: f32, pos_y: f32) -> bool {
+        !(pos_x < self.blastzones.right
+        && pos_x > self.blastzones.left
+        && pos_y < self.blastzones.top
+        && pos_y > self.blastzones.bottom)
+    }
 }
 
 #[derive(Debug, Clone)]

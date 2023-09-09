@@ -1,4 +1,4 @@
-use ssbm_utils::{enums::character::*, calc::attack::*};
+use ssbm_utils::{enums::character::*, calc::{attack::*, knockback::{knockback, resolve_sakurai_angle, kb_from_initial, initial_x_velocity, initial_y_velocity}}};
 
 fn main() {
     let fox = Character::Fox.get_stats();

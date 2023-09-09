@@ -2,6 +2,7 @@ pub mod utils;
 pub mod calc {
     pub mod attack;
     pub mod general;
+    pub mod knockback;
 }
 pub mod enums {
     pub mod attack;

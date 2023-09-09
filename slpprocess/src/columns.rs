@@ -142,3 +142,33 @@ pub enum Inputs {
     TriggerPref,
     JumpPref,
 }
+
+#[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
+pub enum Defense {
+    FrameIndex,
+    StocksRemaining,
+    Percent,
+    DamageTaken,
+    LastHitBy,
+    StateBeforeHit,
+    Grounded,
+    CrouchCancel,
+    HitlagFrames,
+    StickDuringHitlag,
+    SDIInputs,
+    ASDI,
+    KBX,
+    KBY,
+    DIStickX,
+    DIStickY,
+    DIKBX,
+    DIKBY,
+    DIEfficacy,
+    HitlagStartX,
+    HitlagStartY,
+    HitlagEndX,
+    HitlagEndY,
+    KillsWithDI,
+    KillsNoDI,
+    KillsAllDI,
+}
