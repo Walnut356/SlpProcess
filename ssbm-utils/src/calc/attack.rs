@@ -7,7 +7,7 @@ use approx::assert_relative_eq;
 use crate::{
     calc::knockback::knockback,
     constants::{KB_DECAY, TUMBLE_THRESHOLD, Z_ANALOG},
-    enums::{character::*, stage::*},
+    enums::{character::*, stage::*}, types::Radians,
 };
 
 pub fn shield_stun(damage: f32, analog: f32, is_yoshi: bool) -> u32 {
@@ -94,10 +94,7 @@ pub fn shield_pushback_attacker(damage: f32, analog: f32) -> f32 {
     (damage.floor() * a) + 0.02
 }
 
-/// Accepts a point, returns an angle in radians
-pub fn point_to_angle(x: f32, y: f32) -> f32 {
-    (f32::atan2(y, x) + TAU) % TAU
-}
+
 
 /// Calculates staled damage based on a damage value and stale move queue.
 ///

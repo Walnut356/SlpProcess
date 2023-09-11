@@ -5,14 +5,15 @@ use polars::{chunked_array::builder::get_list_builder, prelude::*};
 
 use ssbm_utils::{
     calc::knockback::{
-        apply_di, initial_x_velocity, initial_y_velocity, kb_from_initial, should_kill,
+        apply_di, get_di_efficacy, initial_x_velocity, initial_y_velocity, kb_from_initial,
+        should_kill,
     },
     checks::{
         get_damage_taken, is_in_defender_hitlag, is_in_hitlag, is_magnifying_damage,
         is_shielding_flag, is_thrown, just_took_damage,
     },
     enums::{Character, StickRegion},
-    utils::{Joystick, Velocity},
+    types::{Position, StickPos, Velocity, Degrees},
 };
 
 use crate::player::Frames;
@@ -31,17 +32,14 @@ struct DefenseStats {
     stick_during_hitlag: Vec<Vec<i8>>,
     sdi_inputs: Vec<Vec<i8>>,
     asdi: Vec<i8>,
-    kb_x: Vec<f32>,
-    kb_y: Vec<f32>,
-    di_stick_x: Vec<f32>,
-    di_stick_y: Vec<f32>,
-    di_kb_x: Vec<Option<f32>>,
-    di_kb_y: Vec<Option<f32>>,
+    kb: Vec<Velocity>,
+    kb_angle: Vec<Degrees>,
+    di_stick: Vec<StickPos>,
+    di_kb: Vec<Velocity>,
     di_efficacy: Vec<Option<f32>>,
-    hitlag_start_x: Vec<f32>,
-    hitlag_start_y: Vec<f32>,
-    hitlag_end_x: Vec<f32>,
-    hitlag_end_y: Vec<f32>,
+    di_kb_angle: Vec<Degrees>,
+    hitlag_start: Vec<Position>,
+    hitlag_end: Vec<Position>,
     kills_with_di: Vec<bool>,
     kills_no_di: Vec<bool>,
     kills_any_di: Vec<bool>,
@@ -62,17 +60,13 @@ impl DefenseStats {
             .push(stat.stick_during_hitlag.clone());
         self.sdi_inputs.push(stat.sdi_inputs.clone());
         self.asdi.push(stat.asdi);
-        self.kb_x.push(stat.kb_x);
-        self.kb_y.push(stat.kb_y);
-        self.di_stick_x.push(stat.di_stick_x);
-        self.di_stick_y.push(stat.di_stick_y);
-        self.di_kb_x.push(stat.di_kb_x);
-        self.di_kb_y.push(stat.di_kb_y);
+        self.kb.push(stat.kb);
+        self.kb_angle.push(stat.kb_angle);
+        self.di_stick.push(stat.di_stick);
+        self.di_kb.push(stat.di_kb);
         self.di_efficacy.push(stat.di_efficacy);
-        self.hitlag_start_x.push(stat.hitlag_start_x);
-        self.hitlag_start_y.push(stat.hitlag_start_y);
-        self.hitlag_end_x.push(stat.hitlag_end_x);
-        self.hitlag_end_y.push(stat.hitlag_end_y);
+        self.hitlag_start.push(stat.hitlag_start);
+        self.hitlag_end.push(stat.hitlag_end);
         self.kills_with_di.push(stat.kills_with_di);
         self.kills_no_di.push(stat.kills_no_di);
         self.kills_any_di.push(stat.kills_any_di);
@@ -80,39 +74,85 @@ impl DefenseStats {
 }
 
 impl From<DefenseStats> for DataFrame {
-    fn from(value: DefenseStats) -> Self {
-        use crate::columns::Defense as D;
+    fn from(val: DefenseStats) -> Self {
+        use crate::columns::Defense as col;
 
         let vec_series = vec![
-            Series::new(D::FrameIndex.into(), value.frame_index),
-            Series::new(D::StocksRemaining.into(), value.stocks_remaining),
-            Series::new(D::Percent.into(), value.percent),
-            Series::new(D::DamageTaken.into(), value.damage_taken),
-            Series::new(D::LastHitBy.into(), value.last_hit_by),
-            Series::new(D::StateBeforeHit.into(), value.state_before_hit),
-            Series::new(D::Grounded.into(), value.grounded),
-            Series::new(D::CrouchCancel.into(), value.crouch_cancel),
-            Series::new(D::HitlagFrames.into(), value.hitlag_frames),
+            Series::new(col::FrameIndex.into(), val.frame_index),
+            Series::new(col::StocksRemaining.into(), val.stocks_remaining),
+            Series::new(col::Percent.into(), val.percent),
+            Series::new(col::DamageTaken.into(), val.damage_taken),
+            Series::new(col::LastHitBy.into(), val.last_hit_by),
+            Series::new(col::StateBeforeHit.into(), val.state_before_hit),
+            Series::new(col::Grounded.into(), val.grounded),
+            Series::new(col::CrouchCancel.into(), val.crouch_cancel),
+            Series::new(col::HitlagFrames.into(), val.hitlag_frames),
             Series::new(
-                D::StickDuringHitlag.into(),
-                vec![0.0; value.stick_during_hitlag.len()],
+                col::StickDuringHitlag.into(),
+                val
+                    .stick_during_hitlag
+                    .into_iter()
+                    .map(|x| Series::new("", x))
+                    .collect::<Vec<_>>(),
             ),
-            Series::new(D::SDIInputs.into(), vec![0.0; value.sdi_inputs.len()]),
-            Series::new(D::ASDI.into(), value.asdi),
-            Series::new(D::KBX.into(), value.kb_x),
-            Series::new(D::KBY.into(), value.kb_y),
-            Series::new(D::DIStickX.into(), value.di_stick_x),
-            Series::new(D::DIStickY.into(), value.di_stick_y),
-            Series::new(D::DIKBX.into(), value.di_kb_x),
-            Series::new(D::DIKBY.into(), value.di_kb_y),
-            Series::new(D::DIEfficacy.into(), value.di_efficacy),
-            Series::new(D::HitlagStartX.into(), value.hitlag_start_x),
-            Series::new(D::HitlagStartY.into(), value.hitlag_start_y),
-            Series::new(D::HitlagEndX.into(), value.hitlag_end_x),
-            Series::new(D::HitlagEndY.into(), value.hitlag_end_y),
-            Series::new(D::KillsWithDI.into(), value.kills_with_di),
-            Series::new(D::KillsNoDI.into(), value.kills_no_di),
-            Series::new(D::KillsAllDI.into(), value.kills_any_di),
+            Series::new(
+                col::SDIInputs.into(),
+                val
+                    .sdi_inputs
+                    .into_iter()
+                    .map(|x| Series::new("", x))
+                    .collect::<Vec<_>>(),
+            ),
+            Series::new(col::ASDI.into(), val.asdi),
+            StructChunked::new(
+                col::Knockback.into(),
+                &[
+                    Series::new("x", val.kb.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.kb.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
+            StructChunked::new(
+                col::Knockback.into(),
+                &[
+                    Series::new("x", val.di_stick.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.di_stick.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
+            StructChunked::new(
+                col::Knockback.into(),
+                &[
+                    Series::new("x", val.di_kb.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.di_kb.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
+            Series::new(col::DIEfficacy.into(), val.di_efficacy),
+            StructChunked::new(
+                col::Knockback.into(),
+                &[
+                    Series::new("x", val.hitlag_start.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.hitlag_start.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
+            StructChunked::new(
+                col::HitlagEnd.into(),
+                &[
+                    Series::new("x", val.hitlag_end.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.hitlag_end.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
+            Series::new(col::KillsWithDI.into(), val.kills_with_di),
+            Series::new(col::KillsNoDI.into(), val.kills_no_di),
+            Series::new(col::KillsAllDI.into(), val.kills_any_di),
         ];
 
         DataFrame::new(vec_series).unwrap()
@@ -133,17 +173,14 @@ struct DefenseRow {
     stick_during_hitlag: Vec<i8>,
     sdi_inputs: Vec<i8>,
     asdi: i8,
-    kb_x: f32,
-    kb_y: f32,
-    di_stick_x: f32,
-    di_stick_y: f32,
-    di_kb_x: Option<f32>,
-    di_kb_y: Option<f32>,
+    kb: Velocity,
+    kb_angle: Degrees,
+    di_stick: StickPos,
+    di_kb: Velocity,
+    di_kb_angle: Degrees,
     di_efficacy: Option<f32>,
-    hitlag_start_x: f32,
-    hitlag_start_y: f32,
-    hitlag_end_x: f32,
-    hitlag_end_y: f32,
+    hitlag_start: Position,
+    hitlag_end: Position,
     kills_with_di: bool,
     kills_no_di: bool,
     kills_any_di: bool,
@@ -158,8 +195,7 @@ impl DefenseRow {
         last_hit_by: u8,
         state_before_hit: u16,
         grounded: bool,
-        start_x: f32,
-        start_y: f32,
+        start: Position,
     ) -> Self {
         Self {
             frame_index,
@@ -169,8 +205,7 @@ impl DefenseRow {
             last_hit_by,
             state_before_hit,
             grounded,
-            hitlag_start_x: start_x,
-            hitlag_start_y: start_y,
+            hitlag_start: start,
             ..Default::default()
         }
     }
@@ -218,13 +253,12 @@ pub fn find_defense(
                 attacks[i],
                 post.action_state[i - 1],
                 post.is_grounded.as_ref().unwrap()[i],
-                post.position_x[i],
-                post.position_y[i],
+                post.position[i],
             ));
 
+            // TODO if kb_calc
             let row = event.as_mut().unwrap();
-            row.kb_x = post.knockback_x.as_ref().unwrap()[i];
-            row.kb_y = post.knockback_y.as_ref().unwrap()[i];
+            row.kb = post.knockback.as_ref().unwrap()[i];
         }
 
         // ----------------------------------- mid-event data ----------------------------------- //
@@ -232,42 +266,45 @@ pub fn find_defense(
             let row = event.as_mut().unwrap();
             row.hitlag_frames += 1;
             row.stick_during_hitlag
-                .push(StickRegion::from_coordinates(pre.joystick_x[i], pre.joystick_y[i]) as i8);
+                .push(pre.joystick[i].as_stickregion() as i8);
 
             continue;
         }
 
         // ----------------------------------- finalize event ----------------------------------- //
+        // TODO asdi, list output,
+
         if !in_hitlag && was_in_hitlag && event.is_some() {
             let row = event.as_mut().unwrap();
 
-            row.hitlag_end_x = post.position_x[i];
-            row.hitlag_end_y = post.position_y[i];
+            row.hitlag_end = post.position[i - 1];
 
-            let effective_stick = Joystick::with_deadzone(pre.joystick_x[i], pre.joystick_y[i]);
+            let effective_stick = pre.joystick[i].with_deadzone();
 
-            row.di_stick_x = effective_stick.x;
-            row.di_stick_y = effective_stick.y;
+            row.di_stick = effective_stick;
 
-            let kb_angle = Velocity::new(row.kb_x, row.kb_y).as_angle();
-            if row.kb_x != 0.0 || row.kb_y != 0.0 {
-                let with_di = apply_di(kb_angle, effective_stick.x, effective_stick.y);
+            let kb_angle_rads = row.kb.as_angle();
+            row.kb_angle = kb_angle_rads.to_degrees();
 
-                row.di_efficacy = Some((with_di - kb_angle).abs() / 18.0);
+            if !row.kb.is_zero() {
+                let with_di = apply_di(kb_angle_rads, effective_stick);
 
-                let kb_scalar = kb_from_initial(row.kb_x, row.kb_y);
+                row.di_efficacy = Some(get_di_efficacy(kb_angle_rads, with_di));
+                row.di_kb_angle = with_di.to_degrees();
 
-                row.di_kb_x = Some(initial_x_velocity(kb_scalar, with_di));
-                row.di_kb_y = Some(initial_y_velocity(kb_scalar, with_di, row.grounded));
+                let kb_scalar = kb_from_initial(row.kb);
+
+                row.di_kb = Velocity::new(
+                    initial_x_velocity(kb_scalar, with_di),
+                    initial_y_velocity(kb_scalar, with_di, row.grounded),
+                );
 
                 let char_stats = player_char.get_stats();
 
                 row.kills_no_di = should_kill(
                     stage_id,
-                    row.kb_x,
-                    row.kb_y,
-                    row.hitlag_end_x,
-                    row.hitlag_end_y,
+                    row.kb,
+                    row.hitlag_end,
                     char_stats.gravity,
                     char_stats.terminal_velocity,
                 );
@@ -275,10 +312,8 @@ pub fn find_defense(
                 if effective_stick.x != 0.0 || effective_stick.y != 0.0 {
                     row.kills_with_di = should_kill(
                         stage_id,
-                        row.di_kb_x.unwrap(),
-                        row.di_kb_y.unwrap(),
-                        row.hitlag_end_x,
-                        row.hitlag_end_y,
+                        row.di_kb,
+                        row.hitlag_end,
                         char_stats.gravity,
                         char_stats.terminal_velocity,
                     );
@@ -289,13 +324,14 @@ pub fn find_defense(
                 row.kills_any_di = {
                     let mut result = true;
                     for i in -90..90 {
-                        let new_traj = kb_angle - (i as f32 / 5.0);
+                        let new_traj = kb_angle_rads - (i as f32 / 5.0).to_radians();
                         if !should_kill(
                             stage_id,
-                            initial_x_velocity(kb_scalar, new_traj),
-                            initial_y_velocity(kb_scalar, new_traj, row.grounded),
-                            row.hitlag_end_x,
-                            row.hitlag_end_y,
+                            Velocity::new(
+                                initial_x_velocity(kb_scalar, new_traj),
+                                initial_y_velocity(kb_scalar, new_traj, row.grounded),
+                            ),
+                            row.hitlag_end,
                             char_stats.gravity,
                             char_stats.terminal_velocity,
                         ) {
@@ -309,8 +345,8 @@ pub fn find_defense(
             } else {
                 // No reason to calculate when there's no knockback. Handles things like fox laser
                 row.di_efficacy = None;
-                row.di_kb_x = None;
-                row.di_kb_y = None;
+                row.di_kb = row.kb;
+                row.di_kb_angle = row.kb_angle;
                 row.kills_no_di = false;
                 row.kills_with_di = false;
                 row.kills_any_di = false;

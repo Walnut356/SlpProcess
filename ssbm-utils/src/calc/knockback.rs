@@ -1,14 +1,14 @@
 #![allow(clippy::too_many_arguments)]
 
-use std::{cmp, f32::consts::TAU};
+use std::{cmp, f32::consts::{PI, TAU}};
 
 use approx::assert_relative_eq;
 
 use crate::{
-    calc::attack::{hitstun, point_to_angle},
+    calc::attack::hitstun,
     constants::{KB_DECAY, TUMBLE_THRESHOLD, Z_ANALOG},
     enums::{character::*, stage::*},
-    utils::Velocity,
+    types::{Velocity, Position, Degrees, StickPos, Radians},
 };
 
 /// Calculates the raw knockback value given the circumstances of the hit.
@@ -74,37 +74,30 @@ pub fn knockback(
         kb = f32::max(0.0, kb - 5.0);
     }
     kb = f32::min(2500.0, kb);
-    // if (trajectory > 180.0 && trajectory != 361.0) && grounded {
-    //     if kb >= 80.0 {
-    //         groundDownHitType = "Fly";
-    //     } else {
-    //         groundDownHitType = "Stay";
-    //     }
-    //     groundDownHit = true;
-    // }
 
     kb
 }
 
-/// Checks if a given trajectory is a sakurai angle and returns a modified trajectory with the proper sakurai-angle
-/// logic applied.
+/// Checks if a given trajectory is a sakurai angle and returns a modified trajectory with the
+/// proper sakurai-angle logic applied.
 ///
 /// If the victim is airborne, the angle is 45 degrees.
 ///
-/// If the victim is grounded and the knockback is less than or equal to 32.0, the angle is horizontal. If the victim is
-/// grounded and the knockback is greater than or equal to 32.1, the knockback is 44 degrees. If the knockback is
-/// **between** the thresholds, it is scaled linearly between 0 and 44 degrees. The gap between the thresholds is small
-/// enough that it's rare that this situation comes up.
+/// If the victim is grounded and the knockback is less than or equal to 32.0, the angle is
+/// horizontal. If the victim is grounded and the knockback is greater than or equal to 32.1, the
+/// knockback is 44 degrees. If the knockback is **between** the thresholds, it is scaled linearly
+/// between 0 and 44 degrees. The gap between the thresholds is small enough that it's rare that
+/// this situation comes up.
 ///
-/// e.g. Marth sourspot jab vs falco at 9%, with a knockback value of 32.03333, thus a final knockback angle of
-/// ~14.667 degrees
-pub fn resolve_sakurai_angle(trajectory: f32, knockback: f32, grounded: bool) -> f32 {
-    if trajectory != 361.0 {
-        return trajectory;
+/// e.g. Marth sourspot jab vs falco at 9%, with a knockback value of 32.03333, thus a final
+/// knockback angle of ~14.667 degrees
+pub fn resolve_sakurai_angle(angle: Radians, knockback: f32, grounded: bool) -> Radians {
+    if angle != 361.0_f32.to_radians() {
+        return angle;
     }
 
     if !grounded {
-        return 45.0;
+        return 45.0_f32.to_radians();
     }
 
     let kb_extreme = knockback <= 32.0 || knockback >= 32.1;
@@ -113,7 +106,7 @@ pub fn resolve_sakurai_angle(trajectory: f32, knockback: f32, grounded: bool) ->
         if knockback <= 32.0 {
             return 0.0;
         } else {
-            return 44.0;
+            return 44.0_f32.to_radians();
         }
     }
 
@@ -127,55 +120,54 @@ pub fn resolve_sakurai_angle(trajectory: f32, knockback: f32, grounded: bool) ->
 /// Returns a new knockback trajectory by modifying the given trajectory to account for DI based on
 /// a joystick X and Y value. This should be done after dealing with trajectory modifiers such as
 /// sakurai angle.
-pub fn apply_di(trajectory: f32, joystick_x: f32, joystick_y: f32) -> f32 {
-    let joystick_angle = point_to_angle(joystick_x, joystick_y);
+pub fn apply_di(original_angle: Radians, joystick: StickPos) -> Radians {
+    let mut angle_diff = original_angle - joystick.as_angle();
 
-    let mut angle_diff = trajectory - joystick_angle;
-    if angle_diff > 180.0 {
-        angle_diff -= 360.0;
+    if angle_diff > PI {
+        angle_diff -= TAU;
     }
 
-    let perp_dist = angle_diff.sin() * f32::hypot(joystick_x, joystick_y);
+    let perp_dist = angle_diff.sin() * f32::hypot(joystick.x, joystick.y);
     let mut angle_offset = (perp_dist.powi(2)) * 18.0;
 
     if angle_offset > 18.0 {
         angle_offset = 18.0
     }
-    if -180.0 < angle_diff && angle_diff < 0.0 {
+    if -PI < angle_diff && angle_diff < 0.0 {
         angle_offset *= -1.0;
     }
 
-    trajectory - angle_offset
+    original_angle - angle_offset
 }
 
 /// Returns a percentage representing how much the DI affected the final trajectory, relative to the
 /// maximum possible effect that DI can have.
-pub fn get_di_efficacy(old_trajectory: f32, new_trajectory: f32) -> f32 {
-    (new_trajectory - old_trajectory).abs() / 18.0
+pub fn get_di_efficacy(old_angle: Radians, new_angle: Radians) -> f32 {
+    (new_angle - old_angle).abs() / 18.0_f32.to_radians()
 }
 
 /// Converts a knockback value and angle into the initial X knockback velocity imparted on the
 /// character.
-pub fn initial_x_velocity(knockback: f32, angle: f32) -> f32 {
+pub fn initial_x_velocity(knockback: f32, angle: Radians) -> f32 {
     let magnitude = knockback * 0.03;
-    let angle = angle.to_radians().cos();
+    let angle = angle.cos();
     angle * magnitude
 }
 
 /// Converts a knockback value and angle into the initial Y knockback velocity imparted on the
 /// character.
-pub fn initial_y_velocity(knockback: f32, angle: f32, grounded: bool) -> f32 {
+pub fn initial_y_velocity(knockback: f32, angle: Radians, grounded: bool) -> f32 {
     let high_kb = knockback >= 80.0;
 
-    if high_kb && grounded && (angle == 0.0 || angle == 180.0) {
+    if high_kb && grounded && (angle == 0.0 || angle == 180.0_f32.to_radians()) {
         return 0.0;
     }
 
     let magnitude = knockback * 0.03;
-    let angle = angle.to_radians().sin();
+    let angle = angle.sin();
     let mut velocity = angle * magnitude;
 
-    let down = angle > 180.0 && angle < 361.0;
+    let down = angle > 180.0_f32.to_radians() && angle < 361.0_f32.to_radians();
 
     if down && high_kb {
         velocity *= 0.8;
@@ -185,14 +177,14 @@ pub fn initial_y_velocity(knockback: f32, angle: f32, grounded: bool) -> f32 {
 }
 
 /// Rate at which horizontal knockback velocity decreases per frame
-pub fn get_horizontal_decay(angle: f32) -> f32 {
-    KB_DECAY * angle.to_radians().cos()
+pub fn get_horizontal_decay(angle: Radians) -> f32 {
+    KB_DECAY * angle.cos()
 }
 
 /// Rate at which vertical knockback velocity decreases per frame
 /// Gravity also plays a role, but that is done in knockback_travel
-pub fn get_vertical_decay(angle: f32) -> f32 {
-    KB_DECAY * angle.to_radians().sin()
+pub fn get_vertical_decay(angle: Radians) -> f32 {
+    KB_DECAY * angle.sin()
 }
 
 pub fn will_tumble(kb: f32) -> bool {
@@ -200,10 +192,10 @@ pub fn will_tumble(kb: f32) -> bool {
 }
 
 /// Accepts the initial knockback velocity, returns the flat knockback value
-pub fn kb_from_initial(x: f32, y: f32) -> f32 {
-    let angle = point_to_angle(x, y);
+pub fn kb_from_initial(val: Velocity) -> f32 {
+    let angle = val.as_angle();
 
-    x / angle.cos() / 0.03
+    val.x / angle.cos() / 0.03
 }
 
 enum Direction {
@@ -214,20 +206,18 @@ enum Direction {
 }
 
 pub fn knockback_travel(
-    mut kb_x: f32,
-    mut kb_y: f32,
-    mut position_x: f32,
-    mut position_y: f32,
+    mut kb: Velocity,
+    mut position: Position,
     gravity: f32,
     max_fall_speed: f32,
-) -> Vec<(f32, f32)> {
-    let kb_scalar = kb_from_initial(kb_x, kb_y);
+) -> Vec<Position> {
+    let kb_scalar = kb_from_initial(kb);
     let hitstun = hitstun(kb_scalar);
 
     let mut result = Vec::with_capacity(hitstun as usize + 1);
-    result.push((position_x, position_y));
+    result.push(position);
 
-    let trajectory = Velocity::new(kb_x, kb_y).as_angle();
+    let trajectory = kb.as_angle();
 
     let x_decay = get_horizontal_decay(trajectory);
     let y_decay = get_vertical_decay(trajectory);
@@ -247,20 +237,20 @@ pub fn knockback_travel(
     for _ in 0..hitstun {
         self_y = (self_y - gravity).max(max_fall_speed.abs() * -1.0); // coerce to negative regardless of sign
         match x_direction {
-            Direction::Left => kb_x = (kb_x + x_decay).min(0.0),
-            Direction::Right => kb_x = (kb_x - x_decay).max(0.0),
+            Direction::Left => kb.x = (kb.x + x_decay).min(0.0),
+            Direction::Right => kb.x = (kb.x - x_decay).max(0.0),
             _ => panic!("how did you get here"),
         }
         match y_direction {
-            Direction::Up => kb_y = (kb_y - y_decay).max(0.0),
-            Direction::Down => kb_y = (kb_y + y_decay).min(0.0),
+            Direction::Up => kb.y = (kb.y - y_decay).max(0.0),
+            Direction::Down => kb.y = (kb.y + y_decay).min(0.0),
             _ => panic!("how did you get here"),
         }
 
-        position_x += kb_x;
-        position_y += kb_y + self_y;
+        position += kb;
+        position.y += self_y;
 
-        result.push((position_x, position_y));
+        result.push(position);
     }
 
     result
@@ -268,19 +258,17 @@ pub fn knockback_travel(
 
 pub fn should_kill(
     stage_id: u16,
-    kb_x: f32,
-    kb_y: f32,
-    position_x: f32,
-    position_y: f32,
+    kb: Velocity,
+    position: Position,
     gravity: f32,
     max_fall_speed: f32,
 ) -> bool {
     let stage = Stage::try_from(stage_id).unwrap();
 
-    let travel = knockback_travel(kb_x, kb_y, position_x, position_y, gravity, max_fall_speed);
+    let travel = knockback_travel(kb, position, gravity, max_fall_speed);
 
-    for (x, y) in travel {
-        if stage.is_past_blastzone(x, y) {
+    for pos in travel {
+        if stage.is_past_blastzone(pos) {
             return true;
         }
     }

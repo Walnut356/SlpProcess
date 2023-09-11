@@ -1,4 +1,4 @@
-pub mod utils;
+pub mod types;
 pub mod calc {
     pub mod attack;
     pub mod general;

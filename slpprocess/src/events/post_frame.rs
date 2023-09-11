@@ -3,6 +3,7 @@
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
+use ssbm_utils::types::{Position, Velocity};
 
 use crate::{columns::Post, events::game_start::Version, Port};
 
@@ -13,8 +14,7 @@ pub struct PostFrames {
     pub frame_index: Box<[i32]>,
     pub character: Box<[u8]>,
     pub action_state: Box<[u16]>,
-    pub position_x: Box<[f32]>,
-    pub position_y: Box<[f32]>,
+    pub position: Box<[Position]>,
     pub orientation: Box<[f32]>,
     pub percent: Box<[f32]>,
     pub shield_health: Box<[f32]>,
@@ -30,153 +30,136 @@ pub struct PostFrames {
     pub jumps_remaining: Option<Box<[u8]>>,
     pub l_cancel: Option<Box<[u8]>>,
     pub hurtbox_state: Option<Box<[u8]>>,
-    pub air_vel_x: Option<Box<[f32]>>,
-    pub vel_y: Option<Box<[f32]>>,
-    pub knockback_x: Option<Box<[f32]>>,
-    pub knockback_y: Option<Box<[f32]>>,
-    pub ground_vel_x: Option<Box<[f32]>>,
+    pub air_velocity: Option<Box<[Velocity]>>,
+    pub knockback: Option<Box<[Velocity]>>,
+    pub ground_velocity: Option<Box<[Velocity]>>,
     pub hitlag_remaining: Option<Box<[f32]>>,
     pub animation_index: Option<Box<[u32]>>,
 }
 
 impl PostFrames {
-    fn new(len: usize, version: Version) -> Self {
+    fn new(duration: usize, version: Version) -> Self {
         PostFrames {
-            len,
+            len: duration,
             version,
             frame_index: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             character: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             action_state: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
-            position_x: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
-                temp.into_boxed_slice()
-            },
-            position_y: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+            position: unsafe {
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             orientation: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             percent: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             shield_health: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             last_attack_landed: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             combo_count: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             last_hit_by: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             stocks: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 temp.into_boxed_slice()
             },
             state_frame: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
             flags: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
             misc_as: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
             is_grounded: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
             last_ground_id: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
             jumps_remaining: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
             l_cancel: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
             hurtbox_state: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
-            air_vel_x: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+            air_velocity: unsafe {
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
-            vel_y: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+            knockback: unsafe {
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
-            knockback_x: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
-                Some(temp.into_boxed_slice())
-            },
-            knockback_y: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
-                Some(temp.into_boxed_slice())
-            },
-            ground_vel_x: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+            ground_velocity: unsafe {
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
             hitlag_remaining: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
             animation_index: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                let mut temp = Vec::with_capacity(duration);
+                temp.set_len(duration);
                 Some(temp.into_boxed_slice())
             },
         }
@@ -210,8 +193,7 @@ impl PostFrames {
             action_state: vec![11; duration].into_boxed_slice(),
             // probably fine, though alternatively i could do something VERY obviously wrong like
             // NAN or negative infinity.
-            position_x: vec![0.0; duration].into_boxed_slice(),
-            position_y: vec![0.0; duration].into_boxed_slice(),
+            position: vec![Position::default(); duration].into_boxed_slice(),
             // -1 is left, 1 is right. 0 is only used for warp star animation, but is hijacked for
             // `DOWN` for stats purposes. It should be appropriate here
             orientation: vec![0.0; duration].into_boxed_slice(),
@@ -235,11 +217,9 @@ impl PostFrames {
             jumps_remaining: Some(vec![0; duration].into_boxed_slice()),
             l_cancel: Some(vec![0; duration].into_boxed_slice()),
             hurtbox_state: Some(vec![0; duration].into_boxed_slice()),
-            air_vel_x: Some(vec![0.0; duration].into_boxed_slice()),
-            vel_y: Some(vec![0.0; duration].into_boxed_slice()),
-            knockback_x: Some(vec![0.0; duration].into_boxed_slice()),
-            knockback_y: Some(vec![0.0; duration].into_boxed_slice()),
-            ground_vel_x: Some(vec![0.0; duration].into_boxed_slice()),
+            air_velocity: Some(vec![Velocity::default(); duration].into_boxed_slice()),
+            knockback: Some(vec![Velocity::default(); duration].into_boxed_slice()),
+            ground_velocity: Some(vec![Velocity::default(); duration].into_boxed_slice()),
             hitlag_remaining: Some(vec![0.0; duration].into_boxed_slice()),
             animation_index: Some(vec![0; duration].into_boxed_slice()),
         }
@@ -251,100 +231,118 @@ impl From<PostFrames> for DataFrame {
     fn from(val: PostFrames) -> DataFrame {
         let len = val.len();
 
-        use Post::*;
+        use Post as col;
         let mut vec_series = vec![
-            Series::new(&FrameIndex.to_string(), val.frame_index),
-            Series::new(&Character.to_string(), val.character),
-            Series::new(&ActionState.to_string(), val.action_state),
-            Series::new(&PositionX.to_string(), val.position_x),
-            Series::new(&PositionY.to_string(), val.position_y),
-            Series::new(&Orientation.to_string(), val.orientation),
-            Series::new(&Percent.to_string(), val.percent),
-            Series::new(&ShieldHealth.to_string(), val.shield_health),
-            Series::new(&LastAttackLanded.to_string(), val.last_attack_landed),
-            Series::new(&ComboCount.to_string(), val.combo_count),
-            Series::new(&LastHitBy.to_string(), val.last_hit_by),
-            Series::new(&Stocks.to_string(), val.stocks),
+            Series::new(col::FrameIndex.into(), val.frame_index),
+            Series::new(col::Character.into(), val.character),
+            Series::new(col::ActionState.into(), val.action_state),
+            StructChunked::new(
+                col::Position.into(),
+                &[
+                    Series::new("x", val.position.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.position.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
+            Series::new(col::Orientation.into(), val.orientation),
+            Series::new(col::Percent.into(), val.percent),
+            Series::new(col::ShieldHealth.into(), val.shield_health),
+            Series::new(col::LastAttackLanded.into(), val.last_attack_landed),
+            Series::new(col::ComboCount.into(), val.combo_count),
+            Series::new(col::LastHitBy.into(), val.last_hit_by),
+            Series::new(col::Stocks.into(), val.stocks),
         ];
 
         if val.version.at_least(2, 0, 0) {
             vec_series.push(Series::new(
-                &StateFrame.to_string(),
+                col::StateFrame.into(),
                 val.state_frame.unwrap(),
             ));
-            vec_series.push(Series::new(&Flags.to_string(), val.flags.unwrap()));
-            vec_series.push(Series::new(&MiscAS.to_string(), val.misc_as.unwrap()));
+            vec_series.push(Series::new(col::Flags.into(), val.flags.unwrap()));
+            vec_series.push(Series::new(col::MiscAS.into(), val.misc_as.unwrap()));
             vec_series.push(Series::new(
-                &IsGrounded.to_string(),
+                col::IsGrounded.into(),
                 val.is_grounded.unwrap(),
             ));
             vec_series.push(Series::new(
-                &LastGroundID.to_string(),
+                col::LastGroundID.into(),
                 val.last_ground_id.unwrap(),
             ));
             vec_series.push(Series::new(
-                &JumpsRemaining.to_string(),
+                col::JumpsRemaining.into(),
                 val.jumps_remaining.unwrap(),
             ));
-            vec_series.push(Series::new(&LCancel.to_string(), val.l_cancel.unwrap()));
+            vec_series.push(Series::new(col::LCancel.into(), val.l_cancel.unwrap()));
         } else {
-            vec_series.push(Series::new_null(&StateFrame.to_string(), len));
-            vec_series.push(Series::new_null(&Flags.to_string(), len));
-            vec_series.push(Series::new_null(&MiscAS.to_string(), len));
-            vec_series.push(Series::new_null(&IsGrounded.to_string(), len));
-            vec_series.push(Series::new_null(&LastGroundID.to_string(), len));
-            vec_series.push(Series::new_null(&JumpsRemaining.to_string(), len));
-            vec_series.push(Series::new_null(&LCancel.to_string(), len));
+            vec_series.push(Series::new_null(col::StateFrame.into(), len));
+            vec_series.push(Series::new_null(col::Flags.into(), len));
+            vec_series.push(Series::new_null(col::MiscAS.into(), len));
+            vec_series.push(Series::new_null(col::IsGrounded.into(), len));
+            vec_series.push(Series::new_null(col::LastGroundID.into(), len));
+            vec_series.push(Series::new_null(col::JumpsRemaining.into(), len));
+            vec_series.push(Series::new_null(col::LCancel.into(), len));
         }
 
         if val.version.at_least(2, 1, 0) {
             vec_series.push(Series::new(
-                &HurtboxState.to_string(),
+                col::HurtboxState.into(),
                 val.hurtbox_state.unwrap(),
             ));
         } else {
-            vec_series.push(Series::new_null(&HurtboxState.to_string(), len));
+            vec_series.push(Series::new_null(col::HurtboxState.into(), len));
         }
 
         if val.version.at_least(3, 5, 0) {
-            vec_series.push(Series::new(&AirVelX.to_string(), val.air_vel_x.unwrap()));
-            vec_series.push(Series::new(&VelY.to_string(), val.vel_y.unwrap()));
-            vec_series.push(Series::new(
-                &KnockbackX.to_string(),
-                val.knockback_x.unwrap(),
-            ));
-            vec_series.push(Series::new(
-                &KnockbackY.to_string(),
-                val.knockback_y.unwrap(),
-            ));
-            vec_series.push(Series::new(
-                &GroundVelX.to_string(),
-                val.ground_vel_x.unwrap(),
-            ));
+            vec_series.push(StructChunked::new(
+                col::AirVel.into(),
+                &[
+                    Series::new("x", val.air_velocity.as_ref().unwrap().iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.air_velocity.as_ref().unwrap().iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series());
+            vec_series.push(StructChunked::new(
+                col::Knockback.into(),
+                &[
+                    Series::new("x", val.knockback.as_ref().unwrap().iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.knockback.as_ref().unwrap().iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series());
+            vec_series.push(StructChunked::new(
+                col::GroundVel.into(),
+                &[
+                    Series::new("x", val.ground_velocity.as_ref().unwrap().iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.ground_velocity.as_ref().unwrap().iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),);
         } else {
-            vec_series.push(Series::new_null(&AirVelX.to_string(), len));
-            vec_series.push(Series::new_null(&VelY.to_string(), len));
-            vec_series.push(Series::new_null(&KnockbackX.to_string(), len));
-            vec_series.push(Series::new_null(&KnockbackY.to_string(), len));
-            vec_series.push(Series::new_null(&GroundVelX.to_string(), len));
+            vec_series.push(Series::new_null(col::AirVel.into(), len));
+            vec_series.push(Series::new_null(col::Knockback.into(), len));
+            vec_series.push(Series::new_null(col::GroundVel.into(), len));
         }
 
         if val.version.at_least(3, 8, 0) {
             vec_series.push(Series::new(
-                &HitlagRemaining.to_string(),
+                col::HitlagRemaining.into(),
                 val.hitlag_remaining.unwrap(),
             ));
         } else {
-            vec_series.push(Series::new_null(&HitlagRemaining.to_string(), len));
+            vec_series.push(Series::new_null(col::HitlagRemaining.into(), len));
         }
 
         if val.version.at_least(3, 11, 0) {
             vec_series.push(Series::new(
-                &AnimationIndex.to_string(),
+                col::AnimationIndex.into(),
                 val.animation_index.unwrap(),
             ));
         } else {
-            vec_series.push(Series::new_null(&AnimationIndex.to_string(), len));
+            vec_series.push(Series::new_null(col::AnimationIndex.into(), len));
         }
 
         DataFrame::new(vec_series).unwrap()
@@ -398,8 +396,8 @@ pub fn unpack_frames(
                 *working.frame_index.get_unchecked_mut(i) = frame_number;
                 *working.character.get_unchecked_mut(i) = frame.get_u8();
                 *working.action_state.get_unchecked_mut(i) = frame.get_u16();
-                *working.position_x.get_unchecked_mut(i) = frame.get_f32();
-                *working.position_y.get_unchecked_mut(i) = frame.get_f32();
+                *working.position.get_unchecked_mut(i) =
+                    Position::new(frame.get_f32(), frame.get_f32());
                 *working.orientation.get_unchecked_mut(i) = frame.get_f32();
                 *working.percent.get_unchecked_mut(i) = frame.get_f32();
                 *working.shield_health.get_unchecked_mut(i) = frame.get_f32();
@@ -451,11 +449,17 @@ pub fn unpack_frames(
                 if !frame.has_remaining() {
                     continue;
                 } else {
-                    *working.air_vel_x.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                    *working.vel_y.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                    *working.knockback_x.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                    *working.knockback_y.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                    *working.ground_vel_x.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
+                    let air_vel_x = frame.get_f32();
+                    let vel_y = frame.get_f32();
+                    *working.air_velocity.as_mut().unwrap().get_unchecked_mut(i) =
+                        Velocity::new(air_vel_x, vel_y);
+                    *working.knockback.as_mut().unwrap().get_unchecked_mut(i) =
+                        Velocity::new(frame.get_f32(), frame.get_f32());
+                    *working
+                        .ground_velocity
+                        .as_mut()
+                        .unwrap()
+                        .get_unchecked_mut(i) = Velocity::new(frame.get_f32(), vel_y);
                 }
 
                 // version < 3.8.0
@@ -535,8 +539,8 @@ pub fn unpack_frames_ics(
             *working.frame_index.get_unchecked_mut(i) = frame_number;
             *working.character.get_unchecked_mut(i) = frame.get_u8();
             *working.action_state.get_unchecked_mut(i) = frame.get_u16();
-            *working.position_x.get_unchecked_mut(i) = frame.get_f32();
-            *working.position_y.get_unchecked_mut(i) = frame.get_f32();
+            *working.position.get_unchecked_mut(i) =
+                Position::new(frame.get_f32(), frame.get_f32());
             *working.orientation.get_unchecked_mut(i) = frame.get_f32();
             *working.percent.get_unchecked_mut(i) = frame.get_f32();
             *working.shield_health.get_unchecked_mut(i) = frame.get_f32();
@@ -584,11 +588,17 @@ pub fn unpack_frames_ics(
             if !frame.has_remaining() {
                 continue;
             } else {
-                *working.air_vel_x.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                *working.vel_y.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                *working.knockback_x.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                *working.knockback_y.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                *working.ground_vel_x.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
+                let air_vel_x = frame.get_f32();
+                let vel_y = frame.get_f32();
+                *working.air_velocity.as_mut().unwrap().get_unchecked_mut(i) =
+                    Velocity::new(air_vel_x, vel_y);
+                *working.knockback.as_mut().unwrap().get_unchecked_mut(i) =
+                    Velocity::new(frame.get_f32(), frame.get_f32());
+                *working
+                    .ground_velocity
+                    .as_mut()
+                    .unwrap()
+                    .get_unchecked_mut(i) = Velocity::new(frame.get_f32(), vel_y);
             }
 
             // version < 3.8.0

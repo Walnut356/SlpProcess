@@ -106,17 +106,21 @@ impl Game {
             let opponent = players[1].as_ref().read().unwrap();
             let items = &self.item_frames;
 
+            // inputs are available in every replay version
             player.stats.inputs = find_inputs(&player.frames, self.total_frames);
 
+            // l cancel status was with 2.0.0 on 3/19/2019
             player.stats.l_cancel = version
                 .at_least(2, 0, 0)
                 .then(|| find_lcancels(&player.frames, Stage::from_id(self.metadata.stage)));
 
-            // TODO make newer features optional where possible
+            // requires fields up to item.owner which was released just after rollback on 7/8/2020
             player.stats.items = version
                 .at_least(3, 6, 0)
                 .then(|| find_items(&player.frames, player.port, items.as_ref().unwrap()));
 
+            // requires knockback speed values which requires v3.5.0, released just before rollback
+            // on 6/20/2020
             player.stats.defense = version.at_least(3, 5, 0).then(|| {
                 find_defense(
                     &player.frames,

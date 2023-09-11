@@ -72,8 +72,6 @@ pub fn is_magnifying_damage(damage_taken: f32, flags: &[u64], index: usize) -> b
 ///
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 pub fn is_in_hitlag(flags: u64) -> bool {
-    let val = Flags::from(flags);
-    println!("{:?}", val);
     Flags::from(flags).contains(*Flags::HITLAG)
 }
 

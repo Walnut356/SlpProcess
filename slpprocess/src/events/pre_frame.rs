@@ -1,23 +1,22 @@
 #![allow(clippy::uninit_vec)]
 
-use crate::{Port, events::game_start::Version};
+use crate::{events::game_start::Version, Port};
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
+use ssbm_utils::types::{Position, StickPos};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct PreFrames {
+    len: usize,
     pub version: Version,
     pub frame_index: Box<[i32]>,
     pub random_seed: Box<[u32]>,
     pub action_state: Box<[u16]>,
-    pub position_x: Box<[f32]>,
-    pub position_y: Box<[f32]>,
+    pub position: Box<[Position]>,
     pub orientation: Box<[f32]>,
-    pub joystick_x: Box<[f32]>,
-    pub joystick_y: Box<[f32]>,
-    pub cstick_x: Box<[f32]>,
-    pub cstick_y: Box<[f32]>,
+    pub joystick: Box<[StickPos]>,
+    pub cstick: Box<[StickPos]>,
     pub engine_trigger: Box<[f32]>,
     pub engine_buttons: Box<[u32]>,
     pub controller_buttons: Box<[u16]>,
@@ -32,6 +31,7 @@ impl PreFrames {
         reason to 0-initialize the memory when we're immediately overwriting it anyway. Saves
         a fair few cycles */
         PreFrames {
+            len: duration,
             version,
             frame_index: unsafe {
                 let mut temp = Vec::with_capacity(duration);
@@ -48,12 +48,7 @@ impl PreFrames {
                 temp.set_len(duration);
                 temp.into_boxed_slice()
             },
-            position_x: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                temp.into_boxed_slice()
-            },
-            position_y: unsafe {
+            position: unsafe {
                 let mut temp = Vec::with_capacity(duration);
                 temp.set_len(duration);
                 temp.into_boxed_slice()
@@ -63,22 +58,12 @@ impl PreFrames {
                 temp.set_len(duration);
                 temp.into_boxed_slice()
             },
-            joystick_x: unsafe {
+            joystick: unsafe {
                 let mut temp = Vec::with_capacity(duration);
                 temp.set_len(duration);
                 temp.into_boxed_slice()
             },
-            joystick_y: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                temp.into_boxed_slice()
-            },
-            cstick_x: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                temp.into_boxed_slice()
-            },
-            cstick_y: unsafe {
+            cstick: unsafe {
                 let mut temp = Vec::with_capacity(duration);
                 temp.set_len(duration);
                 temp.into_boxed_slice()
@@ -117,9 +102,8 @@ impl PreFrames {
     }
 
     pub fn len(&self) -> usize {
-        self.frame_index.len()
+        self.len
     }
-
 
     /// When nana is dead, she is considered `inactive`, which is the variable checked by slippi to
     /// determine what characters to record frames for. As a result, we cannot rely on the same
@@ -135,6 +119,7 @@ impl PreFrames {
     fn ics(duration: usize, version: Version) -> Self {
         let len = (duration - 123) as i32;
         PreFrames {
+            len: duration,
             version,
             frame_index: ((-123)..len).collect::<Vec<i32>>().into_boxed_slice(),
             random_seed: vec![0; duration].into_boxed_slice(),
@@ -142,13 +127,10 @@ impl PreFrames {
             // skipped
             action_state: vec![11; duration].into_boxed_slice(),
             // can't go wrong 0ing out most of these values
-            position_x: vec![0.0; duration].into_boxed_slice(),
-            position_y: vec![0.0; duration].into_boxed_slice(),
+            position: vec![Position::default(); duration].into_boxed_slice(),
             orientation: vec![0.0; duration].into_boxed_slice(),
-            joystick_x: vec![0.0; duration].into_boxed_slice(),
-            joystick_y: vec![0.0; duration].into_boxed_slice(),
-            cstick_x: vec![0.0; duration].into_boxed_slice(),
-            cstick_y: vec![0.0; duration].into_boxed_slice(),
+            joystick: vec![StickPos::default(); duration].into_boxed_slice(),
+            cstick: vec![StickPos::default(); duration].into_boxed_slice(),
             engine_trigger: vec![0.0; duration].into_boxed_slice(),
             engine_buttons: vec![0; duration].into_boxed_slice(),
             controller_buttons: vec![0; duration].into_boxed_slice(),
@@ -164,27 +146,50 @@ impl From<PreFrames> for DataFrame {
     fn from(val: PreFrames) -> DataFrame {
         let len = val.len();
 
-        use crate::columns::Pre::*;
+        use crate::columns::Pre as col;
         let mut vec_series = vec![
-            Series::new(&FrameIndex.to_string(), val.frame_index),
-            Series::new(&RandomSeed.to_string(), val.random_seed),
-            Series::new(&ActionState.to_string(), val.action_state),
-            Series::new(&PositionX.to_string(), val.position_x),
-            Series::new(&PositionY.to_string(), val.position_y),
-            Series::new(&Orientation.to_string(), val.orientation),
-            Series::new(&JoystickX.to_string(), val.joystick_x),
-            Series::new(&JoystickY.to_string(), val.joystick_y),
-            Series::new(&CstickX.to_string(), val.cstick_x),
-            Series::new(&CstickY.to_string(), val.cstick_y),
-            Series::new(&EngineTrigger.to_string(), val.engine_trigger),
-            Series::new(&EngineButtons.to_string(), val.engine_buttons),
-            Series::new(&ControllerButtons.to_string(), val.controller_buttons),
-            Series::new(&ControllerL.to_string(), val.controller_l),
-            Series::new(&ControllerR.to_string(), val.controller_r),];
+            Series::new(col::FrameIndex.into(), val.frame_index),
+            Series::new(col::RandomSeed.into(), val.random_seed),
+            Series::new(col::ActionState.into(), val.action_state),
+            // wow polars is ugly in rust
+            StructChunked::new(
+                col::Position.into(),
+                &[
+                    Series::new("x", val.position.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.position.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
+            Series::new(col::Orientation.into(), val.orientation),
+            StructChunked::new(
+                col::Position.into(),
+                &[
+                    Series::new("x", val.joystick.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.joystick.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
+            StructChunked::new(
+                col::Position.into(),
+                &[
+                    Series::new("x", val.cstick.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.cstick.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
+            Series::new(col::EngineTrigger.into(), val.engine_trigger),
+            Series::new(col::EngineButtons.into(), val.engine_buttons),
+            Series::new(col::ControllerButtons.into(), val.controller_buttons),
+            Series::new(col::ControllerL.into(), val.controller_l),
+            Series::new(col::ControllerR.into(), val.controller_r),
+        ];
         if val.version.at_least(1, 4, 0) {
-            vec_series.push(Series::new(&Percent.to_string(), val.percent.unwrap()));
+            vec_series.push(Series::new(col::Percent.into(), val.percent.unwrap()));
         } else {
-            vec_series.push(Series::new_null(&Percent.to_string(), len));
+            vec_series.push(Series::new_null(col::Percent.into(), len));
         }
 
         DataFrame::new(vec_series).unwrap()
@@ -247,13 +252,13 @@ pub fn unpack_frames(
                 *working.frame_index.get_unchecked_mut(i) = frame_number;
                 *working.random_seed.get_unchecked_mut(i) = frame.get_u32();
                 *working.action_state.get_unchecked_mut(i) = frame.get_u16();
-                *working.position_x.get_unchecked_mut(i) = frame.get_f32();
-                *working.position_y.get_unchecked_mut(i) = frame.get_f32();
+                *working.position.get_unchecked_mut(i) =
+                    Position::new(frame.get_f32(), frame.get_f32());
                 *working.orientation.get_unchecked_mut(i) = frame.get_f32();
-                *working.joystick_x.get_unchecked_mut(i) = frame.get_f32();
-                *working.joystick_y.get_unchecked_mut(i) = frame.get_f32();
-                *working.cstick_x.get_unchecked_mut(i) = frame.get_f32();
-                *working.cstick_y.get_unchecked_mut(i) = frame.get_f32();
+                *working.joystick.get_unchecked_mut(i) =
+                    StickPos::new(frame.get_f32(), frame.get_f32());
+                *working.cstick.get_unchecked_mut(i) =
+                    StickPos::new(frame.get_f32(), frame.get_f32());
                 *working.engine_trigger.get_unchecked_mut(i) = frame.get_f32();
                 *working.engine_buttons.get_unchecked_mut(i) = frame.get_u32();
                 *working.controller_buttons.get_unchecked_mut(i) = frame.get_u16();
@@ -288,11 +293,17 @@ pub fn unpack_frames_ics(
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
     p_frames.insert(
         ports[0] as u8,
-        (PreFrames::new(len, version), ics[0].then(|| PreFrames::ics(len, version))),
+        (
+            PreFrames::new(len, version),
+            ics[0].then(|| PreFrames::ics(len, version)),
+        ),
     );
     p_frames.insert(
         ports[1] as u8,
-        (PreFrames::new(len, version), ics[1].then(|| PreFrames::ics(len, version))),
+        (
+            PreFrames::new(len, version),
+            ics[1].then(|| PreFrames::ics(len, version)),
+        ),
     );
 
     for frame in frames.iter_mut() {
@@ -318,13 +329,13 @@ pub fn unpack_frames_ics(
             *working.frame_index.get_unchecked_mut(i) = frame_number;
             *working.random_seed.get_unchecked_mut(i) = frame.get_u32();
             *working.action_state.get_unchecked_mut(i) = frame.get_u16();
-            *working.position_x.get_unchecked_mut(i) = frame.get_f32();
-            *working.position_y.get_unchecked_mut(i) = frame.get_f32();
+            *working.position.get_unchecked_mut(i) =
+                Position::new(frame.get_f32(), frame.get_f32());
             *working.orientation.get_unchecked_mut(i) = frame.get_f32();
-            *working.joystick_x.get_unchecked_mut(i) = frame.get_f32();
-            *working.joystick_y.get_unchecked_mut(i) = frame.get_f32();
-            *working.cstick_x.get_unchecked_mut(i) = frame.get_f32();
-            *working.cstick_y.get_unchecked_mut(i) = frame.get_f32();
+            *working.joystick.get_unchecked_mut(i) =
+                    StickPos::new(frame.get_f32(), frame.get_f32());
+                *working.cstick.get_unchecked_mut(i) =
+                    StickPos::new(frame.get_f32(), frame.get_f32());
             *working.engine_trigger.get_unchecked_mut(i) = frame.get_f32();
             *working.engine_buttons.get_unchecked_mut(i) = frame.get_u32();
             *working.controller_buttons.get_unchecked_mut(i) = frame.get_u16();

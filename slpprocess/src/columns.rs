@@ -16,12 +16,8 @@ pub enum Pre {
     ActionState,
     /// All versions
     ///
-    /// f32
-    PositionX,
-    /// All versions
-    ///
-    /// f32
-    PositionY,
+    /// Position{x: f32, y: f32)
+    Position,
     /// All versions
     ///
     /// f32
@@ -73,8 +69,7 @@ pub enum Post {
     FrameIndex,
     Character,
     ActionState,
-    PositionX,
-    PositionY,
+    Position,
     Orientation,
     Percent,
     ShieldHealth,
@@ -90,11 +85,9 @@ pub enum Post {
     JumpsRemaining,
     LCancel,
     HurtboxState,
-    AirVelX,
-    VelY,
-    KnockbackX,
-    KnockbackY,
-    GroundVelX,
+    AirVel,
+    Knockback,
+    GroundVel,
     HitlagRemaining,
     AnimationIndex,
 }
@@ -157,17 +150,14 @@ pub enum Defense {
     StickDuringHitlag,
     SDIInputs,
     ASDI,
-    KBX,
-    KBY,
-    DIStickX,
-    DIStickY,
-    DIKBX,
-    DIKBY,
+    Knockback,
+    KBAngle,
+    DIStick,
+    DIKnockback,
+    DIKBAngle,
     DIEfficacy,
-    HitlagStartX,
-    HitlagStartY,
-    HitlagEndX,
-    HitlagEndY,
+    HitlagStart,
+    HitlagEnd,
     KillsWithDI,
     KillsNoDI,
     KillsAllDI,

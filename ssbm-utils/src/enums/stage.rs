@@ -3,7 +3,7 @@
 use anyhow::{anyhow, Error, Result};
 use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 
-use crate::utils::Point;
+use crate::types::{Point, Position};
 
 #[derive(Debug, Copy, Clone, PartialEq, EnumString, Display, FromRepr, IntoStaticStr)]
 #[repr(u16)]
@@ -217,11 +217,11 @@ impl Stage {
         }
     }
 
-    pub fn is_past_blastzone(&self, pos_x: f32, pos_y: f32) -> bool {
-        !(pos_x < self.blastzones.right
-        && pos_x > self.blastzones.left
-        && pos_y < self.blastzones.top
-        && pos_y > self.blastzones.bottom)
+    pub fn is_past_blastzone(&self, pos: Position) -> bool {
+        !(pos.x < self.blastzones.right
+        && pos.x > self.blastzones.left
+        && pos.y < self.blastzones.top
+        && pos.y > self.blastzones.bottom)
     }
 }
 

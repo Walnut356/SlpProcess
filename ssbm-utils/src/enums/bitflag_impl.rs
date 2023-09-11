@@ -365,7 +365,7 @@ impl ControllerInput {
             result.push("START");
         }
 
-        result.join("")
+        result.join("|")
     }
 }
 
@@ -687,7 +687,7 @@ impl Flags {
             }
         }
 
-        result.join("")
+        result.join("|")
     }
 }
 
