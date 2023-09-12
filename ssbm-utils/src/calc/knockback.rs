@@ -205,6 +205,7 @@ enum Direction {
     Down,
 }
 
+// TODO account for stage so downward knockback doesn't count as killing
 pub fn knockback_travel(
     mut kb: Velocity,
     mut position: Position,

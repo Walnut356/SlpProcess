@@ -52,7 +52,7 @@ fn test_fh_jump_arc() {
     let ja = jump_arc(
         character.fh_jump_force,
         character.gravity,
-        character.terminal_velocity,
+        character.max_fall_speed,
         false,
     );
 
@@ -76,7 +76,7 @@ fn test_grav_jump_arc() {
     let ja = jump_arc(
         character.fh_jump_force,
         character.gravity,
-        character.terminal_velocity,
+        character.max_fall_speed,
         true,
     );
 
@@ -100,7 +100,7 @@ fn test_sh_jump_arc() {
     let ja = jump_arc(
         character.sh_jump_force,
         character.gravity,
-        character.terminal_velocity,
+        character.max_fall_speed,
         false,
     );
 
@@ -113,8 +113,6 @@ fn test_sh_jump_arc() {
         ]
     );
 }
-
-
 
 #[test]
 fn test_drain_rate() {

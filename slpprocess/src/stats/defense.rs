@@ -13,7 +13,7 @@ use ssbm_utils::{
         is_shielding_flag, is_thrown, just_took_damage,
     },
     enums::{Character, StickRegion},
-    types::{Position, StickPos, Velocity, Degrees},
+    types::{Degrees, Position, StickPos, Velocity},
 };
 
 use crate::player::Frames;
@@ -89,16 +89,14 @@ impl From<DefenseStats> for DataFrame {
             Series::new(col::HitlagFrames.into(), val.hitlag_frames),
             Series::new(
                 col::StickDuringHitlag.into(),
-                val
-                    .stick_during_hitlag
+                val.stick_during_hitlag
                     .into_iter()
                     .map(|x| Series::new("", x))
                     .collect::<Vec<_>>(),
             ),
             Series::new(
                 col::SDIInputs.into(),
-                val
-                    .sdi_inputs
+                val.sdi_inputs
                     .into_iter()
                     .map(|x| Series::new("", x))
                     .collect::<Vec<_>>(),
@@ -135,8 +133,14 @@ impl From<DefenseStats> for DataFrame {
             StructChunked::new(
                 col::Knockback.into(),
                 &[
-                    Series::new("x", val.hitlag_start.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.hitlag_start.iter().map(|p| p.y).collect::<Vec<_>>()),
+                    Series::new(
+                        "x",
+                        val.hitlag_start.iter().map(|p| p.x).collect::<Vec<_>>(),
+                    ),
+                    Series::new(
+                        "y",
+                        val.hitlag_start.iter().map(|p| p.y).collect::<Vec<_>>(),
+                    ),
                 ],
             )
             .unwrap()
@@ -306,7 +310,7 @@ pub fn find_defense(
                     row.kb,
                     row.hitlag_end,
                     char_stats.gravity,
-                    char_stats.terminal_velocity,
+                    char_stats.max_fall_speed,
                 );
 
                 if effective_stick.x != 0.0 || effective_stick.y != 0.0 {
@@ -315,7 +319,7 @@ pub fn find_defense(
                         row.di_kb,
                         row.hitlag_end,
                         char_stats.gravity,
-                        char_stats.terminal_velocity,
+                        char_stats.max_fall_speed,
                     );
                 } else {
                     row.kills_with_di = row.kills_no_di;
@@ -333,7 +337,7 @@ pub fn find_defense(
                             ),
                             row.hitlag_end,
                             char_stats.gravity,
-                            char_stats.terminal_velocity,
+                            char_stats.max_fall_speed,
                         ) {
                             result = false;
                             break;
