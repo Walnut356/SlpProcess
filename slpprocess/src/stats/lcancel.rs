@@ -56,8 +56,10 @@ pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
         if lcancel == LCancel::FAILURE as u8 && l_input_frame.is_some() {
             for j in 0..6 {
                 let temp_index = i + j;
-                if temp_index > pre_buttons.len() { break; }
-                if just_input_lcancel(pre_buttons[i], pre_buttons[i + j]) {
+                if temp_index >= pre_buttons.len() {
+                    break;
+                }
+                if just_input_lcancel(pre_buttons[temp_index], pre_buttons[temp_index - 1]) {
                     l_input_frame = Some(j as i32)
                 }
             }

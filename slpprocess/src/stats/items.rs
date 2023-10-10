@@ -1,7 +1,7 @@
 use nohash_hasher::IntMap;
 use polars::prelude::*;
-use std::collections::HashSet;
 use ssbm_utils::enums::{Item, Port};
+use std::collections::HashSet;
 
 use crate::{
     columns::{Items, Post},
@@ -44,7 +44,7 @@ pub fn find_items(frames: &Frames, port: Port, item_frames: &ItemFrames) -> Data
     let mut keys: Vec<&str> = vec![];
     let mut vals: Vec<u32> = vec![];
     for (key, val) in item_counter {
-        keys.push(Item::from_repr(key).unwrap().into());
+        keys.push(Item::from_repr(key).unwrap_or(Item::UNKNOWN).into());
         vals.push(val);
     }
 

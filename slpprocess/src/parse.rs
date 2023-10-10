@@ -3,6 +3,7 @@
 use anyhow::{anyhow, ensure, Result};
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
+use crossbeam::{channel, thread};
 use nohash_hasher::IntMap;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use polars::prelude::*;
@@ -11,12 +12,18 @@ use std::fs::File;
 use std::io::{prelude::*, Cursor};
 use std::path::Path;
 use std::sync::RwLock;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use crate::{events::{
-    game_end::parse_gameend, game_start::GameStart, item_frames::parse_itemframes,
-    post_frame::parse_postframes, pre_frame::parse_preframes,
-}, player::Frames, utils::ParseError, ubjson, Game};
+use crate::{
+    events::{
+        game_end::parse_gameend, game_start::GameStart, item_frames::parse_itemframes,
+        post_frame::parse_postframes, pre_frame::parse_preframes,
+    },
+    player::Frames,
+    ubjson,
+    utils::ParseError,
+    Game,
+};
 
 use ssbm_utils::enums::character::Character;
 
@@ -131,49 +138,13 @@ impl Game {
         );
 
         let (game_start, version, mut players) = GameStart::parse(raw_start);
+        let return_pos = stream.position() + event_sizes[&EventType::GameStart.into()] as u64;
 
-        stream.set_position(stream.position() + event_sizes[&EventType::GameStart.into()] as u64);
+        // small detour to grab values we need for the parse functions
+        let mut duration: Duration = Duration::default();
+        let mut frame_count = 0;
 
-        let mut game_end_bytes: Option<Bytes> = None;
-
-        // ----------------------------------- event dispatch ----------------------------------- //
-
-        let mut event = EventType::None;
-        let mut pre_bytes = Vec::new();
-        let mut post_bytes = Vec::new();
-        let mut item_bytes = Vec::new();
-
-        while stream.position() < raw_length && event != EventType::GameEnd {
-            let code = stream.read_u8().unwrap();
-            event = EventType::from(code);
-            // TODO remove this once everything works
-            /* EventType::None allows the parser to continue working on newer replays (with possible
-            new events). During testing all events are accounted for, so any EventType::Nones are
-            likely a misalignment of my slices */
-            assert!(event != EventType::None);
-
-            let size = event_sizes[&code] as u64;
-            let pos = stream.position();
-            let raw_data = stream.get_ref();
-
-            match event {
-                EventType::PreFrame => {
-                    pre_bytes.push(raw_data.slice(pos as usize..(pos + size) as usize))
-                }
-                EventType::PostFrame => {
-                    post_bytes.push(raw_data.slice(pos as usize..(pos + size) as usize))
-                }
-                EventType::Item => {
-                    item_bytes.push(raw_data.slice(pos as usize..(pos + size) as usize))
-                }
-                EventType::GameEnd => {
-                    game_end_bytes = Some(raw_data.slice(pos as usize..(pos + size) as usize))
-                }
-                _ => (),
-            }
-
-            stream.set_position(pos + size);
-        }
+        stream.set_position(raw_length);
 
         expect_bytes(
             &mut stream,
@@ -183,10 +154,8 @@ impl Game {
             ],
         )?;
 
-        let mut frame_count = 0;
+        let metadata = ubjson::to_map(&mut stream).unwrap();
 
-        let mut duration: Duration = Duration::default();
-        let metadata = ubjson::to_map(&mut stream)?;
         if let serde_json::Value::Number(lastframe) = &metadata["lastFrame"] {
             // duration, in frames, is translated to seconds. 123 is subtracted from the frame count
             // to match the duration to the in-game timer. The total frame count is easily
@@ -199,12 +168,6 @@ impl Game {
             duration = Duration::from_millis(millis);
         }
 
-        let mut game_end = None;
-
-        if let Some(bytes) = game_end_bytes {
-            game_end = Some(parse_gameend(bytes));
-        }
-
         // i could map but this gives me arrays instead of slices without into
         let ports = [players[0].port, players[1].port];
         let ics = [
@@ -212,16 +175,97 @@ impl Game {
             players[1].character == Character::IceClimbers,
         ];
 
+        stream.set_position(return_pos);
+
+        // ----------------------------------- event dispatch ----------------------------------- //
+
+        let mut game_end_bytes: Option<Bytes> = None;
+        let mut event = EventType::None;
+        // let mut pre_bytes = Vec::new();
+        // let mut post_bytes = Vec::new();
+        let mut item_bytes = Vec::new();
+
+        let mut pre_frames = Default::default();
+        let mut post_frames = Default::default();
+
+        let threads = thread::scope(|s| {
+            {
+                let (pre_send, pre_recv) = channel::unbounded::<Bytes>();
+                let (post_send, post_recv) = channel::unbounded::<Bytes>();
+                let pre_thread = s.spawn(|_| {
+                    pre_frames = parse_preframes(version, pre_recv, frame_count, ports, ics)
+                });
+                let post_thread = s.spawn(|_| {
+                    post_frames = parse_postframes(version, post_recv, frame_count, ports, ics)
+                });
+
+                while stream.position() < raw_length && event != EventType::GameEnd {
+                    let code = stream.read_u8().unwrap();
+                    event = EventType::from(code);
+                    // TODO remove this once everything works
+                    /* EventType::None allows the parser to continue working on newer replays (with possible
+                    new events). During testing all events are accounted for, so any EventType::Nones are
+                    likely a misalignment of my slices */
+                    assert!(event != EventType::None);
+
+                    let size = event_sizes[&code] as u64;
+                    let pos = stream.position();
+                    let raw_data = stream.get_ref();
+
+                    match event {
+                        EventType::PreFrame => {
+                            pre_send
+                                .send(raw_data.slice(pos as usize..(pos + size) as usize))
+                                .unwrap();
+                        }
+                        EventType::PostFrame => {
+                            post_send
+                                .send(raw_data.slice(pos as usize..(pos + size) as usize))
+                                .unwrap();
+                        }
+                        EventType::Item => {
+                            item_bytes.push(raw_data.slice(pos as usize..(pos + size) as usize))
+                        }
+                        EventType::GameEnd => {
+                            game_end_bytes =
+                                Some(raw_data.slice(pos as usize..(pos + size) as usize))
+                        }
+                        _ => (),
+                    }
+
+                    stream.set_position(pos + size);
+                }
+                // pre_thread.join().unwrap();
+                // post_thread.join().unwrap();
+            }
+        });
+
+        expect_bytes(
+            &mut stream,
+            // `metadata` key & type (bytes: "U\x08metadata{")
+            &[
+                0x55, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x7b,
+            ],
+        )?;
+
+        let mut game_end = None;
+
+        if let Some(bytes) = game_end_bytes {
+            game_end = Some(parse_gameend(bytes));
+        }
+
+        // std::thread::sleep(Duration::from_secs(1));
+
         let mut item_frames = None;
 
         if version.at_least(3, 0, 0) {
             item_frames = Some(parse_itemframes(version, &mut item_bytes));
         }
 
-        let (mut pre_frames, mut post_frames) = rayon::join(
-            || parse_preframes(version, &mut pre_bytes, frame_count, ports, ics),
-            || parse_postframes(version, &mut post_bytes, frame_count, ports, ics),
-        );
+        // let (mut pre_frames, mut post_frames) = rayon::join(
+        //     || parse_preframes(version, &mut pre_bytes, frame_count, ports, ics),
+        //     || parse_postframes(version, &mut post_bytes, frame_count, ports, ics),
+        // );
 
         for player in players.iter_mut() {
             let temp_pre = pre_frames.remove(&(player.port as u8)).unwrap();

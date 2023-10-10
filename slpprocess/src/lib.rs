@@ -24,7 +24,7 @@ pub use crate::game::Game;
 pub use ssbm_utils::enums::Port;
 
 
-use rayon::prelude::*;
+use rayon::{prelude::*, ThreadPoolBuilder};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -38,6 +38,7 @@ use std::{
 ///
 /// Directory parsing is multi-threaded by default, can end up IO limited if replays aren't on an SSD
 pub fn parse(path: &str) -> Vec<Game> {
+    ThreadPoolBuilder::build_global(ThreadPoolBuilder::new().num_threads(5)).unwrap();
     let f_path = Path::new(path);
     if f_path.is_file() {
         return vec![Game::new(f_path).unwrap()];

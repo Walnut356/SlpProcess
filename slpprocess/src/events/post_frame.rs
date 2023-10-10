@@ -1,6 +1,7 @@
 #![allow(clippy::uninit_vec)]
 
 use bytes::{Buf, Bytes};
+use crossbeam::channel::Receiver;
 use nohash_hasher::IntMap;
 use polars::prelude::*;
 use ssbm_utils::types::{Position, Velocity};
@@ -294,33 +295,87 @@ impl From<PostFrames> for DataFrame {
         }
 
         if val.version.at_least(3, 5, 0) {
-            vec_series.push(StructChunked::new(
-                col::AirVel.into(),
-                &[
-                    Series::new("x", val.air_velocity.as_ref().unwrap().iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.air_velocity.as_ref().unwrap().iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series());
-            vec_series.push(StructChunked::new(
-                col::Knockback.into(),
-                &[
-                    Series::new("x", val.knockback.as_ref().unwrap().iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.knockback.as_ref().unwrap().iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series());
-            vec_series.push(StructChunked::new(
-                col::GroundVel.into(),
-                &[
-                    Series::new("x", val.ground_velocity.as_ref().unwrap().iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.ground_velocity.as_ref().unwrap().iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),);
+            vec_series.push(
+                StructChunked::new(
+                    col::AirVel.into(),
+                    &[
+                        Series::new(
+                            "x",
+                            val.air_velocity
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|p| p.x)
+                                .collect::<Vec<_>>(),
+                        ),
+                        Series::new(
+                            "y",
+                            val.air_velocity
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|p| p.y)
+                                .collect::<Vec<_>>(),
+                        ),
+                    ],
+                )
+                .unwrap()
+                .into_series(),
+            );
+            vec_series.push(
+                StructChunked::new(
+                    col::Knockback.into(),
+                    &[
+                        Series::new(
+                            "x",
+                            val.knockback
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|p| p.x)
+                                .collect::<Vec<_>>(),
+                        ),
+                        Series::new(
+                            "y",
+                            val.knockback
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|p| p.y)
+                                .collect::<Vec<_>>(),
+                        ),
+                    ],
+                )
+                .unwrap()
+                .into_series(),
+            );
+            vec_series.push(
+                StructChunked::new(
+                    col::GroundVel.into(),
+                    &[
+                        Series::new(
+                            "x",
+                            val.ground_velocity
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|p| p.x)
+                                .collect::<Vec<_>>(),
+                        ),
+                        Series::new(
+                            "y",
+                            val.ground_velocity
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|p| p.y)
+                                .collect::<Vec<_>>(),
+                        ),
+                    ],
+                )
+                .unwrap()
+                .into_series(),
+            );
         } else {
             vec_series.push(Series::new_null(col::AirVel.into(), len));
             vec_series.push(Series::new_null(col::Knockback.into(), len));
@@ -351,7 +406,7 @@ impl From<PostFrames> for DataFrame {
 
 pub fn parse_postframes(
     version: Version,
-    frames: &mut [Bytes],
+    frames: Receiver<Bytes>,
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
@@ -359,11 +414,13 @@ pub fn parse_postframes(
     let p_frames = {
         /* splitting these out saves us a small amount of time in conditional logic, and allows for
         exact iterator chunk sizes. */
-        if !ics[0] && !ics[1] {
-            unpack_frames(frames, ports, version)
-        } else {
-            unpack_frames_ics(frames, duration, ports, ics, version)
-        }
+        // if !ics[0] && !ics[1] {
+
+        // TODO why is this sometimes 1 frame off?
+        unpack_frames(frames, duration, ports, version)
+        // } else {
+        //     unpack_frames_ics(frames, duration, ports, ics, version)
+        // }
     };
 
     p_frames
@@ -372,168 +429,30 @@ pub fn parse_postframes(
 /// Slightly more optimized version of the typical parsing code, due to invariants regarding frame
 /// event ordering and counts
 pub fn unpack_frames(
-    frames: &mut [Bytes],
-    ports: [Port; 2],
-    version: Version,
-) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
-    let frames_iter = frames.chunks_exact_mut(2).enumerate();
-    let len = frames_iter.len();
-
-    let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
-    p_frames.insert(ports[0] as u8, (PostFrames::new(len, version), None));
-    p_frames.insert(ports[1] as u8, (PostFrames::new(len, version), None));
-
-    for (i, frames_raw) in frames_iter {
-        for frame in frames_raw {
-            let frame_number = frame.get_i32();
-            let port = frame.get_u8();
-
-            frame.advance(1); // skip nana byte
-
-            let (working, _) = p_frames.get_mut(&port).unwrap();
-
-            unsafe {
-                *working.frame_index.get_unchecked_mut(i) = frame_number;
-                *working.character.get_unchecked_mut(i) = frame.get_u8();
-                *working.action_state.get_unchecked_mut(i) = frame.get_u16();
-                *working.position.get_unchecked_mut(i) =
-                    Position::new(frame.get_f32(), frame.get_f32());
-                *working.orientation.get_unchecked_mut(i) = frame.get_f32();
-                *working.percent.get_unchecked_mut(i) = frame.get_f32();
-                *working.shield_health.get_unchecked_mut(i) = frame.get_f32();
-                *working.last_attack_landed.get_unchecked_mut(i) = frame.get_u8();
-                *working.combo_count.get_unchecked_mut(i) = frame.get_u8();
-                *working.last_hit_by.get_unchecked_mut(i) = frame.get_u8();
-                *working.stocks.get_unchecked_mut(i) = frame.get_u8();
-
-                // version 2.0.0
-                if !frame.has_remaining() {
-                    continue;
-                } else {
-                    *working.state_frame.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                    let flags_1 = frame.get_u8() as u64;
-                    let flags_2 = frame.get_u8() as u64;
-                    let flags_3 = frame.get_u8() as u64;
-                    let flags_4 = frame.get_u8() as u64;
-                    let flags_5 = frame.get_u8() as u64;
-                    let flags: u64 = flags_1
-                        | (flags_2 << 8)
-                        | (flags_3 << 16)
-                        | (flags_4 << 24)
-                        | (flags_5 << 32);
-                    *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
-                    *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                    *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) =
-                        frame.get_u8() != 0;
-                    *working
-                        .last_ground_id
-                        .as_mut()
-                        .unwrap()
-                        .get_unchecked_mut(i) = frame.get_u16();
-                    *working
-                        .jumps_remaining
-                        .as_mut()
-                        .unwrap()
-                        .get_unchecked_mut(i) = frame.get_u8();
-                    *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
-                }
-
-                // version 2.1.0
-                if !frame.has_remaining() {
-                    continue;
-                } else {
-                    *working.hurtbox_state.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
-                }
-
-                // version 3.5.0
-                if !frame.has_remaining() {
-                    continue;
-                } else {
-                    let air_vel_x = frame.get_f32();
-                    let vel_y = frame.get_f32();
-                    *working.air_velocity.as_mut().unwrap().get_unchecked_mut(i) =
-                        Velocity::new(air_vel_x, vel_y);
-                    *working.knockback.as_mut().unwrap().get_unchecked_mut(i) =
-                        Velocity::new(frame.get_f32(), frame.get_f32());
-                    *working
-                        .ground_velocity
-                        .as_mut()
-                        .unwrap()
-                        .get_unchecked_mut(i) = Velocity::new(frame.get_f32(), vel_y);
-                }
-
-                // version < 3.8.0
-                if !frame.has_remaining() {
-                    continue;
-                } else {
-                    *working
-                        .hitlag_remaining
-                        .as_mut()
-                        .unwrap()
-                        .get_unchecked_mut(i) = frame.get_f32();
-                }
-
-                // version < 3.11.0
-                if !frame.has_remaining() {
-                    continue;
-                } else {
-                    *working
-                        .animation_index
-                        .as_mut()
-                        .unwrap()
-                        .get_unchecked_mut(i) = frame.get_u32();
-                }
-            }
-        }
-    }
-    p_frames
-}
-
-pub fn unpack_frames_ics(
-    frames: &mut [Bytes],
+    frames: Receiver<Bytes>,
     duration: u64,
     ports: [Port; 2],
-    ics: [bool; 2],
     version: Version,
 ) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
-    let len = duration as usize;
-
     let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
     p_frames.insert(
         ports[0] as u8,
-        (
-            PostFrames::new(len, version),
-            ics[0].then(|| PostFrames::ics(len, version)),
-        ),
+        (PostFrames::new(duration as usize, version), None),
     );
     p_frames.insert(
         ports[1] as u8,
-        (
-            PostFrames::new(len, version),
-            ics[1].then(|| PostFrames::ics(len, version)),
-        ),
+        (PostFrames::new(duration as usize, version), None),
     );
 
-    for frame in frames.iter_mut() {
+    while let Ok(mut frame) = frames.recv() {
         let frame_number = frame.get_i32();
-        // since we can't chunk the frames, enumeration won't work. We can still get an
-        // always-in-bounds index from the frame number though.
         let i = (frame_number + 123) as usize;
-        assert!(
-            i < len,
-            "Frame index incorrect, index ({i}) is greater than or equal to the max length of the container ({len})."
-        );
+        assert!(i < duration as usize);
         let port = frame.get_u8();
-        let nana = frame.get_u8() != 0;
 
-        let working = {
-            let temp = p_frames.get_mut(&port).unwrap();
-            if nana {
-                temp.1.as_mut().unwrap()
-            } else {
-                &mut temp.0
-            }
-        };
+        frame.advance(1); // skip nana byte
+
+        let (working, _) = p_frames.get_mut(&port).unwrap();
 
         unsafe {
             *working.frame_index.get_unchecked_mut(i) = frame_number;
@@ -560,10 +479,10 @@ pub fn unpack_frames_ics(
                 let flags_4 = frame.get_u8() as u64;
                 let flags_5 = frame.get_u8() as u64;
                 let flags: u64 =
-                    flags_1 & (flags_2 << 8) & (flags_3 << 16) & (flags_4 << 24) & (flags_5 << 32);
+                    flags_1 | (flags_2 << 8) | (flags_3 << 16) | (flags_4 << 24) | (flags_5 << 32);
                 *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
                 *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8() == 0;
+                *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8() != 0;
                 *working
                     .last_ground_id
                     .as_mut()
@@ -624,6 +543,144 @@ pub fn unpack_frames_ics(
             }
         }
     }
-
     p_frames
 }
+
+// pub fn unpack_frames_ics(
+//     frames: &mut [Bytes],
+//     duration: u64,
+//     ports: [Port; 2],
+//     ics: [bool; 2],
+//     version: Version,
+// ) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
+//     let len = duration as usize;
+
+//     let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
+//     p_frames.insert(
+//         ports[0] as u8,
+//         (
+//             PostFrames::new(len, version),
+//             ics[0].then(|| PostFrames::ics(len, version)),
+//         ),
+//     );
+//     p_frames.insert(
+//         ports[1] as u8,
+//         (
+//             PostFrames::new(len, version),
+//             ics[1].then(|| PostFrames::ics(len, version)),
+//         ),
+//     );
+
+//     for frame in frames.iter_mut() {
+//         let frame_number = frame.get_i32();
+//         // since we can't chunk the frames, enumeration won't work. We can still get an
+//         // always-in-bounds index from the frame number though.
+//         let i = (frame_number + 123) as usize;
+//         assert!(
+//             i < len,
+//             "Frame index incorrect, index ({i}) is greater than or equal to the max length of the container ({len})."
+//         );
+//         let port = frame.get_u8();
+//         let nana = frame.get_u8() != 0;
+
+//         let working = {
+//             let temp = p_frames.get_mut(&port).unwrap();
+//             if nana {
+//                 temp.1.as_mut().unwrap()
+//             } else {
+//                 &mut temp.0
+//             }
+//         };
+
+//         unsafe {
+//             *working.frame_index.get_unchecked_mut(i) = frame_number;
+//             *working.character.get_unchecked_mut(i) = frame.get_u8();
+//             *working.action_state.get_unchecked_mut(i) = frame.get_u16();
+//             *working.position.get_unchecked_mut(i) =
+//                 Position::new(frame.get_f32(), frame.get_f32());
+//             *working.orientation.get_unchecked_mut(i) = frame.get_f32();
+//             *working.percent.get_unchecked_mut(i) = frame.get_f32();
+//             *working.shield_health.get_unchecked_mut(i) = frame.get_f32();
+//             *working.last_attack_landed.get_unchecked_mut(i) = frame.get_u8();
+//             *working.combo_count.get_unchecked_mut(i) = frame.get_u8();
+//             *working.last_hit_by.get_unchecked_mut(i) = frame.get_u8();
+//             *working.stocks.get_unchecked_mut(i) = frame.get_u8();
+
+//             // version 2.0.0
+//             if !frame.has_remaining() {
+//                 continue;
+//             } else {
+//                 *working.state_frame.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
+//                 let flags_1 = frame.get_u8() as u64;
+//                 let flags_2 = frame.get_u8() as u64;
+//                 let flags_3 = frame.get_u8() as u64;
+//                 let flags_4 = frame.get_u8() as u64;
+//                 let flags_5 = frame.get_u8() as u64;
+//                 let flags: u64 =
+//                     flags_1 & (flags_2 << 8) & (flags_3 << 16) & (flags_4 << 24) & (flags_5 << 32);
+//                 *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
+//                 *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
+//                 *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8() == 0;
+//                 *working
+//                     .last_ground_id
+//                     .as_mut()
+//                     .unwrap()
+//                     .get_unchecked_mut(i) = frame.get_u16();
+//                 *working
+//                     .jumps_remaining
+//                     .as_mut()
+//                     .unwrap()
+//                     .get_unchecked_mut(i) = frame.get_u8();
+//                 *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
+//             }
+
+//             // version 2.1.0
+//             if !frame.has_remaining() {
+//                 continue;
+//             } else {
+//                 *working.hurtbox_state.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
+//             }
+
+//             // version 3.5.0
+//             if !frame.has_remaining() {
+//                 continue;
+//             } else {
+//                 let air_vel_x = frame.get_f32();
+//                 let vel_y = frame.get_f32();
+//                 *working.air_velocity.as_mut().unwrap().get_unchecked_mut(i) =
+//                     Velocity::new(air_vel_x, vel_y);
+//                 *working.knockback.as_mut().unwrap().get_unchecked_mut(i) =
+//                     Velocity::new(frame.get_f32(), frame.get_f32());
+//                 *working
+//                     .ground_velocity
+//                     .as_mut()
+//                     .unwrap()
+//                     .get_unchecked_mut(i) = Velocity::new(frame.get_f32(), vel_y);
+//             }
+
+//             // version < 3.8.0
+//             if !frame.has_remaining() {
+//                 continue;
+//             } else {
+//                 *working
+//                     .hitlag_remaining
+//                     .as_mut()
+//                     .unwrap()
+//                     .get_unchecked_mut(i) = frame.get_f32();
+//             }
+
+//             // version < 3.11.0
+//             if !frame.has_remaining() {
+//                 continue;
+//             } else {
+//                 *working
+//                     .animation_index
+//                     .as_mut()
+//                     .unwrap()
+//                     .get_unchecked_mut(i) = frame.get_u32();
+//             }
+//         }
+//     }
+
+//     p_frames
+// }
