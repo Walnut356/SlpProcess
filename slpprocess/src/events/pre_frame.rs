@@ -163,7 +163,7 @@ impl From<PreFrames> for DataFrame {
             .into_series(),
             Series::new(col::Orientation.into(), val.orientation),
             StructChunked::new(
-                col::Position.into(),
+                col::JoystickPos.into(),
                 &[
                     Series::new("x", val.joystick.iter().map(|p| p.x).collect::<Vec<_>>()),
                     Series::new("y", val.joystick.iter().map(|p| p.y).collect::<Vec<_>>()),
@@ -172,7 +172,7 @@ impl From<PreFrames> for DataFrame {
             .unwrap()
             .into_series(),
             StructChunked::new(
-                col::Position.into(),
+                col::CstickPos.into(),
                 &[
                     Series::new("x", val.cstick.iter().map(|p| p.x).collect::<Vec<_>>()),
                     Series::new("y", val.cstick.iter().map(|p| p.y).collect::<Vec<_>>()),

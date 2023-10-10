@@ -10,7 +10,7 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-polars = { version = "0.32.1", features = [
+polars = { version = "0.33.2", features = [
     "lazy",
     "dtype-u16",
     "dtype-u8",
@@ -40,3 +40,4 @@ circular-queue = "0.2.6"
 num-traits = "0.2.16"
 lazy_static = "1.4.0"
 ssbm_utils = { path = "../ssbm-utils" }
+crossbeam = "0.8.2"

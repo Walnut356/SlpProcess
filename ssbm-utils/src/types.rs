@@ -1,4 +1,4 @@
-use std::{ops::{Deref, Add, AddAssign}, f32::consts::TAU};
+use std::{ops::{Deref, Add, AddAssign, Sub, SubAssign}, f32::consts::TAU};
 use serde::{Serialize, Deserialize};
 use crate::enums::StickRegion;
 
@@ -97,5 +97,20 @@ impl AddAssign<Velocity> for Position {
     fn add_assign(&mut self, rhs: Velocity) {
         self.x += rhs.x;
         self.y += rhs.y;
+    }
+}
+
+impl Sub<Velocity> for Position {
+    type Output = Self;
+
+    fn sub(self, rhs: Velocity) -> Self::Output {
+        Self {x: self.x - rhs.x, y: self.y - rhs.y}
+    }
+}
+
+impl SubAssign<Velocity> for Position {
+    fn sub_assign(&mut self, rhs: Velocity) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
     }
 }

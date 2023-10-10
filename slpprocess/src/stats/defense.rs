@@ -112,7 +112,7 @@ impl From<DefenseStats> for DataFrame {
             .unwrap()
             .into_series(),
             StructChunked::new(
-                col::Knockback.into(),
+                col::DIStick.into(),
                 &[
                     Series::new("x", val.di_stick.iter().map(|p| p.x).collect::<Vec<_>>()),
                     Series::new("y", val.di_stick.iter().map(|p| p.y).collect::<Vec<_>>()),
@@ -121,7 +121,7 @@ impl From<DefenseStats> for DataFrame {
             .unwrap()
             .into_series(),
             StructChunked::new(
-                col::Knockback.into(),
+                col::DIKnockback.into(),
                 &[
                     Series::new("x", val.di_kb.iter().map(|p| p.x).collect::<Vec<_>>()),
                     Series::new("y", val.di_kb.iter().map(|p| p.y).collect::<Vec<_>>()),
@@ -131,7 +131,7 @@ impl From<DefenseStats> for DataFrame {
             .into_series(),
             Series::new(col::DIEfficacy.into(), val.di_efficacy),
             StructChunked::new(
-                col::Knockback.into(),
+                col::HitlagStart.into(),
                 &[
                     Series::new(
                         "x",
@@ -244,7 +244,7 @@ pub fn find_defense(
         let damage_taken = get_damage_taken(post.percent[i], post.percent[i - 1]);
 
         // ----------------------------------- event detection ---------------------------------- //
-
+        // TODO CC check
         if (!was_in_hitlag && took_damage)
             || (!in_hitlag && took_damage && is_thrown(post.action_state[i]))
         // && !is_magnifying_damage(damage_taken, flags, i)
@@ -260,7 +260,6 @@ pub fn find_defense(
                 post.position[i],
             ));
 
-            // TODO if kb_calc
             let row = event.as_mut().unwrap();
             row.kb = post.knockback.as_ref().unwrap()[i];
         }
@@ -273,6 +272,7 @@ pub fn find_defense(
                 .push(pre.joystick[i].as_stickregion() as i8);
 
             continue;
+            // TODO check valid sdi
         }
 
         // ----------------------------------- finalize event ----------------------------------- //

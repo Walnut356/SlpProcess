@@ -678,3 +678,5 @@ impl PartialOrd<u16> for ActionRange {
         (*self as u16).partial_cmp(other)
     }
 }
+
+// TODO character-specific action states

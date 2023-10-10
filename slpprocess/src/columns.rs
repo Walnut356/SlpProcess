@@ -25,19 +25,11 @@ pub enum Pre {
     /// All versions
     ///
     /// f32
-    JoystickX,
+    JoystickPos,
     /// All versions
     ///
     /// f32
-    JoystickY,
-    /// All versions
-    ///
-    /// f32
-    CstickX,
-    /// All versions
-    ///
-    /// f32
-    CstickY,
+    CstickPos,
     /// All versions
     ///
     /// f32
