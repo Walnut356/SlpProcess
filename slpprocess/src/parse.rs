@@ -245,6 +245,7 @@ impl Game {
             players: players.map(|x| Arc::new(RwLock::new(x))),
             version,
             item_frames,
+            path: Default::default(),
         })
     }
 }

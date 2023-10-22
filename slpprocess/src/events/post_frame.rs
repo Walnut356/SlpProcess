@@ -7,7 +7,7 @@ use ssbm_utils::types::{Position, Velocity};
 
 use crate::{columns::Post, events::game_start::Version, Port};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct PostFrames {
     len: usize,
     pub version: Version,

@@ -141,6 +141,7 @@ impl Stage {
             DREAM_LAND_N64 => Self::DREAMLAND,
             POKEMON_STADIUM => Self::STADIUM,
             FOUNTAIN_OF_DREAMS => Self::FOUNTAIN,
+            // Maybe better to error out? Iunno
             _ => Self {
                 id,
                 blastzones: BlastZones {
@@ -222,6 +223,15 @@ impl Stage {
         && pos.x > self.blastzones.left
         && pos.y < self.blastzones.top
         && pos.y > self.blastzones.bottom)
+    }
+
+    pub fn is_offstage(&self, pos: Position) -> bool {
+        if pos.y < -5.0 {
+            return true;
+        }
+
+        pos.x < self.ledges[0].x || pos.x > self.ledges[1].x
+
     }
 }
 

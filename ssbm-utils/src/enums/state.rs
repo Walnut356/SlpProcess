@@ -679,4 +679,29 @@ impl PartialOrd<u16> for ActionRange {
     }
 }
 
+impl PartialEq<ActionRange> for u16 {
+    fn eq(&self, other: &ActionRange) -> bool {
+        *self == (*other) as u16
+    }
+}
+
+impl PartialOrd<ActionRange> for u16 {
+    fn partial_cmp(&self, other: &ActionRange) -> Option<std::cmp::Ordering> {
+        self.partial_cmp(&(*other as u16))
+    }
+}
+
+impl PartialEq<ActionState> for u16 {
+    fn eq(&self, other: &ActionState) -> bool {
+        *self == (*other) as u16
+    }
+}
+
+impl PartialOrd<ActionState> for u16 {
+    fn partial_cmp(&self, other: &ActionState) -> Option<std::cmp::Ordering> {
+        self.partial_cmp(&(*other as u16))
+    }
+}
+
+
 // TODO character-specific action states

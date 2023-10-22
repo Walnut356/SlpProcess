@@ -41,3 +41,4 @@ num-traits = "0.2.16"
 lazy_static = "1.4.0"
 ssbm_utils = { path = "../ssbm-utils" }
 crossbeam = "0.8.2"
+derive-new = "0.5.9"

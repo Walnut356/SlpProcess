@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
 
@@ -15,7 +15,7 @@ use crate::{
     },
     player::Player,
     stats::{
-        defense::find_defense, inputs::find_inputs, items::find_items, lcancel::find_lcancels,
+        defense::find_defense, inputs::find_inputs, items::find_items, lcancel::find_lcancels, combos::find_combos,
     },
 };
 
@@ -29,6 +29,7 @@ pub struct Game {
     pub version: Version,
     pub players: [Arc<RwLock<Player>>; 2],
     pub item_frames: Option<ItemFrames>,
+    pub path: PathBuf,
 }
 
 impl Game {
@@ -40,6 +41,7 @@ impl Game {
         ensure!(path.is_file() && path.extension().unwrap() == "slp");
         let file_data = Self::get_file_contents(path)?;
         let mut game = Game::parse(file_data)?;
+        game.path = path.into();
         // let now = Instant::now();
         game.get_stats();
         // let dur = now.elapsed();
@@ -129,6 +131,12 @@ impl Game {
                     player.character,
                 )
             });
+
+            player.combos = find_combos(&player.frames, &opponent.frames, self.metadata.stage, player.character)
         }
     }
+
+    // pub fn get_combos(&mut self) {
+    //     find_combos(plyr_frames, opnt_frames, stage_id, player_char)
+    // }
 }

@@ -10,6 +10,7 @@ use strum_macros::{Display, EnumString, IntoStaticStr, FromRepr};
 )]
 #[repr(u16)]
 pub enum Item {
+    UNKNOWN = 0xFFFF,
     CAPSULE = 0x00,
     BOX = 0x01,
     BARREL = 0x02,

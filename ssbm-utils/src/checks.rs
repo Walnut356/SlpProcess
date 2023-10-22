@@ -1,6 +1,45 @@
 use crate::enums::*;
 use crate::enums::ActionRange as AR;
 
+pub struct StateTracker {
+    target: ActionState,
+    count: u32,
+    prev_state: u16,
+}
+
+impl StateTracker {
+    pub fn new(target: ActionState) -> Self {
+        Self {
+            target,
+            count: 0,
+            // you'll probably not ever be in this state, so it's an okay initial value =)
+            prev_state: u16::MAX,
+        }
+    }
+
+    pub fn check_entered(&mut self, state: u16) {
+        if state == self.target && state != self.prev_state {
+            self.count += 1;
+        }
+        self.prev_state = state;
+    }
+
+    pub fn check_exited(&mut self, state: u16) {
+        if state == self.prev_state && state != self.target {
+            self.count += 1;
+        }
+        self.prev_state = state;
+    }
+
+    pub fn get_count(&self) -> u32 {
+        self.count
+    }
+
+    pub fn reset(&mut self) {
+        self.count = 0
+    }
+}
+
 /// Returns true if the current state is different from the previous state
 ///
 /// Minimum Slippi Version: 0.1.0
@@ -12,14 +51,14 @@ pub fn just_changed_state(curr_state: u16, prev_state: u16) -> bool {
 ///
 /// Minimum Slippi Version: 0.1.0
 pub fn just_entered_state(target: ActionState, curr_state: u16, prev_state: u16) -> bool {
-    curr_state == target as u16 && prev_state != target as u16
+    curr_state == target && prev_state != target
 }
 
 /// Returns true if the current state isn't the target state and the previous state is the target state
 ///
 /// Minimum Slippi Version: 0.1.0
 pub fn just_exited_state(target: ActionState, curr_state: u16, prev_state: u16) -> bool {
-    curr_state != target as u16 && prev_state == target as u16
+    curr_state != target && prev_state == target
 }
 
 /// Returns true if the character input anything that would trigger an L cancel (L Digital, R Digital, Z, or analog
@@ -114,7 +153,7 @@ pub fn is_fastfalling(flags: u64) -> bool {
 ///
 /// Minimum Slippi Version: 0.1.0
 pub fn is_damaged(state: u16) -> bool {
-    (AR::DAMAGE_START as u16..=AR::DAMAGE_END as u16).contains(&state)
+    (AR::DAMAGE_START..=AR::DAMAGE_END).contains(&state)
         || ActionState::DOWN_DAMAGE_D == state
         || ActionState::DOWN_DAMAGE_U == state
 }
@@ -123,7 +162,7 @@ pub fn is_damaged(state: u16) -> bool {
 ///
 /// Minimum Slippi Version: 0.1.0
 pub fn is_grabbed(state: u16) -> bool {
-    (AR::CAPTURE_START as u16..=AR::CAPTURE_END as u16).contains(&state)
+    (AR::CAPTURE_START..=AR::CAPTURE_END).contains(&state)
 }
 
 /// Returns true if the character is in any command grab state
@@ -131,22 +170,79 @@ pub fn is_grabbed(state: u16) -> bool {
 /// Minimum Slippi Version: 0.1.0
 pub fn is_cmd_grabbed(state: u16) -> bool {
     ActionState::BARREL_WAIT != state
-        && ((AR::COMMAND_GRAB_RANGE1_START as u16..=AR::COMMAND_GRAB_RANGE1_END as u16)
+        && ((AR::COMMAND_GRAB_RANGE1_START..=AR::COMMAND_GRAB_RANGE1_END)
             .contains(&state)
-            || (AR::COMMAND_GRAB_RANGE2_START as u16..=AR::COMMAND_GRAB_RANGE2_END as u16)
+            || (AR::COMMAND_GRAB_RANGE2_START..=AR::COMMAND_GRAB_RANGE2_END)
                 .contains(&state))
 }
 
-/// Returns true if the character is in any teching or downed state
+/// Returns true if the character is in any teching state. Does not included downed states.
+/// For Downed states, see `is_downed()`
 ///
 /// Minimum Slippi Version: 0.1.0
 pub fn is_teching(state: u16) -> bool {
-    (AR::TECH_START as u16..=AR::TECH_END as u16).contains(&state)
-        // || (AR::DOWN_START as u16..=AR::DOWN_END as u16).contains(&state)
-        // || ActionState::FLY_REFLECT_CEIL == state
-        // || ActionState::FLY_REFLECT_WALL == state
+    (AR::TECH_START..=AR::TECH_END).contains(&state)
+        // || (AR::DOWN_START..=AR::DOWN_END).contains(&state)
+        || ActionState::FLY_REFLECT_CEIL == state
+        || ActionState::FLY_REFLECT_WALL == state
 }
 
+/// Returns true if the character is in any owned state
+///
+/// Minimum Slippi Version: 0.1.0
+pub fn is_downed(state: u16) -> bool {
+    (AR::DOWN_START..=AR::DOWN_END).contains(&state)
+}
+
+/// Returns true if the character is currently being thrown
+///
+/// Minimum Slippi Version: 0.1.0
 pub fn is_thrown(state: u16) -> bool {
-    (AR::THROWN_START as u16..=AR::THROWN_END as u16).contains(&state)
+    (AR::THROWN_START..=AR::THROWN_END).contains(&state)
+}
+
+/// Returns true if the character is currently in a dying state (blast zone explosion, star KO, etc)
+///
+/// Minimum Slippi Version: 0.1.0
+pub fn is_dying(state: u16) -> bool {
+    (AR::DYING_START..=AR::DYING_END).contains(&state)
+}
+
+/// Returns true if the character is currently rolling or spot dodging
+///
+/// Minimum Slippi Version: 0.1.0
+pub fn is_dodging(state: u16) -> bool {
+    // intionally not `..=` due to leaving out airdodging
+    (AR::DODGE_START..AR::DODGE_END).contains(&state)
+}
+
+pub fn is_shielding(state: u16) -> bool {
+    (AR::GUARD_START..=AR::GUARD_END).contains(&state)
+}
+
+pub fn is_shield_broken(state: u16) -> bool {
+    (AR::GUARD_BREAK_START..=AR::GUARD_BREAK_END).contains(&state)
+}
+
+/// Returns trie if the character is currently hanging from the ledge or performing any ledge action
+///
+/// Minimum Slippi Version: 0.1.0
+pub fn is_ledge_action(state: u16) -> bool {
+    (AR::LEDGE_ACTION_START..=AR::LEDGE_ACTION_END).contains(&state)
+}
+
+pub fn is_special_fall(state: u16) -> bool {
+    (AR::FALL_SPECIAL_START..=AR::FALL_SPECIAL_END).contains(&state)
+}
+
+pub fn is_upb_lag(state: u16, prev_state: u16) -> bool {
+    // TODO verify this more
+    state == ActionState::LAND_FALL_SPECIAL &&
+    prev_state != ActionState::LAND_FALL_SPECIAL &&
+    prev_state != ActionState::KNEE_BEND &&
+    prev_state != ActionState::ESCAPE_AIR
+}
+
+pub fn lost_stock(current: u8, prev: u8) -> bool {
+    current < prev
 }

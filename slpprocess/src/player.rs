@@ -1,7 +1,7 @@
 use polars::prelude::DataFrame;
 use ssbm_utils::enums::{Character, Port};
 
-use crate::events::{game_start::ControllerFix, post_frame::PostFrames, pre_frame::PreFrames};
+use crate::{events::{game_start::ControllerFix, post_frame::PostFrames, pre_frame::PreFrames}, stats::combos::Combos};
 
 #[derive(Debug, Default)]
 pub struct Player {
@@ -13,7 +13,7 @@ pub struct Player {
     pub is_winner: Option<bool>,
     pub ucf: Option<UCFToggles>,
     pub stats: Stats,
-    pub combos: (),
+    pub combos: Combos,
     pub frames: Frames,
     pub nana_frames: Option<Frames>,
 }

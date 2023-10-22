@@ -31,6 +31,11 @@ pub fn find_items(frames: &Frames, port: Port, item_frames: &ItemFrames) -> Data
         }
 
         let id = ids[i];
+        // if id == 0x62 {
+        //     dbg!(item_frames.frame_index[i]);
+        //     dbg!(item_frames.position_x[i]);
+        //     dbg!(item_frames.position_y[i]);
+        // }
 
         if unique.insert(spawn_ids[i]) {
             if let Some(x) = item_counter.get_mut(&id) {
@@ -44,7 +49,11 @@ pub fn find_items(frames: &Frames, port: Port, item_frames: &ItemFrames) -> Data
     let mut keys: Vec<&str> = vec![];
     let mut vals: Vec<u32> = vec![];
     for (key, val) in item_counter {
-        keys.push(Item::from_repr(key).unwrap().into());
+        let temp = Item::from_repr(key).unwrap_or(Item::UNKNOWN).into();
+        // if temp == Item::UNKNOWN.to_string() {
+        //     dbg!(key);
+        // }
+        keys.push(temp);
         vals.push(val);
     }
 

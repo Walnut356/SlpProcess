@@ -12,6 +12,7 @@ pub mod stats {
     pub mod inputs;
     pub mod items;
     pub mod lcancel;
+    pub mod combos;
 }
 pub mod columns;
 pub mod game;
