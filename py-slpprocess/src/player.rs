@@ -42,18 +42,15 @@ pub struct PyPlayer {
 impl PyPlayer {
     pub fn new(player: Arc<RwLock<Player>>) -> Self {
         let frames = PyFrames {
-            pre: PyDataFrame(player.read().unwrap().frames.pre.clone()),
-            post: PyDataFrame(player.read().unwrap().frames.post.clone()),
+            pre: PyDataFrame(player.read().unwrap().frames.pre.clone().into()),
+            post: PyDataFrame(player.read().unwrap().frames.post.clone().into()),
         };
 
         let nana_frames = {
-            match player.read().unwrap().nana_frames.clone() {
-                Some(nana_frames) => Some(PyFrames {
-                    pre: PyDataFrame(nana_frames.pre),
-                    post: PyDataFrame(nana_frames.post),
-                }),
-                None => None,
-            }
+            player.read().unwrap().nana_frames.as_ref().map(|nana_frames| PyFrames {
+                    pre: PyDataFrame(nana_frames.pre.clone().into()),
+                    post: PyDataFrame(nana_frames.post.clone().into()),
+                })
         };
         PyPlayer {
             player,
@@ -89,7 +86,7 @@ impl PyPlayer {
     }
     #[getter]
     fn get_port(&self) -> PyResult<u8> {
-        Ok(self.player.as_ref().read().unwrap().port.into())
+        Ok(self.player.as_ref().read().unwrap().port as u8)
     }
     #[getter]
     fn get_connect_code(&self) -> PyResult<Option<String>> {

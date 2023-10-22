@@ -4,7 +4,7 @@ import time
 import slippistats as ss
 
 now = time.time()
-game = slp.parse(R"./Game_20230526T020459.slp")
+game = slp.parse(R"G:/temp")
 fin = time.time()
 print(fin - now)
 print(len(game))

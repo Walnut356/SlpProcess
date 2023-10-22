@@ -50,51 +50,51 @@ impl PyGame {
     // --------------------------------------------- game start getters --------------------------------------------- //
     #[getter]
     pub fn get_random_seed(&self) -> PyResult<u32> {
-        Ok(self.game.start.random_seed)
+        Ok(self.game.metadata.random_seed)
     }
     #[getter]
     pub fn get_is_teams(&self) -> PyResult<bool> {
-        Ok(self.game.start.is_teams)
+        Ok(self.game.metadata.is_teams)
     }
     #[getter]
     pub fn get_stage(&self) -> PyResult<u16> {
-        Ok(self.game.start.stage.into())
+        Ok(self.game.metadata.stage as u16)
     }
     #[getter]
     pub fn get_timer(&self) -> PyResult<u64> {
-        Ok(self.game.start.timer.as_secs())
+        Ok(self.game.metadata.timer.as_secs())
     }
     #[getter]
     pub fn get_damage_ratio(&self) -> PyResult<f32> {
-        Ok(self.game.start.damage_ratio)
+        Ok(self.game.metadata.damage_ratio)
     }
     #[getter]
     pub fn get_is_pal(&self) -> PyResult<Option<bool>> {
-        Ok(self.game.start.is_pal)
+        Ok(self.game.metadata.is_pal)
     }
     #[getter]
     pub fn get_is_frozen_stadium(&self) -> PyResult<Option<bool>> {
-        Ok(self.game.start.is_frozen_stadium)
+        Ok(self.game.metadata.is_frozen_stadium)
     }
     #[getter]
     pub fn get_is_netplay(&self) -> PyResult<Option<bool>> {
-        Ok(self.game.start.is_netplay)
+        Ok(self.game.metadata.is_netplay)
     }
     #[getter]
     pub fn get_match_id(&self) -> PyResult<Option<String>> {
-        Ok(self.game.start.match_id.clone())
+        Ok(self.game.metadata.match_id.clone())
     }
     #[getter]
     pub fn get_match_type(&self) -> PyResult<Option<u8>> {
-        Ok(self.game.start.match_type.map(|x| x as u8))
+        Ok(self.game.metadata.match_type.map(|x| x as u8))
     }
     #[getter]
     pub fn get_game_number(&self) -> PyResult<Option<u32>> {
-        Ok(self.game.start.game_number)
+        Ok(self.game.metadata.game_number)
     }
     #[getter]
     pub fn get_tiebreak_number(&self) -> PyResult<Option<u32>> {
-        Ok(self.game.start.tiebreak_number)
+        Ok(self.game.metadata.tiebreak_number)
     }
 
     // ---------------------------------------------- game end getters ---------------------------------------------- //

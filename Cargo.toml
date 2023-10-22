@@ -1,5 +1,5 @@
 [workspace]
-members = ["./slpprocess", "./ssbm-utils"]
+members = ["./slpprocess", "./ssbm-utils", "./py-slpprocess"]
 
 [profile.dev.package."*"]
 opt-level = 3
