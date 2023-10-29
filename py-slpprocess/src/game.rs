@@ -90,7 +90,7 @@ impl PyGame {
     }
     #[getter]
     pub fn get_item_frames(&self) -> PyResult<Option<PyItem>> {
-        Ok(self.game.item_frames.as_ref().map(|x| PyItem { frames: x} ))
+        Ok(self.game.item_frames.as_ref().map(|x| PyItem { frames: x.clone()} ))
     }
 
     // ---------------------------------------------- game end getters ---------------------------------------------- //

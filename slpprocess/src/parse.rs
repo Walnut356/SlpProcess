@@ -244,7 +244,7 @@ impl Game {
             total_frames: frame_count,
             players: players.map(|x| ArcSwap::from(Arc::new(x))),
             version,
-            item_frames: item_frames.map(|x| Arc::new(x)),
+            item_frames: item_frames.map(Arc::new),
             path: Default::default(),
         })
     }
