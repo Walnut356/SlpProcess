@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use polars::prelude::DataFrame;
 use ssbm_utils::enums::{Character, Port};
 
@@ -12,8 +14,8 @@ pub struct Player {
     pub display_name: Option<String>,
     pub is_winner: Option<bool>,
     pub ucf: Option<UCFToggles>,
-    pub stats: Stats,
-    pub combos: Combos,
+    pub stats: Arc<Stats>,
+    pub combos: Arc<Combos>,
     pub frames: Frames,
     pub nana_frames: Option<Frames>,
 }
@@ -24,10 +26,10 @@ pub struct UCFToggles {
     pub shield_drop: ControllerFix,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Frames {
-    pub pre: PreFrames,
-    pub post: PostFrames,
+    pub pre: Arc<PreFrames>,
+    pub post: Arc<PostFrames>,
 }
 
 impl Frames {

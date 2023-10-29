@@ -2,22 +2,14 @@
 
 use std::path::Path;
 
-use crate::player::*;
+use crate::{player::*, frames::PyFrames};
 
 use pyo3::prelude::*;
-use pyo3_polars::PyDataFrame;
 use slpprocess::Game;
 
-#[derive(Clone, Debug)]
-#[pyclass(name = "Frames")]
-pub struct PyFrames {
-    #[pyo3(get)]
-    pub pre: PyDataFrame,
-    #[pyo3(get)]
-    pub post: PyDataFrame,
-}
 
-#[pyclass(name = "Game")]
+
+#[pyclass(name = "Game", frozen)]
 pub struct PyGame {
     game: Game,
     #[pyo3(get)]
@@ -29,7 +21,7 @@ impl PyGame {
         let players = game
             .players
             .iter()
-            .map(|x| PyPlayer::new(x.clone()))
+            .map(|x| PyPlayer::new(x.load().clone()))
             .collect();
         PyGame { game, players }
     }

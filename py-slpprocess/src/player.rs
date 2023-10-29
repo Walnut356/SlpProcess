@@ -1,11 +1,9 @@
-use std::sync::{Arc, RwLock};
-
+use std::sync::Arc;
 
 use pyo3::prelude::*;
-use pyo3_polars::PyDataFrame;
 use slpprocess::player::Player;
 
-use crate::game::PyFrames;
+use crate::frames::{PyFrames, PyPre, PyPost};
 
 // #[derive(Clone, Debug)]
 // #[pyclass(name = "Players")]
@@ -30,9 +28,9 @@ use crate::game::PyFrames;
 // }
 
 #[derive(Clone, Debug)]
-#[pyclass(name = "Player")]
+#[pyclass(name = "Player", frozen)]
 pub struct PyPlayer {
-    pub player: Arc<RwLock<Player>>,
+    pub player: Arc<Player>,
     #[pyo3(get)]
     pub frames: PyFrames,
     #[pyo3(get)]
@@ -40,17 +38,25 @@ pub struct PyPlayer {
 }
 
 impl PyPlayer {
-    pub fn new(player: Arc<RwLock<Player>>) -> Self {
+    pub fn new(player: Arc<Player>) -> Self {
         let frames = PyFrames {
-            pre: PyDataFrame(player.read().unwrap().frames.pre.clone().into()),
-            post: PyDataFrame(player.read().unwrap().frames.post.clone().into()),
+            pre: PyPre {
+                pre: player.frames.pre.clone(),
+            },
+            post: PyPost {
+                post: player.frames.post.clone(),
+            },
         };
 
         let nana_frames = {
-            player.read().unwrap().nana_frames.as_ref().map(|nana_frames| PyFrames {
-                    pre: PyDataFrame(nana_frames.pre.clone().into()),
-                    post: PyDataFrame(nana_frames.post.clone().into()),
-                })
+            player.nana_frames.as_ref().map(|nana_frames| PyFrames {
+                pre: PyPre {
+                    pre: nana_frames.pre.clone(),
+                },
+                post: PyPost {
+                    post: nana_frames.post.clone(),
+                },
+            })
         };
         PyPlayer {
             player,
@@ -63,41 +69,31 @@ impl PyPlayer {
 #[pymethods]
 impl PyPlayer {
     fn __repr__(&self) -> PyResult<String> {
-        Ok(format!(
-            "Player{{\nPort: {:?},\n}}",
-            self.player.read().unwrap().port
-        ))
+        Ok(format!("Player{{\nPort: {:?},\n}}", self.player.port))
     }
 
     #[getter]
     fn get_character(&self) -> PyResult<u8> {
-        Ok(self
-            .player
-            .as_ref()
-            .read()
-            .unwrap()
-            .character
-            .try_into_css()
-            .unwrap())
+        Ok(self.player.as_ref().character.try_into_css().unwrap())
     }
     #[getter]
     fn get_costume(&self) -> PyResult<u8> {
-        Ok(self.player.as_ref().read().unwrap().costume)
+        Ok(self.player.costume)
     }
     #[getter]
     fn get_port(&self) -> PyResult<u8> {
-        Ok(self.player.as_ref().read().unwrap().port as u8)
+        Ok(self.player.port as u8)
     }
     #[getter]
     fn get_connect_code(&self) -> PyResult<Option<String>> {
-        Ok(self.player.as_ref().read().unwrap().connect_code.clone())
+        Ok(self.player.connect_code.clone())
     }
     #[getter]
     fn get_display_name(&self) -> PyResult<Option<String>> {
-        Ok(self.player.as_ref().read().unwrap().display_name.clone())
+        Ok(self.player.display_name.clone())
     }
     #[getter]
     fn get_is_winner(&self) -> PyResult<Option<bool>> {
-        Ok(self.player.as_ref().read().unwrap().is_winner)
+        Ok(self.player.is_winner)
     }
 }

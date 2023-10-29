@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
 
 use anyhow::{anyhow, ensure, Result};
+use arc_swap::{ArcSwap, Guard};
 use itertools::Itertools;
 
 use ssbm_utils::enums::{stage::Stage, Port};
@@ -13,9 +14,10 @@ use crate::{
         game_start::{GameStart, Version},
         item_frames::ItemFrames,
     },
-    player::Player,
+    player::{Player, Stats},
     stats::{
-        defense::find_defense, inputs::find_inputs, items::find_items, lcancel::find_lcancels, combos::find_combos,
+        combos::find_combos, defense::find_defense, inputs::find_inputs, items::find_items,
+        lcancel::find_lcancels,
     },
 };
 
@@ -27,7 +29,7 @@ pub struct Game {
     pub duration: Duration,
     pub total_frames: u64,
     pub version: Version,
-    pub players: [Arc<RwLock<Player>>; 2],
+    pub players: [ArcSwap<Player>; 2],
     pub item_frames: Option<ItemFrames>,
     pub path: PathBuf,
 }
@@ -50,13 +52,13 @@ impl Game {
         Ok(game)
     }
 
-    pub fn player_by_port(&self, port: Port) -> Result<RwLockReadGuard<'_, Player>> {
+    pub fn player_by_port(&self, port: Port) -> Result<Guard<Arc<Player>>> {
         for p_lock in self.players.as_ref().iter() {
             // TODO i don't like making this a string, but RwLock errors require Sync/Send so
             // they can't be directly converted to anyhow errors without some fiddling. I don't
             // feel super confident about that, but it's also not very important atm so i'll
             // look into it later
-            let player = p_lock.read().map_err(|x| anyhow!("{:?}", x.to_string()))?;
+            let player = p_lock.load();
 
             if player.port == port {
                 return Ok(player);
@@ -66,9 +68,9 @@ impl Game {
         Err(anyhow!("Unable to find player with port {:?}", port))
     }
 
-    pub fn player_by_code(&self, connect_code: &str) -> Result<RwLockReadGuard<'_, Player>> {
+    pub fn player_by_code(&self, connect_code: &str) -> Result<Guard<Arc<Player>>> {
         for p_lock in self.players.iter() {
-            let player = p_lock.read().map_err(|x| anyhow!("{:?}", x.to_string()))?;
+            let player = p_lock.load();
 
             if player
                 .connect_code
@@ -85,45 +87,31 @@ impl Game {
         ))
     }
 
-    pub(crate) fn player_by_port_mut(
-        &mut self,
-        port: Port,
-    ) -> Result<RwLockWriteGuard<'_, Player>> {
-        for p_lock in self.players.iter() {
-            let player = p_lock.write().map_err(|x| anyhow!("{:?}", x.to_string()))?;
-
-            if player.port == port {
-                return Ok(player);
-            }
-        }
-
-        Err(anyhow!("Unable to find player with port {:?}", port))
-    }
-
     pub fn get_stats(&mut self) {
         let version = self.version;
 
         for players in self.players.iter().permutations(2) {
-            let mut player = players[0].as_ref().write().unwrap();
-            let opponent = players[1].as_ref().read().unwrap();
+            // inner scope for read-only operations
+            let player = players[0].load();
+            let opponent = players[1].load();
             let items = &self.item_frames;
 
             // inputs are available in every replay version
-            player.stats.inputs = find_inputs(&player.frames, self.total_frames);
+            let inputs = find_inputs(&player.frames, self.total_frames);
 
             // l cancel status was with 2.0.0 on 3/19/2019
-            player.stats.l_cancel = version
+            let l_cancel = version
                 .at_least(2, 0, 0)
-                .then(|| find_lcancels(&player.frames, Stage::from_id(self.metadata.stage)));
+                .then(|| find_lcancels(&player.frames, &Stage::from_id(self.metadata.stage)));
 
             // requires fields up to item.owner which was released just after rollback on 7/8/2020
-            player.stats.items = version
+            let items = version
                 .at_least(3, 6, 0)
                 .then(|| find_items(&player.frames, player.port, items.as_ref().unwrap()));
 
             // requires knockback speed values which requires v3.5.0, released just before rollback
             // on 6/20/2020
-            player.stats.defense = version.at_least(3, 5, 0).then(|| {
+            let defense = version.at_least(3, 5, 0).then(|| {
                 find_defense(
                     &player.frames,
                     &opponent.frames,
@@ -132,7 +120,46 @@ impl Game {
                 )
             });
 
-            player.combos = find_combos(&player.frames, &opponent.frames, self.metadata.stage, player.character)
+            let stats = Arc::new(Stats {
+                inputs,
+                l_cancel,
+                items,
+                defense,
+            });
+
+            let combos = Arc::new(find_combos(
+                &player.frames,
+                &opponent.frames,
+                self.metadata.stage,
+                player.character,
+            ));
+
+            /* This should be a pretty cheap clone all things considered. The frames are 2 Arc
+            clones, and the connect code/display name are a max of 40 bytes (max 10 for code, max
+            30 for display name)
+
+            I'm not super happy with how this turned out, but the ergonomics for the end-user are
+            nicer than Arc<RwLock<>> or RwLock<Arc<>>and ArcSwap is heavily optimized for
+            seldom-write, often-read which is exactly my usecase.
+
+            The alternative (i think?) is to use something like OnceLock<Arc<Stats>>, which i may
+            still change to later. It's a negligable performance impact to save typing .get()
+            and i'm lazy =)
+             */
+
+            self.players[0].store(Arc::new(Player {
+                character: player.character,
+                costume: player.costume,
+                port: player.port,
+                connect_code: player.connect_code.clone(),
+                display_name: player.display_name.clone(),
+                is_winner: player.is_winner,
+                ucf: player.ucf,
+                stats,
+                combos,
+                frames: player.frames.clone(),
+                nana_frames: player.nana_frames.clone(),
+            }))
         }
     }
 

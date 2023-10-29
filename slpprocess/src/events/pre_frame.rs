@@ -9,7 +9,7 @@ use ssbm_utils::types::{Position, StickPos};
 #[derive(Debug, Default, Clone)]
 pub struct PreFrames {
     len: usize,
-    pub version: Version,
+    version: Version,
     pub frame_index: Box<[i32]>,
     pub random_seed: Box<[u32]>,
     pub action_state: Box<[u16]>,
@@ -141,9 +141,8 @@ impl PreFrames {
     }
 }
 
-#[allow(clippy::from_over_into)]
 impl From<PreFrames> for DataFrame {
-    fn from(val: PreFrames) -> DataFrame {
+    fn from(val: PreFrames) -> Self {
         let len = val.len();
 
         use crate::columns::Pre as col;

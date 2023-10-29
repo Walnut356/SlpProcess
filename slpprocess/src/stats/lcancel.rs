@@ -8,7 +8,7 @@ use crate::{columns::*, player::Frames};
 use itertools::izip;
 use polars::prelude::*;
 
-pub fn find_lcancels(frames: &Frames, stage: Stage) -> DataFrame {
+pub fn find_lcancels(frames: &Frames, stage: &Stage) -> DataFrame {
     let mut frame_index_col: Vec<i32> = Vec::new();
     let mut stocks_col: Vec<u8> = Vec::new();
     let mut attack_col: Vec<&str> = Vec::new();

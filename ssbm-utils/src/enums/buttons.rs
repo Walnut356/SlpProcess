@@ -140,7 +140,7 @@ impl StickRegion {
             // this one goes first because i get the feeling it's most common by a lot.
             // also, since we know it's non-deadzone past the first entry, we can just do pos/neg
             // check instead of checking against exact values which reads a little easier
-            _ if (-0.2875 < x && x < 0.2875) && (-0.2875 < y && y < -0.2875) => R::DEAD_ZONE,
+            _ if (-0.2875 < x && x < 0.2875) && (-0.2875 < y && y < 0.2875) => R::DEAD_ZONE,
             _ if x.is_positive() && y.is_positive() => R::UP_RIGHT,
             _ if x.is_positive() && y.is_negative() => R::DOWN_RIGHT,
             _ if x.is_negative() && y.is_negative() => R::DOWN_LEFT,

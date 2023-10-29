@@ -10,7 +10,7 @@ use crate::{columns::Post, events::game_start::Version, Port};
 #[derive(Debug, Default, Clone)]
 pub struct PostFrames {
     len: usize,
-    pub version: Version,
+    version: Version,
     pub frame_index: Box<[i32]>,
     pub character: Box<[u8]>,
     pub action_state: Box<[u16]>,
@@ -226,9 +226,8 @@ impl PostFrames {
     }
 }
 
-#[allow(clippy::from_over_into)]
 impl From<PostFrames> for DataFrame {
-    fn from(val: PostFrames) -> DataFrame {
+    fn from(val: PostFrames) -> Self {
         let len = val.len();
 
         use Post as col;
@@ -294,33 +293,87 @@ impl From<PostFrames> for DataFrame {
         }
 
         if val.version.at_least(3, 5, 0) {
-            vec_series.push(StructChunked::new(
-                col::AirVel.into(),
-                &[
-                    Series::new("x", val.air_velocity.as_ref().unwrap().iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.air_velocity.as_ref().unwrap().iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series());
-            vec_series.push(StructChunked::new(
-                col::Knockback.into(),
-                &[
-                    Series::new("x", val.knockback.as_ref().unwrap().iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.knockback.as_ref().unwrap().iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series());
-            vec_series.push(StructChunked::new(
-                col::GroundVel.into(),
-                &[
-                    Series::new("x", val.ground_velocity.as_ref().unwrap().iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.ground_velocity.as_ref().unwrap().iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),);
+            vec_series.push(
+                StructChunked::new(
+                    col::AirVel.into(),
+                    &[
+                        Series::new(
+                            "x",
+                            val.air_velocity
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|p| p.x)
+                                .collect::<Vec<_>>(),
+                        ),
+                        Series::new(
+                            "y",
+                            val.air_velocity
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|p| p.y)
+                                .collect::<Vec<_>>(),
+                        ),
+                    ],
+                )
+                .unwrap()
+                .into_series(),
+            );
+            vec_series.push(
+                StructChunked::new(
+                    col::Knockback.into(),
+                    &[
+                        Series::new(
+                            "x",
+                            val.knockback
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|p| p.x)
+                                .collect::<Vec<_>>(),
+                        ),
+                        Series::new(
+                            "y",
+                            val.knockback
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|p| p.y)
+                                .collect::<Vec<_>>(),
+                        ),
+                    ],
+                )
+                .unwrap()
+                .into_series(),
+            );
+            vec_series.push(
+                StructChunked::new(
+                    col::GroundVel.into(),
+                    &[
+                        Series::new(
+                            "x",
+                            val.ground_velocity
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|p| p.x)
+                                .collect::<Vec<_>>(),
+                        ),
+                        Series::new(
+                            "y",
+                            val.ground_velocity
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|p| p.y)
+                                .collect::<Vec<_>>(),
+                        ),
+                    ],
+                )
+                .unwrap()
+                .into_series(),
+            );
         } else {
             vec_series.push(Series::new_null(col::AirVel.into(), len));
             vec_series.push(Series::new_null(col::Knockback.into(), len));
@@ -356,17 +409,13 @@ pub fn parse_postframes(
     ports: [Port; 2],
     ics: [bool; 2],
 ) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
-    let p_frames = {
-        /* splitting these out saves us a small amount of time in conditional logic, and allows for
-        exact iterator chunk sizes. */
-        if !ics[0] && !ics[1] {
-            unpack_frames(frames, ports, version)
-        } else {
-            unpack_frames_ics(frames, duration, ports, ics, version)
-        }
-    };
-
-    p_frames
+    /* splitting these out saves us a small amount of time in conditional logic, and allows for
+    exact iterator chunk sizes. */
+    if !ics[0] && !ics[1] {
+        unpack_frames(frames, ports, version)
+    } else {
+        unpack_frames_ics(frames, duration, ports, ics, version)
+    }
 }
 
 /// Slightly more optimized version of the typical parsing code, due to invariants regarding frame

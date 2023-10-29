@@ -8,11 +8,11 @@ pub mod events {
     pub mod pre_frame;
 }
 pub mod stats {
+    pub mod combos;
     pub mod defense;
     pub mod inputs;
     pub mod items;
     pub mod lcancel;
-    pub mod combos;
 }
 pub mod columns;
 pub mod game;
@@ -22,15 +22,15 @@ pub(crate) mod ubjson;
 pub mod utils;
 
 pub use crate::game::Game;
+use crate::stats::combos::Combos;
 pub use ssbm_utils::enums::Port;
 
-
 use rayon::prelude::*;
+use serde_json::json;
 use std::{
     fs,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, cell::RefCell, sync::Arc,
 };
-
 
 /// Accepts a string file path to a single replay, or a directory containing replays. Returns a vector containing the
 /// resultant game object(s).
@@ -68,6 +68,17 @@ pub fn parse(path: &str) -> Vec<Game> {
         return result;
     }
     panic!("invalid file path")
+}
+
+pub fn get_combos<'a>(games: &'a [Game], connect_code: &str) -> Vec<Arc<Combos>> {
+    games.iter().filter_map(|game| {
+
+        let player = game.player_by_code(connect_code);
+        match player {
+            Ok(p) => Some(p.combos.clone()),
+            Err(_) => None,
+        }
+    }).collect()
 }
 
 #[cfg(test)]

@@ -1,6 +1,7 @@
 #![allow(non_upper_case_globals)]
 
 use anyhow::{anyhow, ensure, Result};
+use arc_swap::ArcSwap;
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
 use nohash_hasher::IntMap;
@@ -225,14 +226,14 @@ impl Game {
 
         for player in players.iter_mut() {
             let temp_pre = pre_frames.remove(&(player.port as u8)).unwrap();
-            player.frames.pre = temp_pre.0;
+            player.frames.pre = Arc::new(temp_pre.0);
 
             let temp_post = post_frames.remove(&(player.port as u8)).unwrap();
-            player.frames.post = temp_post.0;
+            player.frames.post = Arc::new(temp_post.0);
             if temp_pre.1.is_some() {
                 player.nana_frames = Some(Frames {
-                    pre: temp_pre.1.unwrap(),
-                    post: temp_post.1.unwrap(),
+                    pre: Arc::new(temp_pre.1.unwrap()),
+                    post: Arc::new(temp_post.1.unwrap()),
                 })
             }
         }
@@ -242,7 +243,7 @@ impl Game {
             end: game_end,
             duration,
             total_frames: frame_count,
-            players: players.map(|x| Arc::new(RwLock::new(x))),
+            players: players.map(|x| ArcSwap::from(Arc::new(x))),
             version,
             item_frames,
             path: Default::default(),
