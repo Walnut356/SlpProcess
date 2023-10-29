@@ -3,7 +3,7 @@ use std::sync::Arc;
 use pyo3::prelude::*;
 use slpprocess::player::Player;
 
-use crate::frames::{PyFrames, PyPre, PyPost};
+use crate::frames::{PyFrames, PyPost, PyPre};
 
 // #[derive(Clone, Debug)]
 // #[pyclass(name = "Players")]
@@ -41,20 +41,20 @@ impl PyPlayer {
     pub fn new(player: Arc<Player>) -> Self {
         let frames = PyFrames {
             pre: PyPre {
-                pre: player.frames.pre.clone(),
+                frames: player.frames.pre.clone(),
             },
             post: PyPost {
-                post: player.frames.post.clone(),
+                frames: player.frames.post.clone(),
             },
         };
 
         let nana_frames = {
             player.nana_frames.as_ref().map(|nana_frames| PyFrames {
                 pre: PyPre {
-                    pre: nana_frames.pre.clone(),
+                    frames: nana_frames.pre.clone(),
                 },
                 post: PyPost {
-                    post: nana_frames.post.clone(),
+                    frames: nana_frames.post.clone(),
                 },
             })
         };

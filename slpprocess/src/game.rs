@@ -30,7 +30,7 @@ pub struct Game {
     pub total_frames: u64,
     pub version: Version,
     pub players: [ArcSwap<Player>; 2],
-    pub item_frames: Option<ItemFrames>,
+    pub item_frames: Option<Arc<ItemFrames>>,
     pub path: PathBuf,
 }
 

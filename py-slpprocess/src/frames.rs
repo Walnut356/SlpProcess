@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use pyo3::prelude::*;
-use slpprocess::events::{post_frame::PostFrames, pre_frame::PreFrames};
+use slpprocess::events::{item_frames::ItemFrames, post_frame::PostFrames, pre_frame::PreFrames};
 
 #[derive(Clone, Debug)]
 #[pyclass(name = "Frames", frozen)]
@@ -13,173 +13,153 @@ pub struct PyFrames {
 }
 
 #[derive(Clone, Debug)]
-#[pyclass(name = "Pre", frozen)]
+#[pyclass(name = "PreFrames", frozen)]
 pub struct PyPre {
-    pub pre: Arc<PreFrames>,
+    pub frames: Arc<PreFrames>,
 }
 
 #[pymethods]
 impl PyPre {
     #[getter]
     fn get_frame_index(&self) -> PyResult<Vec<i32>> {
-        Ok(self.pre.frame_index.to_vec())
+        Ok(self.frames.frame_index.to_vec())
     }
     #[getter]
     fn get_random_seed(&self) -> PyResult<Vec<u32>> {
-        Ok(self.pre.random_seed.to_vec())
+        Ok(self.frames.random_seed.to_vec())
     }
     #[getter]
     fn get_action_state(&self) -> PyResult<Vec<u16>> {
-        Ok(self.pre.action_state.to_vec())
+        Ok(self.frames.action_state.to_vec())
     }
     #[getter]
     fn get_position(&self) -> PyResult<Vec<(f32, f32)>> {
-        Ok(self
-            .pre
-            .position
-            .iter()
-            .map(|p| (p.x, p.y))
-            .collect())
+        Ok(self.frames.position.iter().map(|p| (p.x, p.y)).collect())
     }
     #[getter]
     fn get_orientation(&self) -> PyResult<Vec<f32>> {
-        Ok(self.pre.orientation.to_vec())
+        Ok(self.frames.orientation.to_vec())
     }
     #[getter]
     fn get_joystick(&self) -> PyResult<Vec<(f32, f32)>> {
-        Ok(self
-            .pre
-            .joystick
-            .iter()
-            .map(|p| (p.x, p.y))
-            .collect())
+        Ok(self.frames.joystick.iter().map(|p| (p.x, p.y)).collect())
     }
     #[getter]
     fn get_cstick(&self) -> PyResult<Vec<(f32, f32)>> {
-        Ok(self
-            .pre
-            .cstick
-            .iter()
-            .map(|p| (p.x, p.y))
-            .collect())
+        Ok(self.frames.cstick.iter().map(|p| (p.x, p.y)).collect())
     }
     #[getter]
     fn get_engine_trigger(&self) -> PyResult<Vec<f32>> {
-        Ok(self.pre.engine_trigger.to_vec())
+        Ok(self.frames.engine_trigger.to_vec())
     }
     #[getter]
     fn get_engine_buttons(&self) -> PyResult<Vec<u32>> {
-        Ok(self.pre.engine_buttons.to_vec())
+        Ok(self.frames.engine_buttons.to_vec())
     }
     #[getter]
     fn get_controller_buttons(&self) -> PyResult<Vec<u16>> {
-        Ok(self.pre.controller_buttons.to_vec())
+        Ok(self.frames.controller_buttons.to_vec())
     }
     #[getter]
     fn get_controller_l(&self) -> PyResult<Vec<f32>> {
-        Ok(self.pre.controller_l.to_vec())
+        Ok(self.frames.controller_l.to_vec())
     }
     #[getter]
     fn get_controller_r(&self) -> PyResult<Vec<f32>> {
-        Ok(self.pre.controller_r.to_vec())
+        Ok(self.frames.controller_r.to_vec())
     }
     #[getter]
     fn get_percent(&self) -> PyResult<Option<Vec<f32>>> {
-        Ok(self.pre.percent.as_ref().map(|x| x.to_vec()))
+        Ok(self.frames.percent.as_ref().map(|x| x.to_vec()))
     }
 }
 
 #[derive(Clone, Debug)]
-#[pyclass(name = "Post", frozen)]
+#[pyclass(name = "PostFrames", frozen)]
 pub struct PyPost {
-    pub post: Arc<PostFrames>,
+    pub frames: Arc<PostFrames>,
 }
 
 #[pymethods]
 impl PyPost {
     #[getter]
     fn get_frame_index(&self) -> PyResult<Vec<i32>> {
-        Ok(self.post.frame_index.to_vec())
+        Ok(self.frames.frame_index.to_vec())
     }
 
     #[getter]
     fn get_character(&self) -> PyResult<Vec<u8>> {
-        Ok(self.post.character.to_vec())
+        Ok(self.frames.character.to_vec())
     }
     #[getter]
     fn get_action_state(&self) -> PyResult<Vec<u16>> {
-        Ok(self.post.action_state.to_vec())
+        Ok(self.frames.action_state.to_vec())
     }
     #[getter]
     fn get_position(&self) -> PyResult<Vec<(f32, f32)>> {
-        Ok(self
-            .post
-            .position
-            .iter()
-            .map(|p| (p.x, p.y))
-            .collect())
+        Ok(self.frames.position.iter().map(|p| (p.x, p.y)).collect())
     }
     #[getter]
     fn get_orientation(&self) -> PyResult<Vec<f32>> {
-        Ok(self.post.orientation.to_vec())
+        Ok(self.frames.orientation.to_vec())
     }
     #[getter]
     fn get_percent(&self) -> PyResult<Vec<f32>> {
-        Ok(self.post.percent.to_vec())
+        Ok(self.frames.percent.to_vec())
     }
     #[getter]
     fn get_shield_health(&self) -> PyResult<Vec<f32>> {
-        Ok(self.post.shield_health.to_vec())
+        Ok(self.frames.shield_health.to_vec())
     }
     #[getter]
     fn get_last_attack_landed(&self) -> PyResult<Vec<u8>> {
-        Ok(self.post.last_attack_landed.to_vec())
+        Ok(self.frames.last_attack_landed.to_vec())
     }
     #[getter]
     fn get_combo_count(&self) -> PyResult<Vec<u8>> {
-        Ok(self.post.combo_count.to_vec())
+        Ok(self.frames.combo_count.to_vec())
     }
     #[getter]
     fn get_last_hit_by(&self) -> PyResult<Vec<u8>> {
-        Ok(self.post.last_hit_by.to_vec())
+        Ok(self.frames.last_hit_by.to_vec())
     }
     #[getter]
     fn get_stocks(&self) -> PyResult<Vec<u8>> {
-        Ok(self.post.stocks.to_vec())
+        Ok(self.frames.stocks.to_vec())
     }
 
     #[getter]
     fn get_state_frame(&self) -> PyResult<Option<Vec<f32>>> {
-        Ok(self.post.state_frame.as_ref().map(|x| x.to_vec()))
+        Ok(self.frames.state_frame.as_ref().map(|x| x.to_vec()))
     }
     #[getter]
     fn get_flags(&self) -> PyResult<Option<Vec<u64>>> {
-        Ok(self.post.flags.as_ref().map(|x| x.to_vec()))
+        Ok(self.frames.flags.as_ref().map(|x| x.to_vec()))
     }
     #[getter]
     fn get_misc_as(&self) -> PyResult<Option<Vec<f32>>> {
-        Ok(self.post.misc_as.as_ref().map(|x| x.to_vec()))
+        Ok(self.frames.misc_as.as_ref().map(|x| x.to_vec()))
     }
     #[getter]
     fn get_last_ground_id(&self) -> PyResult<Option<Vec<bool>>> {
-        Ok(self.post.is_grounded.as_ref().map(|x| x.to_vec()))
+        Ok(self.frames.is_grounded.as_ref().map(|x| x.to_vec()))
     }
     #[getter]
     fn get_jumps_remaining(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.post.jumps_remaining.as_ref().map(|x| x.to_vec()))
+        Ok(self.frames.jumps_remaining.as_ref().map(|x| x.to_vec()))
     }
     #[getter]
     fn get_l_cancel(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.post.l_cancel.as_ref().map(|x| x.to_vec()))
+        Ok(self.frames.l_cancel.as_ref().map(|x| x.to_vec()))
     }
     #[getter]
     fn get_hurtbox_state(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.post.hurtbox_state.as_ref().map(|x| x.to_vec()))
+        Ok(self.frames.hurtbox_state.as_ref().map(|x| x.to_vec()))
     }
     #[getter]
     fn get_air_velocity(&self) -> PyResult<Option<Vec<(f32, f32)>>> {
         Ok(self
-            .post
+            .frames
             .air_velocity
             .as_ref()
             .map(|x| x.iter().map(|p| (p.x, p.y)).collect()))
@@ -187,7 +167,7 @@ impl PyPost {
     #[getter]
     fn get_knockback(&self) -> PyResult<Option<Vec<(f32, f32)>>> {
         Ok(self
-            .post
+            .frames
             .knockback
             .as_ref()
             .map(|x| x.iter().map(|p| (p.x, p.y)).collect()))
@@ -195,17 +175,83 @@ impl PyPost {
     #[getter]
     fn get_ground_velocity(&self) -> PyResult<Option<Vec<(f32, f32)>>> {
         Ok(self
-            .post
+            .frames
             .ground_velocity
             .as_ref()
             .map(|x| x.iter().map(|p| (p.x, p.y)).collect()))
     }
     #[getter]
     fn get_hitlag_remaining(&self) -> PyResult<Option<Vec<f32>>> {
-        Ok(self.post.state_frame.as_ref().map(|x| x.to_vec()))
+        Ok(self.frames.state_frame.as_ref().map(|x| x.to_vec()))
     }
     #[getter]
     fn get_animation_index(&self) -> PyResult<Option<Vec<f32>>> {
-        Ok(self.post.state_frame.as_ref().map(|x| x.to_vec()))
+        Ok(self.frames.state_frame.as_ref().map(|x| x.to_vec()))
+    }
+}
+
+#[derive(Clone, Debug)]
+#[pyclass(name = "ItemFrames", frozen)]
+pub struct PyItem {
+    pub frames: Arc<ItemFrames>,
+}
+
+#[pymethods]
+impl PyItem {
+    #[getter]
+    fn get_frame_index(&self) -> PyResult<Vec<i32>> {
+        Ok(self.frames.frame_index.to_vec())
+    }
+    #[getter]
+    fn get_item_id(&self) -> PyResult<Vec<u16>> {
+        Ok(self.frames.item_id.to_vec())
+    }
+    #[getter]
+    fn get_state(&self) -> PyResult<Vec<u8>> {
+        Ok(self.frames.state.to_vec())
+    }
+    #[getter]
+    fn get_orientation(&self) -> PyResult<Vec<f32>> {
+        Ok(self.frames.orientation.to_vec())
+    }
+    #[getter]
+    fn get_velocity(&self) -> PyResult<Vec<(f32, f32)>> {
+        Ok(self.frames.velocity.iter().map(|p| (p.x, p.y)).collect())
+    }
+    #[getter]
+    fn get_position(&self) -> PyResult<Vec<(f32, f32)>> {
+        Ok(self.frames.position.iter().map(|p| (p.x, p.y)).collect())
+    }
+    #[getter]
+    fn get_damage_taken(&self) -> PyResult<Vec<u16>> {
+        Ok(self.frames.damage_taken.to_vec())
+    }
+    #[getter]
+    fn get_expiration_timer(&self) -> PyResult<Vec<f32>> {
+        Ok(self.frames.expiration_timer.to_vec())
+    }
+    #[getter]
+    fn get_spawn_id(&self) -> PyResult<Vec<u32>> {
+        Ok(self.frames.spawn_id.to_vec())
+    }
+    #[getter]
+    fn get_missile_type(&self) -> PyResult<Option<Vec<u8>>> {
+        Ok(self.frames.missile_type.as_ref().map(|x| x.to_vec()))
+    }
+    #[getter]
+    fn get_turnip_type(&self) -> PyResult<Option<Vec<u8>>> {
+        Ok(self.frames.turnip_type.as_ref().map(|x| x.to_vec()))
+    }
+    #[getter]
+    fn get_is_launched(&self) -> PyResult<Option<Vec<bool>>> {
+        Ok(self.frames.is_launched.as_ref().map(|x| x.to_vec()))
+    }
+    #[getter]
+    fn get_charge_power(&self) -> PyResult<Option<Vec<u8>>> {
+        Ok(self.frames.charge_power.as_ref().map(|x| x.to_vec()))
+    }
+    #[getter]
+    fn get_owner(&self) -> PyResult<Option<Vec<i8>>> {
+        Ok(self.frames.owner.as_ref().map(|x| x.to_vec()))
     }
 }

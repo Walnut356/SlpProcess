@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use crate::{player::*, frames::PyFrames};
+use crate::{player::*, frames::{PyFrames, PyItem}};
 
 use pyo3::prelude::*;
 use slpprocess::Game;
@@ -87,6 +87,10 @@ impl PyGame {
     #[getter]
     pub fn get_tiebreak_number(&self) -> PyResult<Option<u32>> {
         Ok(self.game.metadata.tiebreak_number)
+    }
+    #[getter]
+    pub fn get_item_frames(&self) -> PyResult<Option<PyItem>> {
+        Ok(self.game.item_frames.as_ref().map(|x| PyItem { frames: x} ))
     }
 
     // ---------------------------------------------- game end getters ---------------------------------------------- //

@@ -6,9 +6,10 @@ use ssbm_utils::types::{Position, Velocity};
 
 use crate::events::game_start::Version;
 
+#[derive(Debug)]
 pub struct ItemFrames {
     len: usize,
-    pub version: Version,
+    version: Version,
     pub frame_index: Box<[i32]>,
     /// The ID corresponding to the type of item that this frame data is about.
     pub item_id: Box<[u16]>,
