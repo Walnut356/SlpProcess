@@ -1,5 +1,4 @@
 use derive_new::new;
-use polars::prelude::*;
 use ssbm_utils::{
     checks::{
         get_damage_taken, is_cmd_grabbed, is_damaged, is_dodging, is_downed, is_dying, is_grabbed,

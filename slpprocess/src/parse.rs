@@ -11,7 +11,6 @@ use polars::prelude::*;
 use std::fs::File;
 use std::io::{prelude::*, Cursor};
 use std::path::Path;
-use std::sync::RwLock;
 use std::time::Duration;
 
 use crate::{events::{

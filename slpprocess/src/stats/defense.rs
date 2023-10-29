@@ -1,7 +1,6 @@
 #![allow(clippy::too_many_arguments)]
 
-use anyhow::Result;
-use polars::{chunked_array::builder::get_list_builder, prelude::*};
+use polars::prelude::*;
 
 use ssbm_utils::{
     calc::knockback::{
@@ -9,10 +8,10 @@ use ssbm_utils::{
         should_kill,
     },
     checks::{
-        get_damage_taken, is_in_defender_hitlag, is_in_hitlag, is_magnifying_damage,
+        get_damage_taken, is_in_hitlag,
         is_shielding_flag, is_thrown, just_took_damage,
     },
-    enums::{Character, StickRegion},
+    enums::Character,
     types::{Degrees, Position, StickPos, Velocity},
 };
 

@@ -5,7 +5,6 @@ use ssbm_utils::enums::{stage::Stage, ActionState, Attack, LCancel};
 use std::ops::Deref;
 
 use crate::{columns::*, player::Frames};
-use itertools::izip;
 use polars::prelude::*;
 
 pub fn find_lcancels(frames: &Frames, stage: &Stage) -> DataFrame {

@@ -8,8 +8,8 @@ use num_enum::{FromPrimitive, IntoPrimitive, TryFromPrimitive};
 use polars::prelude::*;
 
 use crate::{
-    player::{Frames, Player, UCFToggles, Stats},
-    Port, stats::combos::Combos,
+    player::{Player, UCFToggles},
+    Port,
 };
 use ssbm_utils::enums::{character::Character, stage::StageID};
 

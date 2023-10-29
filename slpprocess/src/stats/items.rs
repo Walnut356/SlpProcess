@@ -4,7 +4,6 @@ use std::collections::HashSet;
 use ssbm_utils::enums::{Item, Port};
 
 use crate::{
-    columns::{Items, Post},
     events::item_frames::ItemFrames,
     player::Frames,
 };

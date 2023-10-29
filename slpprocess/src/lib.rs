@@ -26,10 +26,9 @@ use crate::stats::combos::Combos;
 pub use ssbm_utils::enums::Port;
 
 use rayon::prelude::*;
-use serde_json::json;
 use std::{
     fs,
-    path::{Path, PathBuf}, cell::RefCell, sync::Arc,
+    path::{Path, PathBuf}, sync::Arc,
 };
 
 /// Accepts a string file path to a single replay, or a directory containing replays. Returns a vector containing the
@@ -70,7 +69,7 @@ pub fn parse(path: &str) -> Vec<Game> {
     panic!("invalid file path")
 }
 
-pub fn get_combos<'a>(games: &'a [Game], connect_code: &str) -> Vec<Arc<Combos>> {
+pub fn get_combos(games: &[Game], connect_code: &str) -> Vec<Arc<Combos>> {
     games.iter().filter_map(|game| {
 
         let player = game.player_by_code(connect_code);
