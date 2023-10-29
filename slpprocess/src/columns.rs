@@ -1,7 +1,7 @@
 use strum_macros::{Display, EnumString, IntoStaticStr};
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
-pub enum Pre {
+pub enum PreFrame {
     /// All versions
     ///
     /// i32
@@ -57,7 +57,7 @@ pub enum Pre {
 }
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
-pub enum Post {
+pub enum PostFrame {
     FrameIndex,
     Character,
     ActionState,
@@ -85,15 +85,13 @@ pub enum Post {
 }
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
-pub enum Items {
+pub enum ItemFrame {
     FrameIndex,
     ItemID,
     State,
     Orientation,
-    VelX,
-    VelY,
-    PositionX,
-    PositionY,
+    Velocity,
+    Position,
     DamageTaken,
     ExpirationTimer,
     SpawnID,
@@ -105,7 +103,7 @@ pub enum Items {
 }
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
-pub enum LCancels {
+pub enum LCancelStats {
     FrameIndex,
     Attack,
     StocksRemaining,
@@ -118,7 +116,7 @@ pub enum LCancels {
 }
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
-pub enum Inputs {
+pub enum InputStats {
     Digital,
     Joystick,
     Cstick,
@@ -129,7 +127,7 @@ pub enum Inputs {
 }
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
-pub enum Defense {
+pub enum DefenseStats {
     FrameIndex,
     StocksRemaining,
     Percent,

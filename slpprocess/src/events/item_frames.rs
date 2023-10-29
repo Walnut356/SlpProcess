@@ -2,6 +2,7 @@
 
 use bytes::{Buf, Bytes};
 use polars::prelude::*;
+use ssbm_utils::types::{Position, Velocity};
 
 use crate::events::game_start::Version;
 
@@ -13,10 +14,8 @@ pub struct ItemFrames {
     pub item_id: Box<[u16]>,
     pub state: Box<[u8]>,
     pub orientation: Box<[f32]>,
-    pub velocity_x: Box<[f32]>,
-    pub velocity_y: Box<[f32]>,
-    pub position_x: Box<[f32]>,
-    pub position_y: Box<[f32]>,
+    pub velocity: Box<[Velocity]>,
+    pub position: Box<[Position]>,
     pub damage_taken: Box<[u16]>,
     pub expiration_timer: Box<[f32]>,
     /// A unique ID artificially given to each projectile to help differentiate it from other items spawned
@@ -54,22 +53,12 @@ impl ItemFrames {
                 temp.set_len(len);
                 temp.into_boxed_slice()
             },
-            velocity_x: unsafe {
+            velocity: unsafe {
                 let mut temp = Vec::with_capacity(len);
                 temp.set_len(len);
                 temp.into_boxed_slice()
             },
-            velocity_y: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
-                temp.into_boxed_slice()
-            },
-            position_x: unsafe {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
-                temp.into_boxed_slice()
-            },
-            position_y: unsafe {
+            position: unsafe {
                 let mut temp = Vec::with_capacity(len);
                 temp.set_len(len);
                 temp.into_boxed_slice()
@@ -91,8 +80,8 @@ impl ItemFrames {
             },
             missile_type: unsafe {
                 if version.at_least(3, 2, 0) {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                    let mut temp = Vec::with_capacity(len);
+                    temp.set_len(len);
                     Some(temp.into_boxed_slice())
                 } else {
                     None
@@ -100,8 +89,8 @@ impl ItemFrames {
             },
             turnip_type: unsafe {
                 if version.at_least(3, 2, 0) {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                    let mut temp = Vec::with_capacity(len);
+                    temp.set_len(len);
                     Some(temp.into_boxed_slice())
                 } else {
                     None
@@ -109,8 +98,8 @@ impl ItemFrames {
             },
             is_launched: unsafe {
                 if version.at_least(3, 2, 0) {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                    let mut temp = Vec::with_capacity(len);
+                    temp.set_len(len);
                     Some(temp.into_boxed_slice())
                 } else {
                     None
@@ -118,8 +107,8 @@ impl ItemFrames {
             },
             charge_power: unsafe {
                 if version.at_least(3, 2, 0) {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                    let mut temp = Vec::with_capacity(len);
+                    temp.set_len(len);
                     Some(temp.into_boxed_slice())
                 } else {
                     None
@@ -127,8 +116,8 @@ impl ItemFrames {
             },
             owner: unsafe {
                 if version.at_least(3, 6, 0) {
-                let mut temp = Vec::with_capacity(len);
-                temp.set_len(len);
+                    let mut temp = Vec::with_capacity(len);
+                    temp.set_len(len);
                     Some(temp.into_boxed_slice())
                 } else {
                     None
@@ -148,15 +137,30 @@ impl From<ItemFrames> for DataFrame {
     fn from(val: ItemFrames) -> DataFrame {
         let len = val.len();
 
+        use crate::columns::ItemFrame as col;
         let mut vec_series = vec![
             Series::new("frame number", val.frame_index),
             Series::new("item id", val.item_id),
             Series::new("state", val.state),
             Series::new("facing", val.orientation),
-            Series::new("velocity x", val.velocity_x),
-            Series::new("velocity y", val.velocity_y),
-            Series::new("position x", val.position_x),
-            Series::new("position y", val.position_y),
+            StructChunked::new(
+                col::Velocity.into(),
+                &[
+                    Series::new("x", val.velocity.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.velocity.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
+            StructChunked::new(
+                col::Position.into(),
+                &[
+                    Series::new("x", val.position.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.position.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
             Series::new("damage taken", val.damage_taken),
             Series::new("expiration timer", val.expiration_timer),
             Series::new("spawn id", val.spawn_id),
@@ -193,10 +197,10 @@ pub fn parse_itemframes(version: Version, frames: &mut [Bytes]) -> ItemFrames {
             *working.item_id.get_unchecked_mut(i) = frame.get_u16();
             *working.state.get_unchecked_mut(i) = frame.get_u8();
             *working.orientation.get_unchecked_mut(i) = frame.get_f32();
-            *working.velocity_x.get_unchecked_mut(i) = frame.get_f32();
-            *working.velocity_y.get_unchecked_mut(i) = frame.get_f32();
-            *working.position_x.get_unchecked_mut(i) = frame.get_f32();
-            *working.position_y.get_unchecked_mut(i) = frame.get_f32();
+            *working.velocity.get_unchecked_mut(i) =
+                Velocity::new(frame.get_f32(), frame.get_f32());
+            *working.position.get_unchecked_mut(i) =
+                Position::new(frame.get_f32(), frame.get_f32());
             *working.damage_taken.get_unchecked_mut(i) = frame.get_u16();
             *working.expiration_timer.get_unchecked_mut(i) = frame.get_f32();
             *working.spawn_id.get_unchecked_mut(i) = frame.get_u32();

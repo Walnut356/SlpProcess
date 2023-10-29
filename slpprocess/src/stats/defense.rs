@@ -7,10 +7,7 @@ use ssbm_utils::{
         apply_di, get_di_efficacy, initial_x_velocity, initial_y_velocity, kb_from_initial,
         should_kill,
     },
-    checks::{
-        get_damage_taken, is_in_hitlag,
-        is_shielding_flag, is_thrown, just_took_damage,
-    },
+    checks::{get_damage_taken, is_in_hitlag, is_shielding_flag, is_thrown, just_took_damage},
     enums::Character,
     types::{Degrees, Position, StickPos, Velocity},
 };
@@ -74,7 +71,7 @@ impl DefenseStats {
 
 impl From<DefenseStats> for DataFrame {
     fn from(val: DefenseStats) -> Self {
-        use crate::columns::Defense as col;
+        use crate::columns::DefenseStats as col;
 
         let vec_series = vec![
             Series::new(col::FrameIndex.into(), val.frame_index),

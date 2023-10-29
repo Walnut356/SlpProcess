@@ -146,7 +146,7 @@ impl From<PreFrames> for DataFrame {
     fn from(val: PreFrames) -> Self {
         let len = val.len();
 
-        use crate::columns::Pre as col;
+        use crate::columns::PreFrame as col;
         let mut vec_series = vec![
             Series::new(col::FrameIndex.into(), val.frame_index),
             Series::new(col::RandomSeed.into(), val.random_seed),
@@ -333,9 +333,8 @@ pub fn unpack_frames_ics(
                 Position::new(frame.get_f32(), frame.get_f32());
             *working.orientation.get_unchecked_mut(i) = frame.get_f32();
             *working.joystick.get_unchecked_mut(i) =
-                    StickPos::new(frame.get_f32(), frame.get_f32());
-                *working.cstick.get_unchecked_mut(i) =
-                    StickPos::new(frame.get_f32(), frame.get_f32());
+                StickPos::new(frame.get_f32(), frame.get_f32());
+            *working.cstick.get_unchecked_mut(i) = StickPos::new(frame.get_f32(), frame.get_f32());
             *working.engine_trigger.get_unchecked_mut(i) = frame.get_f32();
             *working.engine_buttons.get_unchecked_mut(i) = frame.get_u32();
             *working.controller_buttons.get_unchecked_mut(i) = frame.get_u16();

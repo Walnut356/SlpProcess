@@ -5,7 +5,7 @@ use nohash_hasher::IntMap;
 use polars::prelude::*;
 use ssbm_utils::types::{Position, Velocity};
 
-use crate::{columns::Post, events::game_start::Version, Port};
+use crate::{columns::PostFrame, events::game_start::Version, Port};
 
 #[derive(Debug, Default, Clone)]
 pub struct PostFrames {
@@ -231,7 +231,7 @@ impl From<PostFrames> for DataFrame {
     fn from(val: PostFrames) -> Self {
         let len = val.len();
 
-        use Post as col;
+        use PostFrame as col;
         let mut vec_series = vec![
             Series::new(col::FrameIndex.into(), val.frame_index),
             Series::new(col::Character.into(), val.character),

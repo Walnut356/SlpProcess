@@ -4,7 +4,7 @@ use ssbm_utils::enums::{
     ControllerInput,
 };
 
-use crate::{columns::Inputs, player::Frames};
+use crate::{columns::InputStats, player::Frames};
 
 // #[derive(Debug, Default)]
 // struct ButtonCounts {
@@ -135,7 +135,7 @@ pub fn find_inputs(frames: &Frames, duration: u64) -> DataFrame {
             }
         }
     };
-    use Inputs::*;
+    use InputStats::*;
     df!(Digital.into() => [digital_counts],
     Joystick.into() => [stick_counts],
     Cstick.into() => [cstick_counts],

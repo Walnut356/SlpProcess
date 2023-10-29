@@ -55,7 +55,9 @@ pub fn find_lcancels(frames: &Frames, stage: &Stage) -> DataFrame {
         if lcancel == LCancel::FAILURE as u8 && l_input_frame.is_some() {
             for j in 0..6 {
                 let temp_index = i + j;
-                if temp_index > pre_buttons.len() { break; }
+                if temp_index > pre_buttons.len() {
+                    break;
+                }
                 if just_input_lcancel(pre_buttons[i], pre_buttons[i + j]) {
                     l_input_frame = Some(j as i32)
                 }
@@ -98,14 +100,14 @@ pub fn find_lcancels(frames: &Frames, stage: &Stage) -> DataFrame {
         percent_col.push(percents[i]);
     }
 
-    df!(LCancels::FrameIndex.into() => frame_index_col,
-    LCancels::Attack.into() => attack_col,
-    LCancels::StocksRemaining.into() => stocks_col,
-    LCancels::Percent.into() => percent_col,
-    LCancels::LCancelled.into() => lcancelled_col,
-    LCancels::TriggerFrame.into() => l_input_col,
-    LCancels::Position.into() => position_col,
-    LCancels::Fastfall.into() => fastfall_col,
-    LCancels::InputDuringHitlag.into() => hitlag_col, )
+    df!(LCancelStats::FrameIndex.into() => frame_index_col,
+    LCancelStats::Attack.into() => attack_col,
+    LCancelStats::StocksRemaining.into() => stocks_col,
+    LCancelStats::Percent.into() => percent_col,
+    LCancelStats::LCancelled.into() => lcancelled_col,
+    LCancelStats::TriggerFrame.into() => l_input_col,
+    LCancelStats::Position.into() => position_col,
+    LCancelStats::Fastfall.into() => fastfall_col,
+    LCancelStats::InputDuringHitlag.into() => hitlag_col, )
     .unwrap()
 }
