@@ -22,16 +22,27 @@ use crate::{
 };
 
 pub struct Game {
+    /// Slippi-spec GameStart event. Contains various data about the match itself
+    /// including stage, match id, etc.
     pub metadata: GameStart,
+    /// Slippi-spec GameEnd event. Contains info about how the game ended.
+    ///
+    /// Can be `None`, even on modern replays due to an unresolved bug where the event sometimes
+    /// doesn't populate.
     pub end: Option<GameEnd>, // There's an unresolved bug where sometiems game end events don't appear
     /// Duration of the game, accurate to the **ingame timer**. For the -123 indexed total frame
     /// count, see `.total_frames`
     pub duration: Duration,
+    /// A flat number equal to the total number of frames in the replay.
     pub total_frames: u64,
+    /// Replay SemVer number in the form `major`, `minor`, `revision`
     pub version: Version,
+    /// Contains exactly 2 Players in threadsafe containers (`.load()` to access). Players are in
+    /// port order, but may be any combination of ports. Port numbers are stored in the Player
+    /// objects
     pub players: [ArcSwap<Player>; 2],
     pub item_frames: Option<Arc<ItemFrames>>,
-    pub path: PathBuf,
+    pub path: Arc<PathBuf>,
 }
 
 impl Game {
@@ -42,8 +53,7 @@ impl Game {
     pub fn new(path: &Path) -> Result<Self> {
         ensure!(path.is_file() && path.extension().unwrap() == "slp");
         let file_data = Self::get_file_contents(path)?;
-        let mut game = Game::parse(file_data)?;
-        game.path = path.into();
+        let mut game = Game::parse(file_data, path)?;
         // let now = Instant::now();
         game.get_stats();
         // let dur = now.elapsed();
@@ -87,7 +97,7 @@ impl Game {
         ))
     }
 
-    pub fn get_stats(&mut self) {
+    fn get_stats(&mut self) {
         let version = self.version;
 
         for players in self.players.iter().permutations(2) {
@@ -121,9 +131,9 @@ impl Game {
             });
 
             let stats = Arc::new(Stats {
-                inputs,
+                input: inputs,
                 l_cancel,
-                items,
+                item: items,
                 defense,
             });
 
@@ -132,6 +142,7 @@ impl Game {
                 &opponent.frames,
                 self.metadata.stage,
                 player.character,
+                self.path.clone(),
             ));
 
             /* This should be a pretty cheap clone all things considered. The frames are 2 Arc

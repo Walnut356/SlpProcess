@@ -3,7 +3,10 @@ use std::sync::Arc;
 use polars::prelude::DataFrame;
 use ssbm_utils::enums::{Character, Port};
 
-use crate::{events::{game_start::ControllerFix, post_frame::PostFrames, pre_frame::PreFrames}, stats::combos::Combos};
+use crate::{
+    events::{game_start::ControllerFix, post_frame::PostFrames, pre_frame::PreFrames},
+    stats::combos::Combos,
+};
 
 #[derive(Debug, Default)]
 pub struct Player {
@@ -45,11 +48,11 @@ impl Frames {
 #[derive(Debug, Default, Clone)]
 pub struct Stats {
     /// Minimum Replay Version: Any
-    pub inputs: DataFrame,
+    pub input: DataFrame,
     /// Minimum Replay Version:
     pub l_cancel: Option<DataFrame>,
     /// Minimum Replay Version:
-    pub items: Option<DataFrame>,
+    pub item: Option<DataFrame>,
     /// Minimum Replay Version
     pub defense: Option<DataFrame>,
 }

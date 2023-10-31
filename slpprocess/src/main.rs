@@ -32,7 +32,7 @@ pub fn main() {
 
     let player = &game.players[0];
     // let frames = &player.frames.post;
-    println!("{:?}", player.load().combos.0.len());
+    println!("{:?}", player.load().combos.len());
 
     // dbg!(&player.combos.0.get(0).unwrap());
 

@@ -1,3 +1,5 @@
+use std::{path::{Path, PathBuf}, sync::Arc, ops::Deref};
+
 use derive_new::new;
 use ssbm_utils::{
     checks::{
@@ -53,7 +55,20 @@ impl Combo {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Combos(pub Vec<Combo>);
+pub struct Combos{
+    pub data: Vec<Combo>,
+    pub path: Arc<PathBuf>,
+}
+
+
+// Deref abuse is sick and nobody can tell me otherwise
+impl Deref for Combos {
+    type Target = Vec<Combo>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ComboState {
@@ -75,6 +90,7 @@ pub fn find_combos(
     opnt_frames: &Frames,
     stage_id: StageID,
     player_char: Character,
+    path: Arc<PathBuf>,
 ) -> Combos {
     let mut result = Vec::new();
 
@@ -222,5 +238,8 @@ pub fn find_combos(
         }
     }
 
-    Combos(result)
+    Combos{
+        data: result,
+        path,
+    }
 }

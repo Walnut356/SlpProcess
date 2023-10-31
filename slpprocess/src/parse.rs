@@ -8,7 +8,7 @@ use nohash_hasher::IntMap;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use polars::prelude::*;
 
-use std::fs::File;
+use std::{fs::File, path::PathBuf};
 use std::io::{prelude::*, Cursor};
 use std::path::Path;
 use std::time::Duration;
@@ -103,7 +103,7 @@ impl Game {
 
     /// Accepts a tokio Bytes object, returns a Game object. Useful if you already have the file in
     /// memory for some other reason
-    pub fn parse(file_data: Bytes) -> Result<Self> {
+    pub fn parse(file_data: Bytes, path: &Path) -> Result<Self> {
         // ---------------------------------------- setup --------------------------------------- //
         // todo replace this with another bytes object? Bytes comes with an internal cursor
         // that supports .advance()
@@ -245,7 +245,7 @@ impl Game {
             players: players.map(|x| ArcSwap::from(Arc::new(x))),
             version,
             item_frames: item_frames.map(Arc::new),
-            path: Default::default(),
+            path: Arc::new(path.to_owned()),
         })
     }
 }
