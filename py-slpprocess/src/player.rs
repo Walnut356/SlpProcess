@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use pyo3::prelude::*;
-use slpprocess::player::Player;
+use pyo3_polars::PyDataFrame;
+use slpprocess::player::{Player, Stats};
 
 use crate::frames::{PyFrames, PyPost, PyPre};
 
@@ -35,6 +36,8 @@ pub struct PyPlayer {
     pub frames: PyFrames,
     #[pyo3(get)]
     pub nana_frames: Option<PyFrames>,
+    #[pyo3(get)]
+    pub stats: PyStats,
 }
 
 impl PyPlayer {
@@ -58,10 +61,15 @@ impl PyPlayer {
                 },
             })
         };
+
+        let stats = PyStats {
+            stats: player.stats.clone(),
+        };
         PyPlayer {
             player,
             frames,
             nana_frames,
+            stats,
         }
     }
 }
@@ -95,5 +103,44 @@ impl PyPlayer {
     #[getter]
     fn get_is_winner(&self) -> PyResult<Option<bool>> {
         Ok(self.player.is_winner)
+    }
+}
+
+#[derive(Clone, Debug)]
+#[pyclass]
+pub struct PyStats {
+    stats: Arc<Stats>,
+}
+
+#[pymethods]
+impl PyStats {
+    #[getter]
+    fn get_input(&self) -> PyResult<PyDataFrame> {
+        Ok(PyDataFrame(self.stats.input.clone()))
+    }
+
+    #[getter]
+    fn get_l_cancel(&self) -> PyResult<Option<PyDataFrame>> {
+        Ok(self
+            .stats
+            .l_cancel
+            .as_ref()
+            .map(|df| PyDataFrame(df.clone())))
+    }
+    #[getter]
+    fn get_item(&self) -> PyResult<Option<PyDataFrame>> {
+        Ok(self
+            .stats
+            .item
+            .as_ref()
+            .map(|df| PyDataFrame(df.clone())))
+    }
+    #[getter]
+    fn get_defense(&self) -> PyResult<Option<PyDataFrame>> {
+        Ok(self
+            .stats
+            .defense
+            .as_ref()
+            .map(|df| PyDataFrame(df.clone())))
     }
 }
