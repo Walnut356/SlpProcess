@@ -6,6 +6,9 @@ use nohash_hasher::IntMap;
 use polars::prelude::*;
 use ssbm_utils::types::{Position, StickPos};
 
+/// Contains all pre-frame data for a single character. Stored in columnar format, thus row-wise
+/// access via `.get_frame(index)` will be very slow. If possible, only iterate through the columns
+/// you need.
 #[derive(Debug, Default, Clone)]
 pub struct PreFrames {
     len: usize,
@@ -106,6 +109,26 @@ impl PreFrames {
         self.len
     }
 
+    /// Gets the full pre-frame data for a given frame index (0-indexed). This is very
+    /// slow compared to iterating through only the columns you need.
+    pub fn get_frame(&self, index: usize) -> PreRow {
+        PreRow {
+            frame_index: self.frame_index[index],
+            random_seed: self.random_seed[index],
+            action_state: self.action_state[index],
+            position: self.position[index],
+            orientation: self.orientation[index],
+            joystick: self.joystick[index],
+            cstick: self.cstick[index],
+            engine_trigger: self.engine_trigger[index],
+            engine_buttons: self.engine_buttons[index],
+            controller_buttons: self.controller_buttons[index],
+            controller_l: self.controller_l[index],
+            controller_r: self.controller_r[index],
+            percent: self.percent.as_ref().map(|x| x[index]),
+        }
+    }
+
     /// When nana is dead, she is considered `inactive`, which is the variable checked by slippi to
     /// determine what characters to record frames for. As a result, we cannot rely on the same
     /// invariants as `new()` (that provide extra optimization room). Because nana can have less
@@ -194,6 +217,23 @@ impl From<PreFrames> for DataFrame {
 
         DataFrame::new(vec_series).unwrap()
     }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct PreRow {
+    pub frame_index: i32,
+    pub random_seed: u32,
+    pub action_state: u16,
+    pub position: Position,
+    pub orientation: f32,
+    pub joystick: StickPos,
+    pub cstick: StickPos,
+    pub engine_trigger: f32,
+    pub engine_buttons: u32,
+    pub controller_buttons: u16,
+    pub controller_l: f32,
+    pub controller_r: f32,
+    pub percent: Option<f32>,
 }
 
 pub fn parse_preframes(

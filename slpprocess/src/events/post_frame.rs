@@ -7,6 +7,9 @@ use ssbm_utils::types::{Position, Velocity};
 
 use crate::{columns::PostFrame, events::game_start::Version, Port};
 
+/// Contains all post-frame data for a single character. Stored in columnar format, thus row-wise
+/// access via `.get_frame(index)` will be very slow. If possible, only iterate through the columns
+/// you need.
 #[derive(Debug, Default, Clone)]
 pub struct PostFrames {
     len: usize,
@@ -168,6 +171,37 @@ impl PostFrames {
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.len
+    }
+
+    /// Gets the full post-frame data for a given frame index (0-indexed). This is very
+    /// slow compared to iterating through only the columns you need.
+    pub fn get_frame(&self, index: usize) -> PostRow {
+        PostRow {
+            frame_index: self.frame_index[index],
+            character: self.character[index],
+            action_state: self.action_state[index],
+            position: self.position[index],
+            orientation: self.orientation[index],
+            percent: self.percent[index],
+            shield_health: self.shield_health[index],
+            last_attack_landed: self.last_attack_landed[index],
+            combo_count: self.combo_count[index],
+            last_hit_by: self.last_hit_by[index],
+            stocks: self.stocks[index],
+            state_frame: self.state_frame.as_ref().map(|x| x[index]),
+            flags: self.flags.as_ref().map(|x| x[index]),
+            misc_as: self.misc_as.as_ref().map(|x| x[index]),
+            is_grounded: self.is_grounded.as_ref().map(|x| x[index]),
+            last_ground_id: self.last_ground_id.as_ref().map(|x| x[index]),
+            jumps_remaining: self.jumps_remaining.as_ref().map(|x| x[index]),
+            l_cancel: self.l_cancel.as_ref().map(|x| x[index]),
+            hurtbox_state: self.hurtbox_state.as_ref().map(|x| x[index]),
+            air_velocity: self.air_velocity.as_ref().map(|x| x[index]),
+            knockback: self.knockback.as_ref().map(|x| x[index]),
+            ground_velocity: self.ground_velocity.as_ref().map(|x| x[index]),
+            hitlag_remaining: self.hitlag_remaining.as_ref().map(|x| x[index]),
+            animation_index: self.animation_index.as_ref().map(|x| x[index]),
+        }
     }
 
     /// When nana is dead, she is considered `inactive`, which is the variable checked by slippi to
@@ -401,6 +435,34 @@ impl From<PostFrames> for DataFrame {
 
         DataFrame::new(vec_series).unwrap()
     }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct PostRow {
+    pub frame_index: i32,
+    pub character: u8,
+    pub action_state: u16,
+    pub position: Position,
+    pub orientation: f32,
+    pub percent: f32,
+    pub shield_health: f32,
+    pub last_attack_landed: u8,
+    pub combo_count: u8,
+    pub last_hit_by: u8,
+    pub stocks: u8,
+    pub state_frame: Option<f32>,
+    pub flags: Option<u64>,
+    pub misc_as: Option<f32>,
+    pub is_grounded: Option<bool>,
+    pub last_ground_id: Option<u16>,
+    pub jumps_remaining: Option<u8>,
+    pub l_cancel: Option<u8>,
+    pub hurtbox_state: Option<u8>,
+    pub air_velocity: Option<Velocity>,
+    pub knockback: Option<Velocity>,
+    pub ground_velocity: Option<Velocity>,
+    pub hitlag_remaining: Option<f32>,
+    pub animation_index: Option<u32>,
 }
 
 pub fn parse_postframes(

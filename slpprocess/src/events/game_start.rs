@@ -634,14 +634,23 @@ impl Version {
 
     /// Returns true if self is at least (greater than or equal to) the given version
     pub fn at_least(&self, major: u8, minor: u8, build: u8) -> bool {
-        *self >= Version{major, minor, build}
+        *self
+            >= Version {
+                major,
+                minor,
+                build,
+            }
     }
 }
 
 impl Default for Version {
     /// Returns Version{0, 1, 0}, the first slippi release version
     fn default() -> Self {
-        Self { major: 0, minor: 1, build: 0 }
+        Self {
+            major: 0,
+            minor: 1,
+            build: 0,
+        }
     }
 }
 

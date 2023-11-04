@@ -1,7 +1,7 @@
 #![allow(non_upper_case_globals)]
 
 use bytes::{Buf, Bytes};
-use num_enum::{TryFromPrimitive, IntoPrimitive};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(Debug, Clone, PartialEq, TryFromPrimitive, IntoPrimitive)]
 #[repr(u8)]
