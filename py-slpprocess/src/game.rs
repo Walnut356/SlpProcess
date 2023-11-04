@@ -2,12 +2,13 @@
 
 use std::path::Path;
 
-use crate::{player::*, frames::{PyFrames, PyItem}};
+use crate::{
+    frames::{PyFrames, PyItem},
+    player::*,
+};
 
 use pyo3::prelude::*;
 use slpprocess::Game;
-
-
 
 #[pyclass(name = "Game", frozen)]
 pub struct PyGame {
@@ -90,7 +91,11 @@ impl PyGame {
     }
     #[getter]
     pub fn get_item_frames(&self) -> PyResult<Option<PyItem>> {
-        Ok(self.game.item_frames.as_ref().map(|x| PyItem { frames: x.clone()} ))
+        Ok(self
+            .game
+            .item_frames
+            .as_ref()
+            .map(|x| PyItem { frames: x.clone() }))
     }
 
     // ---------------------------------------------- game end getters ---------------------------------------------- //

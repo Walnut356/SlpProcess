@@ -1,4 +1,8 @@
-use std::{path::{Path, PathBuf}, sync::Arc, ops::Deref};
+use std::{
+    ops::Deref,
+    path:: PathBuf,
+    sync::Arc,
+};
 
 use derive_new::new;
 use ssbm_utils::{
@@ -55,11 +59,10 @@ impl Combo {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Combos{
+pub struct Combos {
     pub data: Vec<Combo>,
     pub path: Arc<PathBuf>,
 }
-
 
 // Deref abuse is sick and nobody can tell me otherwise
 impl Deref for Combos {
@@ -238,8 +241,5 @@ pub fn find_combos(
         }
     }
 
-    Combos{
-        data: result,
-        path,
-    }
+    Combos { data: result, path }
 }

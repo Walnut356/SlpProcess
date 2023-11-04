@@ -7,7 +7,8 @@ use approx::assert_relative_eq;
 use crate::{
     calc::knockback::knockback,
     constants::{KB_DECAY, TUMBLE_THRESHOLD, Z_ANALOG},
-    enums::{character::*, stage::*}, types::Radians,
+    enums::{character::*, stage::*},
+    types::Radians,
 };
 
 pub fn shield_stun(damage: f32, analog: f32, is_yoshi: bool) -> u32 {
@@ -93,8 +94,6 @@ pub fn shield_pushback_attacker(damage: f32, analog: f32) -> f32 {
     let a = (analog - 0.3) * 0.1;
     (damage.floor() * a) + 0.02
 }
-
-
 
 /// Calculates staled damage based on a damage value and stale move queue.
 ///

@@ -8,15 +8,21 @@ use nohash_hasher::IntMap;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use polars::prelude::*;
 
-use std::{fs::File, path::PathBuf};
 use std::io::{prelude::*, Cursor};
 use std::path::Path;
 use std::time::Duration;
+use std::{fs::File, path::PathBuf};
 
-use crate::{events::{
-    game_end::parse_gameend, game_start::GameStart, item_frames::parse_itemframes,
-    post_frame::parse_postframes, pre_frame::parse_preframes,
-}, player::Frames, utils::ParseError, ubjson, Game};
+use crate::{
+    events::{
+        game_end::parse_gameend, game_start::GameStart, item_frames::parse_itemframes,
+        post_frame::parse_postframes, pre_frame::parse_preframes,
+    },
+    player::Frames,
+    ubjson,
+    utils::ParseError,
+    Game,
+};
 
 use ssbm_utils::enums::character::Character;
 

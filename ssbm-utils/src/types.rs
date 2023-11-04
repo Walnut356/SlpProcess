@@ -1,6 +1,9 @@
-use std::{ops::{Deref, Add, AddAssign, Sub, SubAssign}, f32::consts::TAU};
-use serde::{Serialize, Deserialize};
 use crate::enums::StickRegion;
+use serde::{Deserialize, Serialize};
+use std::{
+    f32::consts::TAU,
+    ops::{Add, AddAssign, Deref, Sub, SubAssign},
+};
 
 pub type Radians = f32;
 pub type Degrees = f32;
@@ -21,7 +24,6 @@ impl Point {
         Self { x, y }
     }
 }
-
 
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct StickPos {
@@ -89,7 +91,10 @@ impl Add<Velocity> for Position {
     type Output = Self;
 
     fn add(self, rhs: Velocity) -> Self::Output {
-        Self {x: self.x + rhs.x, y: self.y + rhs.y}
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
     }
 }
 
@@ -104,7 +109,10 @@ impl Sub<Velocity> for Position {
     type Output = Self;
 
     fn sub(self, rhs: Velocity) -> Self::Output {
-        Self {x: self.x - rhs.x, y: self.y - rhs.y}
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
     }
 }
 

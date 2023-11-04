@@ -3,6 +3,7 @@
 
 use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 
+/// Ports P1-P4. Can be converted to the 0-indexed u8 value via `as u8`
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, FromRepr, Default)]
 #[repr(u8)]
 pub enum Port {

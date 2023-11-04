@@ -1,12 +1,9 @@
 use nohash_hasher::IntMap;
 use polars::prelude::*;
-use std::collections::HashSet;
 use ssbm_utils::enums::{Item, Port};
+use std::collections::HashSet;
 
-use crate::{
-    events::item_frames::ItemFrames,
-    player::Frames,
-};
+use crate::{events::item_frames::ItemFrames, player::Frames};
 
 pub fn find_items(frames: &Frames, port: Port, item_frames: &ItemFrames) -> DataFrame {
     let ids = &item_frames.item_id;

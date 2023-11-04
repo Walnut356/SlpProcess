@@ -177,7 +177,7 @@ impl StickRegion {
             _ if right => R::RIGHT,
             _ if down => R::DOWN,
             _ if left => R::LEFT,
-            _ => panic!("Somehow failed all conditions")
+            _ => panic!("Somehow failed all conditions"),
         }
     }
 }

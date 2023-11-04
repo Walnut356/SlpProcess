@@ -11,7 +11,7 @@ pub mod enums {
     mod bitflag_impl;
     pub use bitflag_impl::BitFlags;
     pub mod buttons;
-    pub use buttons::{EngineInput, ControllerInput, StickRegion};
+    pub use buttons::{ControllerInput, EngineInput, StickRegion};
 
     pub mod character;
     pub use character::Character;

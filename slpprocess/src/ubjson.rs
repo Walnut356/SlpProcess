@@ -44,7 +44,7 @@ fn to_key<R: Read>(r: &mut R) -> Result<Option<String>> {
     }
 }
 
-pub fn to_map<R: Read>(r: &mut R) -> Result<Map<String, Value>> {
+pub(crate) fn to_map<R: Read>(r: &mut R) -> Result<Map<String, Value>> {
     let mut m = Map::new();
     while match to_key(r)? {
         Some(k) => {

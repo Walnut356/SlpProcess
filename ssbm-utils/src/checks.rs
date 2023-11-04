@@ -1,5 +1,5 @@
-use crate::enums::*;
 use crate::enums::ActionRange as AR;
+use crate::enums::*;
 
 pub struct StateTracker {
     target: ActionState,
@@ -170,10 +170,8 @@ pub fn is_grabbed(state: u16) -> bool {
 /// Minimum Slippi Version: 0.1.0
 pub fn is_cmd_grabbed(state: u16) -> bool {
     ActionState::BARREL_WAIT != state
-        && ((AR::COMMAND_GRAB_RANGE1_START..=AR::COMMAND_GRAB_RANGE1_END)
-            .contains(&state)
-            || (AR::COMMAND_GRAB_RANGE2_START..=AR::COMMAND_GRAB_RANGE2_END)
-                .contains(&state))
+        && ((AR::COMMAND_GRAB_RANGE1_START..=AR::COMMAND_GRAB_RANGE1_END).contains(&state)
+            || (AR::COMMAND_GRAB_RANGE2_START..=AR::COMMAND_GRAB_RANGE2_END).contains(&state))
 }
 
 /// Returns true if the character is in any teching state. Does not included downed states.
@@ -237,10 +235,10 @@ pub fn is_special_fall(state: u16) -> bool {
 
 pub fn is_upb_lag(state: u16, prev_state: u16) -> bool {
     // TODO verify this more
-    state == ActionState::LAND_FALL_SPECIAL &&
-    prev_state != ActionState::LAND_FALL_SPECIAL &&
-    prev_state != ActionState::KNEE_BEND &&
-    prev_state != ActionState::ESCAPE_AIR
+    state == ActionState::LAND_FALL_SPECIAL
+        && prev_state != ActionState::LAND_FALL_SPECIAL
+        && prev_state != ActionState::KNEE_BEND
+        && prev_state != ActionState::ESCAPE_AIR
 }
 
 pub fn lost_stock(current: u8, prev: u8) -> bool {

@@ -82,7 +82,7 @@ impl PyPlayer {
 
     #[getter]
     fn get_character(&self) -> PyResult<u8> {
-        Ok(self.player.as_ref().character.try_into_css().unwrap())
+        Ok(self.player.as_ref().character.try_as_css().unwrap())
     }
     #[getter]
     fn get_costume(&self) -> PyResult<u8> {
@@ -129,11 +129,7 @@ impl PyStats {
     }
     #[getter]
     fn get_item(&self) -> PyResult<Option<PyDataFrame>> {
-        Ok(self
-            .stats
-            .item
-            .as_ref()
-            .map(|df| PyDataFrame(df.clone())))
+        Ok(self.stats.item.as_ref().map(|df| PyDataFrame(df.clone())))
     }
     #[getter]
     fn get_defense(&self) -> PyResult<Option<PyDataFrame>> {

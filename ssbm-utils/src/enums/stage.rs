@@ -220,9 +220,9 @@ impl Stage {
 
     pub fn is_past_blastzone(&self, pos: Position) -> bool {
         !(pos.x < self.blastzones.right
-        && pos.x > self.blastzones.left
-        && pos.y < self.blastzones.top
-        && pos.y > self.blastzones.bottom)
+            && pos.x > self.blastzones.left
+            && pos.y < self.blastzones.top
+            && pos.y > self.blastzones.bottom)
     }
 
     pub fn is_offstage(&self, pos: Position) -> bool {
@@ -231,7 +231,6 @@ impl Stage {
         }
 
         pos.x < self.ledges[0].x || pos.x > self.ledges[1].x
-
     }
 }
 

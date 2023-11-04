@@ -180,7 +180,7 @@ impl Character {
         }
     }
 
-    pub fn try_into_css(&self) -> Result<u8> {
+    pub fn try_as_css(&self) -> Result<u8> {
         use Character::*;
         match self {
             CaptainFalcon => Ok(0),
@@ -220,7 +220,7 @@ impl Character {
         }
     }
 
-    pub fn into_internal(&self) -> u8 {
+    pub fn as_internal(&self) -> u8 {
         *self as u8
     }
 
@@ -526,7 +526,7 @@ impl<'a> Attributes<'a> {
         dj_force_multiplier: DJType::Multiple(
             // kinda gross but gives f32 accurate values instead of something rounded
             // this is just the fullhop jump force divided by the observed Y speed (accounding for gravity)
-            [1.0, 1.0, 2.0/1.73, 2.0/1.56, 2.0/1.33]
+            [1.0, 1.0, 2.0 / 1.73, 2.0 / 1.56, 2.0 / 1.33],
         ),
         weight: 70,
     };

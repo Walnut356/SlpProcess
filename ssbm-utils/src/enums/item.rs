@@ -3,11 +3,9 @@
 
 // use std::collections::HashSet;
 // use lazy_static::lazy_static;
-use strum_macros::{Display, EnumString, IntoStaticStr, FromRepr};
+use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 
-#[derive(
-    Debug, Clone, Copy, EnumString, IntoStaticStr, Display, FromRepr, PartialEq, Eq,
-)]
+#[derive(Debug, Clone, Copy, EnumString, IntoStaticStr, Display, FromRepr, PartialEq, Eq)]
 #[repr(u16)]
 pub enum Item {
     UNKNOWN = 0xFFFF,

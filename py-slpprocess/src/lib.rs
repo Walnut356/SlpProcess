@@ -1,6 +1,6 @@
+pub mod frames;
 pub mod game;
 pub mod player;
-pub mod frames;
 
 use game::PyGame;
 use pyo3::prelude::*;

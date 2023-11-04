@@ -1,6 +1,9 @@
 #![allow(clippy::too_many_arguments)]
 
-use std::{cmp, f32::consts::{PI, TAU}};
+use std::{
+    cmp,
+    f32::consts::{PI, TAU},
+};
 
 use approx::assert_relative_eq;
 
@@ -8,7 +11,7 @@ use crate::{
     calc::attack::hitstun,
     constants::{KB_DECAY, TUMBLE_THRESHOLD, Z_ANALOG},
     enums::{character::*, stage::*},
-    types::{Velocity, Position, Degrees, StickPos, Radians},
+    types::{Degrees, Position, Radians, StickPos, Velocity},
 };
 
 /// Calculates the raw knockback value given the circumstances of the hit.

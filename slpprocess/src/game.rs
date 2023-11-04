@@ -41,7 +41,13 @@ pub struct Game {
     /// port order, but may be any combination of ports. Port numbers are stored in the Player
     /// objects
     pub players: [ArcSwap<Player>; 2],
+    /// Contains Item Frames if the replay is new enough. Item frames themselves may be empty if no
+    /// items spawned during the match (highly unlikely), but the container will populate so long as
+    /// the replay is new enough
     pub item_frames: Option<Arc<ItemFrames>>,
+    /// The full path of the parsed replay.
+    ///
+    /// Used internally for generating Dolphin Playback Queues.
     pub path: Arc<PathBuf>,
 }
 

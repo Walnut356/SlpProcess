@@ -8,9 +8,9 @@ use std::ops::Deref;
 use num_traits::{PrimInt, Zero};
 
 use crate::enums::{
-        buttons::{ControllerInput, EngineInput},
-        general::Flags,
-    };
+    buttons::{ControllerInput, EngineInput},
+    general::Flags,
+};
 
 pub trait BitFlags: Into<Self::Other> {
     type Other: PrimInt;
