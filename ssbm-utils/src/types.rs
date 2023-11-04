@@ -2,7 +2,7 @@ use crate::enums::StickRegion;
 use serde::{Deserialize, Serialize};
 use std::{
     f32::consts::TAU,
-    ops::{Add, AddAssign, Deref, Sub, SubAssign},
+    ops::{Add, AddAssign, Sub, SubAssign},
 };
 
 pub type Radians = f32;

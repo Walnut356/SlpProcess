@@ -9,9 +9,9 @@ use approx::assert_relative_eq;
 
 use crate::{
     calc::attack::hitstun,
-    constants::{KB_DECAY, TUMBLE_THRESHOLD, Z_ANALOG},
+    constants::{KB_DECAY, TUMBLE_THRESHOLD},
     enums::{character::*, stage::*},
-    types::{Degrees, Position, Radians, StickPos, Velocity},
+    types::{Position, Radians, StickPos, Velocity},
 };
 
 /// Calculates the raw knockback value given the circumstances of the hit.

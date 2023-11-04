@@ -1,6 +1,6 @@
-//! I'm not super pleased with how these impls turned out. Literally every part of this file is
-//! ugly. Eventually I want to make this a macro, but that's a huge can of worms that i'm not
-//! opening yet. Grouping them all here will let me dumpster them easier when the time comes though.
+// I'm not super pleased with how these impls turned out. Literally every part of this file is
+// ugly. Eventually I want to make this a macro, but that's a huge can of worms that i'm not
+// opening yet. Grouping them all here will let me dumpster them easier when the time comes though.
 
 use std::fmt::{Debug, Display};
 use std::ops::Deref;
