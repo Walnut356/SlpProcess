@@ -8,7 +8,7 @@ use std::{
 use polars::datatypes::DataType::Struct;
 use polars::prelude::*;
 use serde_json;
-use slpprocess::{parse, Game};
+use slpprocess::{parse, Game, get_combos, to_dolphin_queue};
 use ssbm_utils::enums::ActionState;
 use ssbm_utils::types::Point;
 
@@ -21,20 +21,23 @@ pub fn main() {
     // let replay = r"./Game_20230526T020459.slp";
     // let replay = r"E:\Slippi Replays\Netplay\Game_20231018T005550.slp";
 
-    let replay = r"E:\\Slippi Replays\\Netplay\\Game_20230607T011346.slp";
+    let replay = r"E:\Slippi Replays\Netplay\Game_20230607T011346.slp";
     let mut games = parse(replay);
-    let dur = now.elapsed();
-    dbg!(dur);
-    let game = games.pop().unwrap();
-    dbg!(game.metadata);
-    dbg!(game.total_frames);
+    // let dur = now.elapsed();
+    // dbg!(dur);
+    // let game = games.pop().unwrap();
+    // dbg!(game.metadata);
+    // dbg!(game.total_frames);
+    let combos = get_combos(&games, "NUT#356");
+    to_dolphin_queue("./output.json".into(), &combos)
+
     // let player = game.player_by_code("NUT#356").unwrap();
     // let df = player.stats.defense.as_ref().unwrap();
     // println!("{:?}", DataFrame::from(player.frames.pre.clone()));
 
-    let player = &game.players[0];
-    // let frames = &player.frames.post;
-    println!("{:?}", player.load().connect_code);
+    // let player = &game.players[0];
+    // // let frames = &player.frames.post;
+    // println!("{:?}", player.load().connect_code);
 
     // dbg!(&player.combos.0.get(0).unwrap());
 

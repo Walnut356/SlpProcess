@@ -14,12 +14,13 @@ use ssbm_utils::{
     enums::{stage::Stage, Attack, Character, StageID},
     types::Position,
 };
+use serde_json::json;
 
 use crate::player::Frames;
 
 pub const COMBO_LENIENCY: u32 = 45;
-pub const PRE_COMBO_BUFFER_FRAMES: usize = 60;
-pub const POST_COMBO_BUFFER_FRAMES: usize = 90;
+pub const PRE_COMBO_BUFFER_FRAMES: i32 = 60;
+pub const POST_COMBO_BUFFER_FRAMES: i32 = 90;
 
 #[derive(Debug, Clone, new)]
 pub struct Move {
@@ -53,6 +54,14 @@ pub struct Combo {
 }
 
 impl Combo {
+    pub fn to_queue_obj(&self, path: &str) -> serde_json::Value {
+        json!({
+            "path": path,
+            "startFrame": self.start_frame - PRE_COMBO_BUFFER_FRAMES,
+            "endFrame": self.end_frame + POST_COMBO_BUFFER_FRAMES,
+        })
+    }
+
     pub fn is_game_ender(&self) -> bool {
         self.did_kill && self.opponent_stocks == 1
     }

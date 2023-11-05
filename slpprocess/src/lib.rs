@@ -23,13 +23,14 @@ pub mod utils;
 
 pub use crate::game::Game;
 use crate::stats::combos::Combos;
+use serde_json::json;
 pub use ssbm_utils::enums::Port;
 
 use rayon::prelude::*;
 use std::{
-    fs,
+    fs::{self, File},
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::Arc, io::Write,
 };
 
 /// Accepts a string file path to a single replay, or a directory containing replays. Returns a vector containing the
@@ -81,6 +82,30 @@ pub fn get_combos(games: &[Game], connect_code: &str) -> Vec<Arc<Combos>> {
             }
         })
         .collect()
+}
+
+pub fn to_dolphin_queue(target_path: PathBuf, combo_list: &[Arc<Combos>]) {
+    let mut playback_queue = json!({
+        "mode": "queue",
+        "replay": "",
+        "isRealTimeMode": false,
+        "outputOverlayFiles": true,
+        "queue": Vec::<serde_json::Value>::new(),
+    });
+
+    let result = playback_queue["queue"].as_array_mut().unwrap();
+
+    for combos in combo_list {
+        let path = combos.path.to_str().unwrap();
+        for combo in combos.iter() {
+            result.push(combo.to_queue_obj(path));
+        }
+    }
+
+
+    let mut f = File::create(target_path).unwrap();
+    serde_json::to_writer_pretty(f, &playback_queue).unwrap();
+    // f.write_all(playback_queue.to_string().as_bytes()).unwrap();
 }
 
 #[cfg(test)]
