@@ -1,10 +1,7 @@
-use std::{
-    ops::Deref,
-    path:: PathBuf,
-    sync::Arc,
-};
+use std::{ops::{Deref, RangeBounds, Range}, path::PathBuf, sync::Arc};
 
 use derive_new::new;
+use serde_json::json;
 use ssbm_utils::{
     checks::{
         get_damage_taken, is_cmd_grabbed, is_damaged, is_dodging, is_downed, is_dying, is_grabbed,
@@ -14,7 +11,6 @@ use ssbm_utils::{
     enums::{stage::Stage, Attack, Character, StageID},
     types::Position,
 };
-use serde_json::json;
 
 use crate::player::Frames;
 
@@ -36,7 +32,7 @@ pub struct Move {
 #[derive(Debug, Clone, new)]
 pub struct Combo {
     #[new(default)]
-    pub movelist: Vec<Move>,
+    pub move_list: Vec<Move>,
     #[new(value = "false")]
     pub did_kill: bool,
     pub start_position: Position,
@@ -65,12 +61,40 @@ impl Combo {
     pub fn is_game_ender(&self) -> bool {
         self.did_kill && self.opponent_stocks == 1
     }
+
+    pub fn filter_out_attack(&self, attacks: Vec<Attack>) -> impl Iterator<Item = &Move> {
+        self.move_list.iter().filter_map(move|m| attacks.contains(&m.move_id).then_some(m))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct Combos {
     pub data: Vec<Combo>,
     pub path: Arc<PathBuf>,
+}
+
+impl Combos {
+    /// Creates a new combo object containing only combos whose starting percent are below a given
+    /// value
+    pub fn filter_max_start_percent(&self, value: f32) -> impl Iterator<Item = &Combo> {
+        self
+            .iter()
+            .filter(move |c| c.start_percent <= value)
+    }
+
+    pub fn filter_hit_count(&self, value: Range<usize>) -> Combos {
+            Combos {
+            data: self
+                .iter()
+                .filter_map(|c| (value.contains(&c.move_list.len())).then_some(c.clone()))
+                .collect(),
+            path: self.path.clone(),
+        }
+    }
+
+    pub fn filter_min_duration(&self, value: Range<isize>) -> impl Iterator<Item = &Combo>{
+        self.iter().filter(move |c| value.contains(&((c.end_frame - c.start_frame).abs() as isize)))
+    }
 }
 
 // Deref abuse is sick and nobody can tell me otherwise
@@ -167,7 +191,7 @@ pub fn find_combos(
             // a knockback animation will count as a move
             if opnt_damage_taken > 0.0 {
                 if combo_state.last_hit_animation.is_none() {
-                    event.as_mut().unwrap().movelist.push(Move::new(
+                    event.as_mut().unwrap().move_list.push(Move::new(
                         i as i32 - 123,
                         Attack::from(plyr_frames.post.last_attack_landed[i]),
                         opnt_damage_taken,
@@ -178,7 +202,7 @@ pub fn find_combos(
                     let temp = event
                         .as_mut()
                         .unwrap()
-                        .movelist
+                        .move_list
                         .last_mut()
                         .expect("No move despite last hit animation and damage taken");
 
