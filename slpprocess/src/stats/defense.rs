@@ -8,11 +8,15 @@ use ssbm_utils::{
         should_kill,
     },
     checks::{get_damage_taken, is_in_hitlag, is_shielding_flag, is_thrown, just_took_damage},
-    enums::Character,
+    enums::{Character, StickRegion},
     types::{Degrees, Position, StickPos, Velocity},
 };
 
 use crate::player::Frames;
+
+fn as_vec_i8(input: Vec<StickRegion>) -> Vec<i8> {
+    input.into_iter().map(|s| s as i8).collect()
+}
 
 #[derive(Debug, Default)]
 struct DefenseStats {
@@ -25,8 +29,8 @@ struct DefenseStats {
     grounded: Vec<bool>,
     crouch_cancel: Vec<bool>,
     hitlag_frames: Vec<u8>,
-    stick_during_hitlag: Vec<Vec<i8>>,
-    sdi_inputs: Vec<Vec<i8>>,
+    stick_during_hitlag: Vec<Vec<StickRegion>>,
+    sdi_inputs: Vec<Vec<StickRegion>>,
     asdi: Vec<i8>,
     kb: Vec<Velocity>,
     kb_angle: Vec<Degrees>,
@@ -87,14 +91,14 @@ impl From<DefenseStats> for DataFrame {
                 col::StickDuringHitlag.into(),
                 val.stick_during_hitlag
                     .into_iter()
-                    .map(|x| Series::new("", x))
+                    .map(|x| Series::new("", as_vec_i8(x)))
                     .collect::<Vec<_>>(),
             ),
             Series::new(
                 col::SDIInputs.into(),
                 val.sdi_inputs
                     .into_iter()
-                    .map(|x| Series::new("", x))
+                    .map(|x| Series::new("", as_vec_i8(x)))
                     .collect::<Vec<_>>(),
             ),
             Series::new(col::ASDI.into(), val.asdi),
@@ -170,8 +174,8 @@ struct DefenseRow {
     grounded: bool,
     crouch_cancel: bool,
     hitlag_frames: u8,
-    stick_during_hitlag: Vec<i8>,
-    sdi_inputs: Vec<i8>,
+    stick_during_hitlag: Vec<StickRegion>,
+    sdi_inputs: Vec<StickRegion>,
     asdi: i8,
     kb: Velocity,
     kb_angle: Degrees,
@@ -264,11 +268,14 @@ pub fn find_defense(
         if event.is_some() && in_hitlag {
             let row = event.as_mut().unwrap();
             row.hitlag_frames += 1;
-            row.stick_during_hitlag
-                .push(pre.joystick[i].as_stickregion() as i8);
+            let curr_stick = pre.joystick[i].as_stickregion();
+            row.stick_during_hitlag.push(curr_stick);
+
+            if row.hitlag_frames > 1 && curr_stick.valid_sdi(pre.joystick[i - 1].as_stickregion()) {
+                row.sdi_inputs.push(curr_stick)
+            }
 
             continue;
-            // TODO check valid sdi
         }
 
         // ----------------------------------- finalize event ----------------------------------- //
@@ -282,6 +289,13 @@ pub fn find_defense(
             let effective_stick = pre.joystick[i].with_deadzone();
 
             row.di_stick = effective_stick;
+
+            let cstick = pre.cstick[i].as_stickregion();
+            row.asdi = if !cstick.is_deadzone() {
+                cstick as i8
+            } else {
+                effective_stick.as_stickregion() as i8
+            };
 
             let kb_angle_rads = row.kb.as_angle();
             row.kb_angle = kb_angle_rads.to_degrees();

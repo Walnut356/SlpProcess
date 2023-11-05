@@ -30,7 +30,7 @@ use rayon::prelude::*;
 use std::{
     fs::{self, File},
     path::{Path, PathBuf},
-    sync::Arc, io::Write,
+    sync::Arc,
 };
 
 /// Accepts a string file path to a single replay, or a directory containing replays. Returns a vector containing the

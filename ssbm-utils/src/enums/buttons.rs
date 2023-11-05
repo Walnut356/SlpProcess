@@ -107,6 +107,8 @@ pub enum ControllerInput {
     Raw(u16)
 }
 
+/// Represents stick cardinals, diagonals, and deadzone. Can `as i8`, with the resultant value being
+/// -1 (deadzone) or a value 0-7. 0 is up and each step moves clockwise by 1 region.
 #[derive(
     Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, EnumString, IntoStaticStr, Display, FromRepr,
 )]
@@ -179,5 +181,62 @@ impl StickRegion {
             _ if left => R::LEFT,
             _ => panic!("Somehow failed all conditions"),
         }
+    }
+
+    #[inline]
+    pub fn is_cardinal(&self) -> bool {
+        (*self as i8 & 1) == 0
+    }
+
+    #[inline]
+    pub fn is_diagonal(&self) -> bool {
+        (*self as i8 & 1) != 0
+    }
+
+    #[inline]
+    pub fn is_deadzone(&self) -> bool {
+        (*self as i8).is_negative()
+    }
+
+    pub fn valid_sdi(&self, prev: StickRegion) -> bool {
+        // stick must not be deadzone and must have moved since the previous frame
+        if self.is_deadzone() || prev.is_deadzone() || *self == prev {
+            return false;
+        }
+
+        /*
+            We know that self is not deadzone and != prev. If prev is a cardinal direction, self
+            must be a diagonal. All cardinal to diagonal stick regions are valid SDI
+        */
+        if prev.is_cardinal() {
+            return true;
+        }
+
+        /*
+            if prev is diagonal it gets a bit messy.
+
+            Diagonal -> cardinal will NOT result in a second SDI inpuy unless the cardinal is not
+            one of the composite values of the diagonal (i.e. UP_RIGHT -> UP means no SDI
+            UP_RIGHT -> DOWN or UP_RIGHT -> LEFT will register an SDI input)
+
+            This means that if both self and prev are different diagonals, the SDI input must be
+            valid because at least 1 of their composite values must be different.
+
+            HACK the second half of the conditional:
+
+            there's probably less stupid way to do this but...
+            the absolute value of self - prev has 4 possible values: 1, 3, 5, and 7
+            For any valid diagonal-> cardinal (DR->L, UL->D, etc.) the absolute value of
+            the difference between the 2 is always 3 or 5 so this literally works It should almost
+            never happen though since you'd need to move 3 zones away inbetween frames
+        */
+        if *self as i8 % 2 == 1 || {
+            let temp = (*self as i8 - prev as i8).abs();
+            temp == 3 || temp == 5
+        } {
+            return true;
+        }
+
+        false
     }
 }

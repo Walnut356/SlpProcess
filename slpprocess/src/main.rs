@@ -23,33 +23,15 @@ pub fn main() {
 
     let replay = r"E:\Slippi Replays\Netplay\Game_20230607T011346.slp";
     let mut games = parse(replay);
-    // let dur = now.elapsed();
-    // dbg!(dur);
-    // let game = games.pop().unwrap();
-    // dbg!(game.metadata);
-    // dbg!(game.total_frames);
-    let combos = get_combos(&games, "NUT#356");
-    to_dolphin_queue("./output.json".into(), &combos)
+    let dur = now.elapsed();
+    dbg!(dur);
+    let game = games.pop().unwrap();
 
-    // let player = game.player_by_code("NUT#356").unwrap();
-    // let df = player.stats.defense.as_ref().unwrap();
-    // println!("{:?}", DataFrame::from(player.frames.pre.clone()));
+    let player = game.player_by_code("NUT#356").unwrap();
+    let df = player.stats.defense.as_ref().unwrap();
 
-    // let player = &game.players[0];
-    // // let frames = &player.frames.post;
-    // println!("{:?}", player.load().connect_code);
-
-    // dbg!(&player.combos.0.get(0).unwrap());
-
+    dbg!(df.column("SDIInputs"));
     // let mut file = File::create("output.parquet").expect("could not create file");
     // ParquetWriter::new(&mut file).with_compression(ParquetCompression::Snappy)
     // .finish(&mut df.clone()).unwrap();
-}
-
-pub struct Test {
-    inner: RwLock<u32>,
-}
-
-pub fn test(thing: &Test) -> RwLockReadGuard<u32> {
-    thing.inner.read().unwrap()
 }
