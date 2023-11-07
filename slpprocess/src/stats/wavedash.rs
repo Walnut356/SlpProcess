@@ -68,11 +68,11 @@ pub fn find_wavedashes(frames: &Frames) -> DataFrame {
 
     }
 
-    DataFrame::default()
+    wavedashes.into()
 }
 
 fn degrees_below_horizontal(stick: StickPos) -> (f32, Orientation) {
-    let angle = stick.with_deadzone().as_angle();
+    let angle = stick.with_deadzone().as_angle().to_degrees();
 
     match angle {
         _ if (90.0..270.0).contains(&angle) => (angle - 180.0, Orientation::LEFT),

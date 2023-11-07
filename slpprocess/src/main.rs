@@ -13,7 +13,7 @@ use ssbm_utils::enums::ActionState;
 use ssbm_utils::types::Point;
 
 pub fn main() {
-    let now = Instant::now();
+
     // let replay = r"G:/temp";
 
     // TODO this replay has an item of ID 0x62
@@ -22,15 +22,16 @@ pub fn main() {
     // let replay = r"E:\Slippi Replays\Netplay\Game_20231018T005550.slp";
 
     let replay = r"E:\Slippi Replays\Netplay\Game_20230607T011346.slp";
+    let now = Instant::now();
     let mut games = parse(replay);
     let dur = now.elapsed();
     dbg!(dur);
     let game = games.pop().unwrap();
 
     let player = game.player_by_code("NUT#356").unwrap();
-    let df = player.stats.defense.as_ref().unwrap();
+    let df = &player.stats.wavedash;
 
-    dbg!(df.column("SDIInputs"));
+    dbg!(df);
     // let mut file = File::create("output.parquet").expect("could not create file");
     // ParquetWriter::new(&mut file).with_compression(ParquetCompression::Snappy)
     // .finish(&mut df.clone()).unwrap();
