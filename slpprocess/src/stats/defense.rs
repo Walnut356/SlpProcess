@@ -215,7 +215,7 @@ impl DefenseRow {
     }
 }
 
-pub fn find_defense(
+pub(crate) fn find_defense(
     plyr_frames: &Frames,
     opnt_frames: &Frames,
     stage_id: u16,
@@ -230,6 +230,7 @@ pub fn find_defense(
     let mut event = None;
     let mut stat_table = DefenseStats::default();
 
+    // start 1 frame "late" to prevent index errors
     for i in 1..pre.frame_index.len() {
         // check for grab states
 

@@ -152,3 +152,11 @@ pub enum DefenseStats {
     KillsNoDI,
     KillsAllDI,
 }
+
+#[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
+pub enum WavedashStats {
+    FrameIndex,
+    Angle,
+    Direction,
+    StartPosition,
+}

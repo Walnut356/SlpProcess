@@ -82,10 +82,13 @@ impl Frames {
 pub struct Stats {
     /// Minimum Replay Version: Any
     pub input: DataFrame,
-    /// Minimum Replay Version:
+    /// Minimum Replay Version: Any
+    pub wavedash: DataFrame,
+    /// Minimum Replay Version: 2.0
     pub l_cancel: Option<DataFrame>,
-    /// Minimum Replay Version:
+    /// Minimum Replay Version: 3.0
     pub item: Option<DataFrame>,
-    /// Minimum Replay Version
+    /// Minimum Replay Version 3.5
     pub defense: Option<DataFrame>,
+
 }

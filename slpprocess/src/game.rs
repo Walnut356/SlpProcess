@@ -17,7 +17,7 @@ use crate::{
     player::{Player, Stats},
     stats::{
         combos::find_combos, defense::find_defense, inputs::find_inputs, items::find_items,
-        lcancel::find_lcancels,
+        lcancel::find_lcancels, wavedash::find_wavedashes,
     },
 };
 
@@ -113,7 +113,7 @@ impl Game {
             let items = &self.item_frames;
 
             // inputs are available in every replay version
-            let inputs = find_inputs(&player.frames, self.total_frames);
+            let input = find_inputs(&player.frames, self.total_frames);
 
             // l cancel status was with 2.0.0 on 3/19/2019
             let l_cancel = version
@@ -121,7 +121,7 @@ impl Game {
                 .then(|| find_lcancels(&player.frames, &Stage::from_id(self.metadata.stage)));
 
             // requires fields up to item.owner which was released just after rollback on 7/8/2020
-            let items = version
+            let item = version
                 .at_least(3, 6, 0)
                 .then(|| find_items(&player.frames, player.port, items.as_ref().unwrap()));
 
@@ -136,11 +136,15 @@ impl Game {
                 )
             });
 
+            // requires inputs and states thus has no version requirement
+            let wavedash = find_wavedashes(&player.frames);
+
             let stats = Arc::new(Stats {
-                input: inputs,
+                input,
                 l_cancel,
-                item: items,
+                item,
                 defense,
+                wavedash,
             });
 
             let combos = Arc::new(find_combos(
