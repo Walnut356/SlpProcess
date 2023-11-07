@@ -2,8 +2,11 @@
 // ugly. Eventually I want to make this a macro, but that's a huge can of worms that i'm not
 // opening yet. Grouping them all here will let me dumpster them easier when the time comes though.
 
-use std::fmt::{Debug, Display};
 use std::ops::Deref;
+use std::{
+    fmt::{Debug, Display},
+    ops::BitOr,
+};
 
 use num_traits::{PrimInt, Zero};
 
@@ -12,25 +15,41 @@ use crate::enums::{
     general::Flags,
 };
 
-pub trait BitFlags: Into<Self::Other> {
+pub trait BitFlags: Into<Self::Other> + Copy {
     type Other: PrimInt;
 
+    /// returns true if `other` is entirely represented in `self`
+    #[inline]
     fn contains(self, other: Self::Other) -> bool {
         Into::<Self::Other>::into(self) & other == other
     }
 
+    fn contained_by(self, other: Self::Other) -> bool {
+        let temp = Into::<Self::Other>::into(self);
+        temp & other == temp
+    }
+
+    /// Returns true if `self` and `other` share any bits
+    #[inline]
     fn intersects(self, other: Self::Other) -> bool {
         Into::<Self::Other>::into(self) & other != Self::Other::zero()
     }
 
+    /// Returns the total number of `1` bits
+    #[inline]
     fn count_ones(self) -> u32 {
         Into::<Self::Other>::into(self).count_ones()
     }
 
+    /// Returns the total number of `0` bits
+    #[inline]
     fn count_zeroes(self) -> u32 {
         Into::<Self::Other>::into(self).count_zeros()
     }
 }
+
+/// Marker trait to differentiate Input bitfields from all other bitfields
+pub trait Buttons {}
 
 // ----------------------------------------- EngineInput ---------------------------------------- //
 
@@ -93,41 +112,63 @@ impl From<EngineInput> for u32 {
     }
 }
 
+impl Buttons for EngineInput {}
+
 impl BitFlags for EngineInput {
     type Other = u32;
+}
+
+impl BitOr for EngineInput {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        EngineInput::Raw(*self | *rhs)
+    }
 }
 
 impl Deref for EngineInput {
     type Target = u32;
 
-    #[inline]
     fn deref(&self) -> &u32 {
         use EngineInput as EI;
+        // The commented out code below shows an initial attempt that had the compiler
+        // generating (i think) a binary search algorithm. Reinterpreting the pointer is
+        // maybe 2-4x faster. That's probably not worth using unsafe for since this won't be
+        // used a ton, but the experience with pointer manipulation (and any bugs that arise)
+        // are good learning moments.
+
+        // The match is unfortunately necessary. The enum is represented by 4 bytes - in Raw the
+        // desired u16 value is stored in the upper 2, for non-Raw the data is stored in the lower 2
         match self {
             EI::Raw(x) => x,
-            EI::None => &0,
-            EI::DPAD_LEFT => &(1 << 0),
-            EI::DPAD_RIGHT => &(1 << 1),
-            EI::DPAD_DOWN => &(1 << 2),
-            EI::DPAD_UP => &(1 << 3),
-            EI::Z => &(1 << 4),
-            EI::R => &(1 << 5),
-            EI::L => &(1 << 6),
-            EI::A => &(1 << 8),
-            EI::B => &(1 << 9),
-            EI::X => &(1 << 10),
-            EI::Y => &(1 << 11),
-            EI::START => &(1 << 12),
-            EI::JOYSTICK_UP => &(1 << 16),
-            EI::JOYSTICK_DOWN => &(1 << 17),
-            EI::JOYSTICK_LEFT => &(1 << 18),
-            EI::JOYSTICK_RIGHT => &(1 << 19),
-            EI::CSTICK_UP => &(1 << 20),
-            EI::CSTICK_DOWN => &(1 << 21),
-            EI::CSTICK_LEFT => &(1 << 22),
-            EI::CSTICK_RIGHT => &(1 << 23),
-            EI::ANY_TRIGGER => &(1 << 31),
+            // Safety: when using #[repr] the layout is predictable
+            _ => unsafe { &(*(self as *const EngineInput as *const u32)) },
         }
+        // match self {
+        //     EI::Raw(x) => x,
+        //     EI::None => &0,
+        //     EI::DPAD_LEFT => &(1 << 0),
+        //     EI::DPAD_RIGHT => &(1 << 1),
+        //     EI::DPAD_DOWN => &(1 << 2),
+        //     EI::DPAD_UP => &(1 << 3),
+        //     EI::Z => &(1 << 4),
+        //     EI::R => &(1 << 5),
+        //     EI::L => &(1 << 6),
+        //     EI::A => &(1 << 8),
+        //     EI::B => &(1 << 9),
+        //     EI::X => &(1 << 10),
+        //     EI::Y => &(1 << 11),
+        //     EI::START => &(1 << 12),
+        //     EI::JOYSTICK_UP => &(1 << 16),
+        //     EI::JOYSTICK_DOWN => &(1 << 17),
+        //     EI::JOYSTICK_LEFT => &(1 << 18),
+        //     EI::JOYSTICK_RIGHT => &(1 << 19),
+        //     EI::CSTICK_UP => &(1 << 20),
+        //     EI::CSTICK_DOWN => &(1 << 21),
+        //     EI::CSTICK_LEFT => &(1 << 22),
+        //     EI::CSTICK_RIGHT => &(1 << 23),
+        //     EI::ANY_TRIGGER => &(1 << 31),
+        // }
     }
 }
 
@@ -264,7 +305,26 @@ impl EngineInput {
 
 // --------------------------------------- ControllerInput -------------------------------------- //
 
+impl ControllerInput {
+    const VAL_TABLE: [u16; 13] = [
+        1 << 0,
+        1 << 1,
+        1 << 2,
+        1 << 3,
+        1 << 4,
+        1 << 5,
+        1 << 6,
+        1 << 7,
+        1 << 8,
+        1 << 9,
+        1 << 10,
+        1 << 11,
+        1 << 12,
+    ];
+}
+
 impl From<u16> for ControllerInput {
+    #[inline]
     fn from(val: u16) -> Self {
         Self::Raw(val)
     }
@@ -292,31 +352,51 @@ impl From<ControllerInput> for u16 {
     }
 }
 
+impl Buttons for ControllerInput {}
+
 impl BitFlags for ControllerInput {
     type Other = u16;
 }
 
+impl BitOr for ControllerInput {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        ControllerInput::Raw(*self | *rhs)
+    }
+}
 impl Deref for ControllerInput {
     type Target = u16;
 
     #[inline]
     fn deref(&self) -> &u16 {
         use ControllerInput as CI;
+        // The commented out code below shows an initial attempt that had the compiler
+        // generating (i think) a binary search algorithm. Reinterpreting the pointer is
+        // maybe 2-4x faster. That's probably not worth using unsafe for since this won't be
+        // used a ton, but the experience with pointer manipulation (and any bugs that arise)
+        // are good learning moments.
+
+        // The match is unfortunately necessary. The enum is represented by 4 bytes - in Raw the
+        // desired u16 value is stored in the upper 2, for non-Raw the data is stored in the lower 2
         match self {
             CI::Raw(x) => x,
-            CI::None => &(0),
-            CI::DPAD_LEFT => &(1 << 0),
-            CI::DPAD_RIGHT => &(1 << 1),
-            CI::DPAD_DOWN => &(1 << 2),
-            CI::DPAD_UP => &(1 << 3),
-            CI::Z => &(1 << 4),
-            CI::R => &(1 << 5),
-            CI::L => &(1 << 6),
-            CI::A => &(1 << 8),
-            CI::B => &(1 << 9),
-            CI::X => &(1 << 10),
-            CI::Y => &(1 << 11),
-            CI::START => &(1 << 12),
+
+            // Safety: when using #[repr] the layout is predictable
+            _ => unsafe { &(*(self as *const ControllerInput as *const u16)) },
+            // CI::None => &(0),
+            // CI::DPAD_LEFT => &(1 << 0),
+            // CI::DPAD_RIGHT => &(1 << 1),
+            // CI::DPAD_DOWN => &(1 << 2),
+            // CI::DPAD_UP => &(1 << 3),
+            // CI::Z => &(1 << 4),
+            // CI::R => &(1 << 5),
+            // CI::L => &(1 << 6),
+            // CI::A => &(1 << 8),
+            // CI::B => &(1 << 9),
+            // CI::X => &(1 << 10),
+            // CI::Y => &(1 << 11),
+            // CI::START => &(1 << 12),
         }
     }
 }
@@ -503,54 +583,62 @@ impl BitFlags for Flags {
     type Other = u64;
 }
 
+impl BitOr for Flags {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Flags::Raw(*self | *rhs)
+    }
+}
+
 impl Deref for Flags {
     type Target = u64;
 
-    #[inline]
     fn deref(&self) -> &u64 {
         match self {
             Flags::Raw(x) => x,
-            Flags::None => &0,
-            Flags::BIT_1_1 => &(1 << 0),
-            Flags::ABSORB_BUBBLE => &(1 << 1),
-            Flags::BIT_1_3 => &(1 << 2),
-            Flags::REFLECT_NO_STEAL => &(1 << 3),
-            Flags::REFLECT_BUBBLE => &(1 << 4),
-            Flags::BIT_1_6 => &(1 << 5),
-            Flags::BIT_1_7 => &(1 << 6),
-            Flags::BIT_1_8 => &(1 << 7),
-            Flags::BIT_2_1 => &(1 << 8),
-            Flags::BIT_2_2 => &(1 << 9),
-            Flags::SUBACTION_INVULN => &(1 << 10),
-            Flags::FASTFALL => &(1 << 11),
-            Flags::DEFENDER_HITLAG => &(1 << 12),
-            Flags::HITLAG => &(1 << 13),
-            Flags::BIT_2_7 => &(1 << 14),
-            Flags::BIT_2_8 => &(1 << 15),
-            Flags::BIT_3_1 => &(1 << 16),
-            Flags::BIT_3_2 => &(1 << 17),
-            Flags::GRAB_HOLD => &(1 << 18),
-            Flags::BIT_3_4 => &(1 << 19),
-            Flags::BIT_3_5 => &(1 << 20),
-            Flags::BIT_3_6 => &(1 << 21),
-            Flags::BIT_3_7 => &(1 << 22),
-            Flags::SHIELDING => &(1 << 23),
-            Flags::BIT_4_1 => &(1 << 24),
-            Flags::HITSTUN => &(1 << 25),
-            Flags::HITBOX_TOUCHING_SHIELD => &(1 << 26),
-            Flags::BIT_4_4 => &(1 << 27),
-            Flags::BIT_4_5 => &(1 << 28),
-            Flags::POWERSHIELD_BUBBLE => &(1 << 29),
-            Flags::BIT_4_7 => &(1 << 30),
-            Flags::BIT_4_8 => &(1 << 31),
-            Flags::BIT_5_1 => &(1 << 32),
-            Flags::CLOAKING_DEVICE => &(1 << 33),
-            Flags::BIT_5_3 => &(1 << 34),
-            Flags::FOLLOWER => &(1 << 35),
-            Flags::INACTIVE => &(1 << 36),
-            Flags::BIT_5_6 => &(1 << 37),
-            Flags::DEAD => &(1 << 38),
-            Flags::OFFSCREEN => &(1 << 39),
+            _ => unsafe { &(*(self as *const Flags as *const u64)) },
+            // Flags::None => &0,
+            // Flags::BIT_1_1 => &(1 << 0),
+            // Flags::ABSORB_BUBBLE => &(1 << 1),
+            // Flags::BIT_1_3 => &(1 << 2),
+            // Flags::REFLECT_NO_STEAL => &(1 << 3),
+            // Flags::REFLECT_BUBBLE => &(1 << 4),
+            // Flags::BIT_1_6 => &(1 << 5),
+            // Flags::BIT_1_7 => &(1 << 6),
+            // Flags::BIT_1_8 => &(1 << 7),
+            // Flags::BIT_2_1 => &(1 << 8),
+            // Flags::BIT_2_2 => &(1 << 9),
+            // Flags::SUBACTION_INVULN => &(1 << 10),
+            // Flags::FASTFALL => &(1 << 11),
+            // Flags::DEFENDER_HITLAG => &(1 << 12),
+            // Flags::HITLAG => &(1 << 13),
+            // Flags::BIT_2_7 => &(1 << 14),
+            // Flags::BIT_2_8 => &(1 << 15),
+            // Flags::BIT_3_1 => &(1 << 16),
+            // Flags::BIT_3_2 => &(1 << 17),
+            // Flags::GRAB_HOLD => &(1 << 18),
+            // Flags::BIT_3_4 => &(1 << 19),
+            // Flags::BIT_3_5 => &(1 << 20),
+            // Flags::BIT_3_6 => &(1 << 21),
+            // Flags::BIT_3_7 => &(1 << 22),
+            // Flags::SHIELDING => &(1 << 23),
+            // Flags::BIT_4_1 => &(1 << 24),
+            // Flags::HITSTUN => &(1 << 25),
+            // Flags::HITBOX_TOUCHING_SHIELD => &(1 << 26),
+            // Flags::BIT_4_4 => &(1 << 27),
+            // Flags::BIT_4_5 => &(1 << 28),
+            // Flags::POWERSHIELD_BUBBLE => &(1 << 29),
+            // Flags::BIT_4_7 => &(1 << 30),
+            // Flags::BIT_4_8 => &(1 << 31),
+            // Flags::BIT_5_1 => &(1 << 32),
+            // Flags::CLOAKING_DEVICE => &(1 << 33),
+            // Flags::BIT_5_3 => &(1 << 34),
+            // Flags::FOLLOWER => &(1 << 35),
+            // Flags::INACTIVE => &(1 << 36),
+            // Flags::BIT_5_6 => &(1 << 37),
+            // Flags::DEAD => &(1 << 38),
+            // Flags::OFFSCREEN => &(1 << 39),
         }
     }
 }

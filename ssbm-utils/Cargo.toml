@@ -14,4 +14,4 @@ nohash-hasher = "0.2.0"
 approx = "0.5.1"
 num-traits = "0.2.16"
 anyhow = "1.0.75"
-serde = "1.0.188"
+serde = { version = "1.0.188", features = ["derive"] }

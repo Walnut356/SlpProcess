@@ -10,6 +10,7 @@ pub mod enums {
 
     mod bitflag_impl;
     pub use bitflag_impl::BitFlags;
+    pub use bitflag_impl::Buttons;
     pub mod buttons;
     pub use buttons::{ControllerInput, EngineInput, StickRegion};
 
@@ -52,4 +53,6 @@ pub mod constants {
 
     /// The minimum value at which knockback will tumble/knock down
     pub const TUMBLE_THRESHOLD: f32 = 80.0;
+
+    pub const FIRST_FRAME_INDEX: i32 = -123;
 }

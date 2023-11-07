@@ -36,7 +36,7 @@ impl StickPos {
         Self { x, y }
     }
 
-    pub fn with_deadzone(&self) -> Self {
+    pub fn with_deadzone(self) -> Self {
         use crate::enums::StickRegion as SR;
         match self.as_stickregion() {
             SR::DEAD_ZONE => StickPos::new(0.0, 0.0),
