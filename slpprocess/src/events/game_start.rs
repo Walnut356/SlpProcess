@@ -632,6 +632,7 @@ impl Version {
         }
     }
 
+    #[inline]
     /// Returns true if self is at least (greater than or equal to) the given version
     pub fn at_least(&self, major: u8, minor: u8, build: u8) -> bool {
         *self

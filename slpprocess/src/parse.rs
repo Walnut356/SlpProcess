@@ -124,62 +124,10 @@ impl Game {
 
         let raw_length = stream.read_u32::<BigEndian>().unwrap() as u64 + 15;
 
-        let event_sizes: IntMap<u8, u16> = Self::get_event_sizes(&mut stream)?;
+        let return_pos = stream.position();
 
-        // ------------------------------------- game start ------------------------------------- //
-
-        assert_eq!(stream.read_u8().unwrap(), EventType::GameStart as u8);
-
-        let raw_start = stream.get_ref().slice(
-            // wow this is exceptionally ugly! thanks rust =)
-            stream.position() as usize
-                ..(stream.position() + event_sizes[&EventType::GameStart.into()] as u64) as usize,
-        );
-
-        let (game_start, version, mut players) = GameStart::parse(raw_start);
-
-        stream.set_position(stream.position() + event_sizes[&EventType::GameStart.into()] as u64);
-
-        let mut game_end_bytes: Option<Bytes> = None;
-
-        // ----------------------------------- event dispatch ----------------------------------- //
-
-        let mut event = EventType::None;
-        let mut pre_bytes = Vec::new();
-        let mut post_bytes = Vec::new();
-        let mut item_bytes = Vec::new();
-
-        while stream.position() < raw_length && event != EventType::GameEnd {
-            let code = stream.read_u8().unwrap();
-            event = EventType::from(code);
-            // TODO remove this once everything works
-            /* EventType::None allows the parser to continue working on newer replays (with possible
-            new events). During testing all events are accounted for, so any EventType::Nones are
-            likely a misalignment of my slices */
-            assert!(event != EventType::None);
-
-            let size = event_sizes[&code] as u64;
-            let pos = stream.position();
-            let raw_data = stream.get_ref();
-
-            match event {
-                EventType::PreFrame => {
-                    pre_bytes.push(raw_data.slice(pos as usize..(pos + size) as usize))
-                }
-                EventType::PostFrame => {
-                    post_bytes.push(raw_data.slice(pos as usize..(pos + size) as usize))
-                }
-                EventType::Item => {
-                    item_bytes.push(raw_data.slice(pos as usize..(pos + size) as usize))
-                }
-                EventType::GameEnd => {
-                    game_end_bytes = Some(raw_data.slice(pos as usize..(pos + size) as usize))
-                }
-                _ => (),
-            }
-
-            stream.set_position(pos + size);
-        }
+        // quick detour to help save on re-allocations later
+        stream.set_position(raw_length);
 
         expect_bytes(
             &mut stream,
@@ -203,6 +151,76 @@ impl Game {
 
             // i shouldn't have to do any checks on this conversion
             duration = Duration::from_millis(millis);
+        };
+
+        stream.set_position(return_pos);
+
+        let event_sizes: IntMap<u8, u16> = Self::get_event_sizes(&mut stream)?;
+
+        // ------------------------------------- game start ------------------------------------- //
+
+        assert_eq!(stream.read_u8().unwrap(), EventType::GameStart as u8);
+
+        let raw_start = stream.get_ref().slice(
+            // wow this is exceptionally ugly! thanks rust =)
+            stream.position() as usize
+                ..(stream.position() + event_sizes[&EventType::GameStart.into()] as u64) as usize,
+        );
+
+        let (game_start, version, mut players) = GameStart::parse(raw_start);
+
+                // i could map but this gives me arrays instead of slices without into
+        let ports = [players[0].port, players[1].port];
+        let ics = [
+            players[0].character == Character::IceClimbers,
+            players[1].character == Character::IceClimbers,
+        ];
+
+        stream.set_position(stream.position() + event_sizes[&EventType::GameStart.into()] as u64);
+
+        let mut game_end_bytes: Option<Bytes> = None;
+
+        // ----------------------------------- event dispatch ----------------------------------- //
+
+        let mut event = EventType::None;
+        let mut pre_offsets = Vec::with_capacity((frame_count * 2) as usize);
+        let mut post_offsets = Vec::with_capacity((frame_count * 2) as usize);
+        let mut item_offsets = Vec::with_capacity((frame_count * 2) as usize);
+
+        while stream.position() < raw_length && event != EventType::GameEnd {
+            let code = stream.read_u8().unwrap();
+            event = EventType::from(code);
+            // TODO remove this once everything works
+            /* EventType::None allows the parser to continue working on newer replays (with possible
+            new events). During testing all events are accounted for, so any EventType::Nones are
+            likely a misalignment of my slices */
+            assert!(event != EventType::None);
+
+            // TODO stop making Vec<Bytes> and just make Vec<usize> (i.e. Vec<offset>). Pass a
+            // single bytes copy into each handler function and just stream.set_position(offset)
+            // should be 4x less memory
+
+            let size = event_sizes[&code] as u64;
+            let pos = stream.position();
+            let raw_data = stream.get_ref();
+
+            match event {
+                EventType::PreFrame => {
+                    pre_offsets.push(stream.position())
+                }
+                EventType::PostFrame => {
+                    post_offsets.push(stream.position())
+                }
+                EventType::Item => {
+                    item_offsets.push(stream.position())
+                }
+                EventType::GameEnd => {
+                    game_end_bytes = Some(raw_data.slice(pos as usize..(pos + size) as usize))
+                }
+                _ => (),
+            }
+
+            stream.set_position(pos + size);
         }
 
         let mut game_end = None;
@@ -211,22 +229,16 @@ impl Game {
             game_end = Some(parse_gameend(bytes));
         }
 
-        // i could map but this gives me arrays instead of slices without into
-        let ports = [players[0].port, players[1].port];
-        let ics = [
-            players[0].character == Character::IceClimbers,
-            players[1].character == Character::IceClimbers,
-        ];
 
         let mut item_frames = None;
 
         if version.at_least(3, 0, 0) {
-            item_frames = Some(parse_itemframes(version, &mut item_bytes));
+            item_frames = Some(parse_itemframes(stream.clone(), version, &item_offsets));
         }
 
         let (mut pre_frames, mut post_frames) = rayon::join(
-            || parse_preframes(version, &mut pre_bytes, frame_count, ports, ics),
-            || parse_postframes(version, &mut post_bytes, frame_count, ports, ics),
+            || parse_preframes(stream.clone(), version, &pre_offsets, frame_count, ports, ics),
+            || parse_postframes(stream.clone(), version, &post_offsets, frame_count, ports, ics),
         );
 
         for player in players.iter_mut() {

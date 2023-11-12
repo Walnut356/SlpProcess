@@ -1,5 +1,7 @@
 #![allow(clippy::uninit_vec)]
 
+use std::io::Cursor;
+
 use crate::{events::game_start::Version, Port};
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
@@ -237,8 +239,9 @@ pub struct PreRow {
 }
 
 pub fn parse_preframes(
+    stream: Cursor<Bytes>,
     version: Version,
-    frames: &mut [Bytes],
+    frames: &[u64],
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
@@ -247,9 +250,9 @@ pub fn parse_preframes(
         /* splitting these out saves us a small amount of time in conditional logic, and allows for
         exact iterator chunk sizes. */
         if !ics[0] && !ics[1] {
-            unpack_frames(frames, ports, version)
+            unpack_frames(stream, frames, ports, version)
         } else {
-            unpack_frames_ics(frames, duration, ports, ics, version)
+            unpack_frames_ics(stream, frames, duration, ports, ics, version)
         }
     };
 
@@ -263,7 +266,8 @@ pub fn parse_preframes(
 }
 
 pub fn unpack_frames(
-    frames: &mut [Bytes],
+    mut stream: Cursor<Bytes>,
+    frames: &[u64],
     ports: [Port; 2],
     version: Version,
 ) -> IntMap<u8, (PreFrames, Option<PreFrames>)> {
@@ -271,18 +275,19 @@ pub fn unpack_frames(
     assembly to be sure. It's gonna start looking real gross if it's having trouble seeing through
     the constructor though */
 
-    let frames_iter = frames.chunks_exact_mut(2).enumerate();
+    let frames_iter = frames.chunks_exact(2).enumerate();
     let len = frames_iter.len();
 
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
     p_frames.insert(ports[0] as u8, (PreFrames::new(len, version), None));
     p_frames.insert(ports[1] as u8, (PreFrames::new(len, version), None));
 
-    for (i, frames_raw) in frames_iter {
-        for frame in frames_raw {
-            let frame_number = frame.get_i32();
-            let port = frame.get_u8();
-            frame.advance(1); // skip nana byte
+    for (i, offsets) in frames_iter {
+        for offset in offsets {
+            stream.set_position(*offset);
+            let frame_number = stream.get_i32();
+            let port = stream.get_u8();
+            stream.advance(1); // skip nana byte
 
             let (working, _) = p_frames.get_mut(&port).unwrap();
             // if the compiler doesn't catch that these are in-bounds, it's still fairly obvious.
@@ -290,30 +295,32 @@ pub fn unpack_frames(
             // vecs that make up the PreFrames objects.
             unsafe {
                 *working.frame_index.get_unchecked_mut(i) = frame_number;
-                *working.random_seed.get_unchecked_mut(i) = frame.get_u32();
-                *working.action_state.get_unchecked_mut(i) = frame.get_u16();
+                *working.random_seed.get_unchecked_mut(i) = stream.get_u32();
+                *working.action_state.get_unchecked_mut(i) = stream.get_u16();
                 *working.position.get_unchecked_mut(i) =
-                    Position::new(frame.get_f32(), frame.get_f32());
-                *working.orientation.get_unchecked_mut(i) = frame.get_f32();
+                    Position::new(stream.get_f32(), stream.get_f32());
+                *working.orientation.get_unchecked_mut(i) = stream.get_f32();
                 *working.joystick.get_unchecked_mut(i) =
-                    StickPos::new(frame.get_f32(), frame.get_f32());
+                    StickPos::new(stream.get_f32(), stream.get_f32());
                 *working.cstick.get_unchecked_mut(i) =
-                    StickPos::new(frame.get_f32(), frame.get_f32());
-                *working.engine_trigger.get_unchecked_mut(i) = frame.get_f32();
-                *working.engine_buttons.get_unchecked_mut(i) = frame.get_u32();
-                *working.controller_buttons.get_unchecked_mut(i) = frame.get_u16();
-                *working.controller_l.get_unchecked_mut(i) = frame.get_f32();
-                *working.controller_r.get_unchecked_mut(i) = frame.get_f32();
-                if !frame.has_remaining() {
-                    // version < 1.2.0
+                    StickPos::new(stream.get_f32(), stream.get_f32());
+                *working.engine_trigger.get_unchecked_mut(i) = stream.get_f32();
+                *working.engine_buttons.get_unchecked_mut(i) = stream.get_u32();
+                *working.controller_buttons.get_unchecked_mut(i) = stream.get_u16();
+                *working.controller_l.get_unchecked_mut(i) = stream.get_f32();
+                *working.controller_r.get_unchecked_mut(i) = stream.get_f32();
+
+                // Unnecessary since we're not recording Raw X for now
+                // if !version.at_least(1, 2, 0) {
+                //     continue;
+                // }
+
+                if !version.at_least(1, 4, 0) {
                     continue;
                 }
-                frame.advance(1);
-                if !frame.has_remaining() {
-                    // version < 1.4.0
-                    continue;
-                }
-                *working.percent.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
+
+                stream.advance(1);
+                *working.percent.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
             }
         }
     }
@@ -322,7 +329,8 @@ pub fn unpack_frames(
 }
 
 pub fn unpack_frames_ics(
-    frames: &mut [Bytes],
+    mut stream: Cursor<Bytes>,
+    offsets: &[u64],
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
@@ -346,15 +354,17 @@ pub fn unpack_frames_ics(
         ),
     );
 
-    for frame in frames.iter_mut() {
-        let frame_number = frame.get_i32();
+    for offset in offsets.iter() {
+        stream.set_position(*offset);
+
+        let frame_number = stream.get_i32();
         let i = (frame_number + 123) as usize;
         assert!(
             i < len,
             "Frame index incorrect, index ({i}) is greater than or equal to the max length of the container ({len})."
         );
-        let port = frame.get_u8();
-        let nana = frame.get_u8() != 0;
+        let port = stream.get_u8();
+        let nana = stream.get_u8() != 0;
 
         let working = {
             let temp = p_frames.get_mut(&port).unwrap();
@@ -367,30 +377,26 @@ pub fn unpack_frames_ics(
 
         unsafe {
             *working.frame_index.get_unchecked_mut(i) = frame_number;
-            *working.random_seed.get_unchecked_mut(i) = frame.get_u32();
-            *working.action_state.get_unchecked_mut(i) = frame.get_u16();
+            *working.random_seed.get_unchecked_mut(i) = stream.get_u32();
+            *working.action_state.get_unchecked_mut(i) = stream.get_u16();
             *working.position.get_unchecked_mut(i) =
-                Position::new(frame.get_f32(), frame.get_f32());
-            *working.orientation.get_unchecked_mut(i) = frame.get_f32();
+                Position::new(stream.get_f32(), stream.get_f32());
+            *working.orientation.get_unchecked_mut(i) = stream.get_f32();
             *working.joystick.get_unchecked_mut(i) =
-                StickPos::new(frame.get_f32(), frame.get_f32());
-            *working.cstick.get_unchecked_mut(i) = StickPos::new(frame.get_f32(), frame.get_f32());
-            *working.engine_trigger.get_unchecked_mut(i) = frame.get_f32();
-            *working.engine_buttons.get_unchecked_mut(i) = frame.get_u32();
-            *working.controller_buttons.get_unchecked_mut(i) = frame.get_u16();
-            *working.controller_l.get_unchecked_mut(i) = frame.get_f32();
-            *working.controller_r.get_unchecked_mut(i) = frame.get_f32();
-            if !frame.has_remaining() {
-                // version < 1.2.0
+                StickPos::new(stream.get_f32(), stream.get_f32());
+            *working.cstick.get_unchecked_mut(i) = StickPos::new(stream.get_f32(), stream.get_f32());
+            *working.engine_trigger.get_unchecked_mut(i) = stream.get_f32();
+            *working.engine_buttons.get_unchecked_mut(i) = stream.get_u32();
+            *working.controller_buttons.get_unchecked_mut(i) = stream.get_u16();
+            *working.controller_l.get_unchecked_mut(i) = stream.get_f32();
+            *working.controller_r.get_unchecked_mut(i) = stream.get_f32();
+
+            if !version.at_least(1, 4, 0) {
                 continue;
             }
-            frame.advance(1);
-            if !frame.has_remaining() {
-                // version < 1.4.0
-                continue;
-            } else {
-                *working.percent.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-            }
+
+            stream.advance(1);
+            *working.percent.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
         }
     }
 

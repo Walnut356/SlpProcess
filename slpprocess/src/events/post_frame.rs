@@ -1,5 +1,7 @@
 #![allow(clippy::uninit_vec)]
 
+use std::io::Cursor;
+
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
@@ -466,8 +468,9 @@ pub struct PostRow {
 }
 
 pub fn parse_postframes(
+    stream: Cursor<Bytes>,
     version: Version,
-    frames: &mut [Bytes],
+    frames: &[u64],
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
@@ -475,125 +478,122 @@ pub fn parse_postframes(
     /* splitting these out saves us a small amount of time in conditional logic, and allows for
     exact iterator chunk sizes. */
     if !ics[0] && !ics[1] {
-        unpack_frames(frames, ports, version)
+        unpack_frames(stream, frames, ports, version)
     } else {
-        unpack_frames_ics(frames, duration, ports, ics, version)
+        unpack_frames_ics(stream, frames, duration, ports, ics, version)
     }
 }
 
 /// Slightly more optimized version of the typical parsing code, due to invariants regarding frame
 /// event ordering and counts
 pub fn unpack_frames(
-    frames: &mut [Bytes],
+    mut stream: Cursor<Bytes>,
+    frames: &[u64],
     ports: [Port; 2],
     version: Version,
 ) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
-    let frames_iter = frames.chunks_exact_mut(2).enumerate();
-    let len = frames_iter.len();
+    let offsets_iter = frames.chunks_exact(2).enumerate();
+    let len = offsets_iter.len();
 
     let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
     p_frames.insert(ports[0] as u8, (PostFrames::new(len, version), None));
     p_frames.insert(ports[1] as u8, (PostFrames::new(len, version), None));
 
-    for (i, frames_raw) in frames_iter {
-        for frame in frames_raw {
-            let frame_number = frame.get_i32();
-            let port = frame.get_u8();
+    for (i, offsets) in offsets_iter {
+        for offset in offsets {
+            stream.set_position(*offset);
+            let frame_number = stream.get_i32();
+            let port = stream.get_u8();
 
-            frame.advance(1); // skip nana byte
+            stream.advance(1); // skip nana byte
 
             let (working, _) = p_frames.get_mut(&port).unwrap();
 
             unsafe {
                 *working.frame_index.get_unchecked_mut(i) = frame_number;
-                *working.character.get_unchecked_mut(i) = frame.get_u8();
-                *working.action_state.get_unchecked_mut(i) = frame.get_u16();
+                *working.character.get_unchecked_mut(i) = stream.get_u8();
+                *working.action_state.get_unchecked_mut(i) = stream.get_u16();
                 *working.position.get_unchecked_mut(i) =
-                    Position::new(frame.get_f32(), frame.get_f32());
-                *working.orientation.get_unchecked_mut(i) = frame.get_f32();
-                *working.percent.get_unchecked_mut(i) = frame.get_f32();
-                *working.shield_health.get_unchecked_mut(i) = frame.get_f32();
-                *working.last_attack_landed.get_unchecked_mut(i) = frame.get_u8();
-                *working.combo_count.get_unchecked_mut(i) = frame.get_u8();
-                *working.last_hit_by.get_unchecked_mut(i) = frame.get_u8();
-                *working.stocks.get_unchecked_mut(i) = frame.get_u8();
+                    Position::new(stream.get_f32(), stream.get_f32());
+                *working.orientation.get_unchecked_mut(i) = stream.get_f32();
+                *working.percent.get_unchecked_mut(i) = stream.get_f32();
+                *working.shield_health.get_unchecked_mut(i) = stream.get_f32();
+                *working.last_attack_landed.get_unchecked_mut(i) = stream.get_u8();
+                *working.combo_count.get_unchecked_mut(i) = stream.get_u8();
+                *working.last_hit_by.get_unchecked_mut(i) = stream.get_u8();
+                *working.stocks.get_unchecked_mut(i) = stream.get_u8();
 
-                // version 2.0.0
-                if !frame.has_remaining() {
+                if !version.at_least(2, 0, 0) {
                     continue;
                 } else {
-                    *working.state_frame.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                    let flags_1 = frame.get_u8() as u64;
-                    let flags_2 = frame.get_u8() as u64;
-                    let flags_3 = frame.get_u8() as u64;
-                    let flags_4 = frame.get_u8() as u64;
-                    let flags_5 = frame.get_u8() as u64;
+                    *working.state_frame.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+                    let flags_1 = stream.get_u8() as u64;
+                    let flags_2 = stream.get_u8() as u64;
+                    let flags_3 = stream.get_u8() as u64;
+                    let flags_4 = stream.get_u8() as u64;
+                    let flags_5 = stream.get_u8() as u64;
                     let flags: u64 = flags_1
                         | (flags_2 << 8)
                         | (flags_3 << 16)
                         | (flags_4 << 24)
                         | (flags_5 << 32);
                     *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
-                    *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
+                    *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
                     *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) =
-                        frame.get_u8() != 0;
+                        stream.get_u8() != 0;
                     *working
                         .last_ground_id
                         .as_mut()
                         .unwrap()
-                        .get_unchecked_mut(i) = frame.get_u16();
+                        .get_unchecked_mut(i) = stream.get_u16();
                     *working
                         .jumps_remaining
                         .as_mut()
                         .unwrap()
-                        .get_unchecked_mut(i) = frame.get_u8();
-                    *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
+                        .get_unchecked_mut(i) = stream.get_u8();
+                    *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
                 }
 
-                // version 2.1.0
-                if !frame.has_remaining() {
+                if !version.at_least(2, 1, 0) {
                     continue;
                 } else {
-                    *working.hurtbox_state.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
+                    *working.hurtbox_state.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
                 }
 
-                // version 3.5.0
-                if !frame.has_remaining() {
+                if !version.at_least(3, 5, 0) {
                     continue;
                 } else {
-                    let air_vel_x = frame.get_f32();
-                    let vel_y = frame.get_f32();
+                    let air_vel_x = stream.get_f32();
+                    let vel_y = stream.get_f32();
                     *working.air_velocity.as_mut().unwrap().get_unchecked_mut(i) =
                         Velocity::new(air_vel_x, vel_y);
                     *working.knockback.as_mut().unwrap().get_unchecked_mut(i) =
-                        Velocity::new(frame.get_f32(), frame.get_f32());
+                        Velocity::new(stream.get_f32(), stream.get_f32());
                     *working
                         .ground_velocity
                         .as_mut()
                         .unwrap()
-                        .get_unchecked_mut(i) = Velocity::new(frame.get_f32(), vel_y);
+                        .get_unchecked_mut(i) = Velocity::new(stream.get_f32(), vel_y);
                 }
 
-                // version < 3.8.0
-                if !frame.has_remaining() {
+                if !version.at_least(3, 8, 0) {
                     continue;
                 } else {
                     *working
                         .hitlag_remaining
                         .as_mut()
                         .unwrap()
-                        .get_unchecked_mut(i) = frame.get_f32();
+                        .get_unchecked_mut(i) = stream.get_f32();
                 }
 
-                // version < 3.11.0
-                if !frame.has_remaining() {
+                if !version.at_least(3, 11, 0) {
                     continue;
                 } else {
                     *working
                         .animation_index
                         .as_mut()
                         .unwrap()
-                        .get_unchecked_mut(i) = frame.get_u32();
+                        .get_unchecked_mut(i) = stream.get_u32();
                 }
             }
         }
@@ -602,7 +602,8 @@ pub fn unpack_frames(
 }
 
 pub fn unpack_frames_ics(
-    frames: &mut [Bytes],
+    mut stream: Cursor<Bytes>,
+    offsets: &[u64],
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
@@ -626,8 +627,9 @@ pub fn unpack_frames_ics(
         ),
     );
 
-    for frame in frames.iter_mut() {
-        let frame_number = frame.get_i32();
+    for offset in offsets.iter() {
+        stream.set_position(*offset);
+        let frame_number = stream.get_i32();
         // since we can't chunk the frames, enumeration won't work. We can still get an
         // always-in-bounds index from the frame number though.
         let i = (frame_number + 123) as usize;
@@ -635,8 +637,8 @@ pub fn unpack_frames_ics(
             i < len,
             "Frame index incorrect, index ({i}) is greater than or equal to the max length of the container ({len})."
         );
-        let port = frame.get_u8();
-        let nana = frame.get_u8() != 0;
+        let port = stream.get_u8();
+        let nana = stream.get_u8() != 0;
 
         let working = {
             let temp = p_frames.get_mut(&port).unwrap();
@@ -649,90 +651,90 @@ pub fn unpack_frames_ics(
 
         unsafe {
             *working.frame_index.get_unchecked_mut(i) = frame_number;
-            *working.character.get_unchecked_mut(i) = frame.get_u8();
-            *working.action_state.get_unchecked_mut(i) = frame.get_u16();
+            *working.character.get_unchecked_mut(i) = stream.get_u8();
+            *working.action_state.get_unchecked_mut(i) = stream.get_u16();
             *working.position.get_unchecked_mut(i) =
-                Position::new(frame.get_f32(), frame.get_f32());
-            *working.orientation.get_unchecked_mut(i) = frame.get_f32();
-            *working.percent.get_unchecked_mut(i) = frame.get_f32();
-            *working.shield_health.get_unchecked_mut(i) = frame.get_f32();
-            *working.last_attack_landed.get_unchecked_mut(i) = frame.get_u8();
-            *working.combo_count.get_unchecked_mut(i) = frame.get_u8();
-            *working.last_hit_by.get_unchecked_mut(i) = frame.get_u8();
-            *working.stocks.get_unchecked_mut(i) = frame.get_u8();
+                Position::new(stream.get_f32(), stream.get_f32());
+            *working.orientation.get_unchecked_mut(i) = stream.get_f32();
+            *working.percent.get_unchecked_mut(i) = stream.get_f32();
+            *working.shield_health.get_unchecked_mut(i) = stream.get_f32();
+            *working.last_attack_landed.get_unchecked_mut(i) = stream.get_u8();
+            *working.combo_count.get_unchecked_mut(i) = stream.get_u8();
+            *working.last_hit_by.get_unchecked_mut(i) = stream.get_u8();
+            *working.stocks.get_unchecked_mut(i) = stream.get_u8();
 
             // version 2.0.0
-            if !frame.has_remaining() {
+            if !stream.has_remaining() {
                 continue;
             } else {
-                *working.state_frame.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                let flags_1 = frame.get_u8() as u64;
-                let flags_2 = frame.get_u8() as u64;
-                let flags_3 = frame.get_u8() as u64;
-                let flags_4 = frame.get_u8() as u64;
-                let flags_5 = frame.get_u8() as u64;
+                *working.state_frame.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+                let flags_1 = stream.get_u8() as u64;
+                let flags_2 = stream.get_u8() as u64;
+                let flags_3 = stream.get_u8() as u64;
+                let flags_4 = stream.get_u8() as u64;
+                let flags_5 = stream.get_u8() as u64;
                 let flags: u64 =
                     flags_1 & (flags_2 << 8) & (flags_3 << 16) & (flags_4 << 24) & (flags_5 << 32);
                 *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
-                *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = frame.get_f32();
-                *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8() == 0;
+                *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+                *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8() == 0;
                 *working
                     .last_ground_id
                     .as_mut()
                     .unwrap()
-                    .get_unchecked_mut(i) = frame.get_u16();
+                    .get_unchecked_mut(i) = stream.get_u16();
                 *working
                     .jumps_remaining
                     .as_mut()
                     .unwrap()
-                    .get_unchecked_mut(i) = frame.get_u8();
-                *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
+                    .get_unchecked_mut(i) = stream.get_u8();
+                *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
             }
 
             // version 2.1.0
-            if !frame.has_remaining() {
+            if !stream.has_remaining() {
                 continue;
             } else {
-                *working.hurtbox_state.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
+                *working.hurtbox_state.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
             }
 
             // version 3.5.0
-            if !frame.has_remaining() {
+            if !stream.has_remaining() {
                 continue;
             } else {
-                let air_vel_x = frame.get_f32();
-                let vel_y = frame.get_f32();
+                let air_vel_x = stream.get_f32();
+                let vel_y = stream.get_f32();
                 *working.air_velocity.as_mut().unwrap().get_unchecked_mut(i) =
                     Velocity::new(air_vel_x, vel_y);
                 *working.knockback.as_mut().unwrap().get_unchecked_mut(i) =
-                    Velocity::new(frame.get_f32(), frame.get_f32());
+                    Velocity::new(stream.get_f32(), stream.get_f32());
                 *working
                     .ground_velocity
                     .as_mut()
                     .unwrap()
-                    .get_unchecked_mut(i) = Velocity::new(frame.get_f32(), vel_y);
+                    .get_unchecked_mut(i) = Velocity::new(stream.get_f32(), vel_y);
             }
 
             // version < 3.8.0
-            if !frame.has_remaining() {
+            if !stream.has_remaining() {
                 continue;
             } else {
                 *working
                     .hitlag_remaining
                     .as_mut()
                     .unwrap()
-                    .get_unchecked_mut(i) = frame.get_f32();
+                    .get_unchecked_mut(i) = stream.get_f32();
             }
 
             // version < 3.11.0
-            if !frame.has_remaining() {
+            if !stream.has_remaining() {
                 continue;
             } else {
                 *working
                     .animation_index
                     .as_mut()
                     .unwrap()
-                    .get_unchecked_mut(i) = frame.get_u32();
+                    .get_unchecked_mut(i) = stream.get_u32();
             }
         }
     }

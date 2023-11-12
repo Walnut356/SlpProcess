@@ -1,5 +1,7 @@
 #![allow(clippy::uninit_vec)]
 
+use std::io::Cursor;
+
 use bytes::{Buf, Bytes};
 use polars::prelude::*;
 use ssbm_utils::types::{Position, Velocity};
@@ -189,37 +191,38 @@ impl From<ItemFrames> for DataFrame {
     }
 }
 
-pub fn parse_itemframes(version: Version, frames: &mut [Bytes]) -> ItemFrames {
-    let mut working = ItemFrames::new(frames.len(), version);
+pub fn parse_itemframes(mut stream: Cursor<Bytes>, version: Version, offsets: &[u64]) -> ItemFrames {
+    let mut working = ItemFrames::new(offsets.len(), version);
 
-    for (i, frame) in frames.iter_mut().enumerate() {
+    for (i, offset) in offsets.iter().enumerate() {
+        stream.set_position(*offset);
         unsafe {
-            *working.frame_index.get_unchecked_mut(i) = frame.get_i32();
-            *working.item_id.get_unchecked_mut(i) = frame.get_u16();
-            *working.state.get_unchecked_mut(i) = frame.get_u8();
-            *working.orientation.get_unchecked_mut(i) = frame.get_f32();
+            *working.frame_index.get_unchecked_mut(i) = stream.get_i32();
+            *working.item_id.get_unchecked_mut(i) = stream.get_u16();
+            *working.state.get_unchecked_mut(i) = stream.get_u8();
+            *working.orientation.get_unchecked_mut(i) = stream.get_f32();
             *working.velocity.get_unchecked_mut(i) =
-                Velocity::new(frame.get_f32(), frame.get_f32());
+                Velocity::new(stream.get_f32(), stream.get_f32());
             *working.position.get_unchecked_mut(i) =
-                Position::new(frame.get_f32(), frame.get_f32());
-            *working.damage_taken.get_unchecked_mut(i) = frame.get_u16();
-            *working.expiration_timer.get_unchecked_mut(i) = frame.get_f32();
-            *working.spawn_id.get_unchecked_mut(i) = frame.get_u32();
+                Position::new(stream.get_f32(), stream.get_f32());
+            *working.damage_taken.get_unchecked_mut(i) = stream.get_u16();
+            *working.expiration_timer.get_unchecked_mut(i) = stream.get_f32();
+            *working.spawn_id.get_unchecked_mut(i) = stream.get_u32();
 
-            if !frame.has_remaining() {
+            if !stream.has_remaining() {
                 // version < 3.2.0
                 continue;
             }
-            *working.missile_type.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
-            *working.turnip_type.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
-            *working.is_launched.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8() != 0;
-            *working.charge_power.as_mut().unwrap().get_unchecked_mut(i) = frame.get_u8();
+            *working.missile_type.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
+            *working.turnip_type.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
+            *working.is_launched.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8() != 0;
+            *working.charge_power.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
 
-            if !frame.has_remaining() {
+            if !stream.has_remaining() {
                 // version < 3.6.0
                 continue;
             }
-            *working.owner.as_mut().unwrap().get_unchecked_mut(i) = frame.get_i8();
+            *working.owner.as_mut().unwrap().get_unchecked_mut(i) = stream.get_i8();
         }
     }
 
