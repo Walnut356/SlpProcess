@@ -9,6 +9,7 @@ pub type Radians = f32;
 pub type Degrees = f32;
 
 /// Accepts a point, returns an angle in radians
+#[inline]
 pub fn point_to_angle(x: f32, y: f32) -> Radians {
     (f32::atan2(y, x) + TAU) % TAU
 }
@@ -20,6 +21,7 @@ pub struct Point {
 }
 
 impl Point {
+    #[inline]
     pub const fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
@@ -32,6 +34,7 @@ pub struct StickPos {
 }
 
 impl StickPos {
+    #[inline]
     pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
@@ -46,10 +49,12 @@ impl StickPos {
         }
     }
 
+    #[inline]
     pub fn as_stickregion(&self) -> StickRegion {
         StickRegion::from_coordinates(self.x, self.y)
     }
 
+    #[inline]
     pub fn as_angle(&self) -> Radians {
         point_to_angle(self.x, self.y)
     }
@@ -62,10 +67,12 @@ pub struct Velocity {
 }
 
 impl Velocity {
+    #[inline]
     pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
 
+    #[inline]
     pub fn as_angle(&self) -> Radians {
         point_to_angle(self.x, self.y)
     }
@@ -82,6 +89,7 @@ pub struct Position {
 }
 
 impl Position {
+    #[inline]
     pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
@@ -90,6 +98,7 @@ impl Position {
 impl Add<Velocity> for Position {
     type Output = Self;
 
+    #[inline]
     fn add(self, rhs: Velocity) -> Self::Output {
         Self {
             x: self.x + rhs.x,
@@ -99,6 +108,7 @@ impl Add<Velocity> for Position {
 }
 
 impl AddAssign<Velocity> for Position {
+    #[inline]
     fn add_assign(&mut self, rhs: Velocity) {
         self.x += rhs.x;
         self.y += rhs.y;
@@ -108,6 +118,7 @@ impl AddAssign<Velocity> for Position {
 impl Sub<Velocity> for Position {
     type Output = Self;
 
+    #[inline]
     fn sub(self, rhs: Velocity) -> Self::Output {
         Self {
             x: self.x - rhs.x,
@@ -117,6 +128,7 @@ impl Sub<Velocity> for Position {
 }
 
 impl SubAssign<Velocity> for Position {
+    #[inline]
     fn sub_assign(&mut self, rhs: Velocity) {
         self.x -= rhs.x;
         self.y -= rhs.y;

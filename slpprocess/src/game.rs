@@ -11,7 +11,7 @@ use ssbm_utils::enums::{stage::Stage, Port};
 
 use crate::{
     events::{
-        game_end::GameEnd,
+        game_end::{EndMethod, GameEnd},
         game_start::{GameStart, Version},
         item_frames::ItemFrames,
     },
@@ -189,11 +189,79 @@ impl Game {
     //     find_combos(plyr_frames, opnt_frames, stage_id, player_char)
     // }
 
-    // fn get_winner(&self) -> Port {
+    /// Returns the winner of the match if one can be decided conclusively
+    fn get_winner(&self) -> Option<Port> {
+        // this will panic before the unwraps further down panic. I don't think it's even possible
+        // to have a replay with no frames tbh
+        assert!(
+            self.total_frames > 0,
+            "Cannot determine winner of game with no frame data"
+        );
 
-    // }
+        let p1 = self.players[0].load();
+        let p2 = self.players[1].load();
+
+        // Anyone who LRAS's loses by default (matches slippi behavior)
+        if self
+            .end
+            .is_some_and(|x| x.end_method == EndMethod::NoContest)
+        {
+            let lras = Port::from_repr(
+                self.end
+                    .unwrap()
+                    .lras_initiator
+                    .unwrap()
+                    .try_into()
+                    .unwrap(),
+            )
+            .unwrap();
+
+            if lras == p1.port {
+                return Some(p2.port);
+            } else if lras == p2.port {
+                return Some(p1.port);
+            } else {
+                return None;
+            }
+        }
+
+        let p1_stocks = *p1.frames.post.stocks.last().unwrap();
+        let p2_stocks = *p2.frames.post.stocks.last().unwrap();
+
+        /* I'm not sure whether or not percents are reset instantly upon dying, so this is a safety
+            check. If both players die at the same time (and that ends the game), we assume it's a
+            tie, thus we can't determine a winner.
+        */
+        if p1_stocks == 0 && p2_stocks == 0 {
+            return None;
+        }
+
+        /* Otherwise, check to see who has more stocks, and then who has more percent on the last
+            frame. This should handle regular game-end (loser will have 0 stocks on the last frame)
+            timeouts (stock and percent check),
+        */
+        match p1_stocks.cmp(&p2_stocks) {
+            std::cmp::Ordering::Less => return Some(p2.port),
+            std::cmp::Ordering::Greater => return Some(p1.port),
+            std::cmp::Ordering::Equal => {
+                // The percent as seen on the HUD
+                let p1_percent = p1.frames.post.percent.last().unwrap().floor();
+                let p2_percent = p2.frames.post.percent.last().unwrap().floor();
+
+                match p1_percent.partial_cmp(&p2_percent).unwrap() {
+                    std::cmp::Ordering::Less => return Some(p2.port),
+                    std::cmp::Ordering::Greater => return Some(p1.port),
+                    std::cmp::Ordering::Equal => return None,
+                }
+            }
+        }
+    }
 
     // pub fn get_summary(&self) -> DataFrame {
+    //     let vec_series = vec![
+    //         Series::new()
+    //     ]
 
+    //     DataFrame::default()
     // }
 }

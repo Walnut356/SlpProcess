@@ -55,4 +55,7 @@ pub mod constants {
     pub const TUMBLE_THRESHOLD: f32 = 80.0;
 
     pub const FIRST_FRAME_INDEX: i32 = -123;
+
+    /// The max number of frames that will be present in a tournament match that ends in a time out
+    pub const MAX_TOURNAMENT_GAME_LENGTH: usize = 28924;
 }

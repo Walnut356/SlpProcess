@@ -14,12 +14,12 @@ use ssbm_utils::types::Point;
 
 pub fn main() {
 
-    let replay = r"G:/temp";
+    // let replay = r"G:/temp";
 
     // TODO this replay has an item of ID 0x62
     // let replay = r"G:/temp/Game_20230713T212214.slp";
     // let replay = r"./Game_20230526T020459.slp";
-    // let replay = r"E:\Slippi Replays\Netplay\Game_20231018T005550.slp";
+    let replay = r"E:\Slippi Replays\Netplay\Game_20231018T005550.slp";
 
     // let replay = r"E:\Slippi Replays\Netplay\Game_20230607T011346.slp";
     let now = Instant::now();
@@ -28,8 +28,14 @@ pub fn main() {
     dbg!(dur);
     let game = games.pop().unwrap();
 
-    let player = game.player_by_code("NUT#356").unwrap();
-    let df = &player.stats.wavedash;
+    for player in game.players.iter() {
+        let p = player.load();
+        dbg!(&p.connect_code);
+        dbg!(&p.frames.post.stocks.first());
+        dbg!(&p.frames.post.stocks.last());
+    }
+    // let player = game.player_by_code("NUT#356").unwrap();
+    // let df = &player.stats.wavedash;
 
     // dbg!(df);
     // let mut file = File::create("output.parquet").expect("could not create file");
