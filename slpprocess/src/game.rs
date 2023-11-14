@@ -204,10 +204,11 @@ impl Game {
         // Anyone who LRAS's loses by default (matches slippi behavior)
         if self
             .end
+            .as_ref()
             .is_some_and(|x| x.end_method == EndMethod::NoContest)
         {
             let lras = Port::from_repr(
-                self.end
+                self.end.as_ref()
                     .unwrap()
                     .lras_initiator
                     .unwrap()
