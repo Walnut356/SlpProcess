@@ -6,6 +6,7 @@ use anyhow::{anyhow, ensure, Result};
 use arc_swap::{ArcSwap, Guard};
 use itertools::Itertools;
 
+use polars::prelude::*;
 use ssbm_utils::enums::{stage::Stage, Port};
 
 use crate::{
@@ -168,7 +169,7 @@ impl Game {
             and i'm lazy =)
              */
 
-            self.players[0].store(Arc::new(Player {
+            players[0].store(Arc::new(Player {
                 character: player.character,
                 costume: player.costume,
                 port: player.port,
@@ -186,5 +187,13 @@ impl Game {
 
     // pub fn get_combos(&mut self) {
     //     find_combos(plyr_frames, opnt_frames, stage_id, player_char)
+    // }
+
+    // fn get_winner(&self) -> Port {
+
+    // }
+
+    // pub fn get_summary(&self) -> DataFrame {
+
     // }
 }
