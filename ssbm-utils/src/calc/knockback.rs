@@ -14,6 +14,10 @@ use crate::{
     types::{Position, Radians, StickPos, Velocity},
 };
 
+const DI_MAX_DEGREES: f32 = 18.0;
+// why is .to_radians() not const?
+const DI_MAX_RADS: f32 = 0.314159;
+
 /// Calculates the raw knockback value given the circumstances of the hit.
 ///
 /// *note: assumes Victim Defense Ratio, Attacker Offense Ratio, and Global Damage Ratio are 1, as
@@ -131,10 +135,10 @@ pub fn apply_di(original_angle: Radians, joystick: StickPos) -> Radians {
     }
 
     let perp_dist = angle_diff.sin() * f32::hypot(joystick.x, joystick.y);
-    let mut angle_offset = (perp_dist.powi(2)) * 18.0;
+    let mut angle_offset = (perp_dist.powi(2)) * DI_MAX_RADS;
 
-    if angle_offset > 18.0 {
-        angle_offset = 18.0
+    if angle_offset > DI_MAX_RADS {
+        angle_offset = DI_MAX_RADS
     }
     if -PI < angle_diff && angle_diff < 0.0 {
         angle_offset *= -1.0;
@@ -146,7 +150,7 @@ pub fn apply_di(original_angle: Radians, joystick: StickPos) -> Radians {
 /// Returns a percentage representing how much the DI affected the final trajectory, relative to the
 /// maximum possible effect that DI can have.
 pub fn get_di_efficacy(old_angle: Radians, new_angle: Radians) -> f32 {
-    (new_angle - old_angle).abs() / 18.0_f32.to_radians()
+    ((new_angle - old_angle).abs() / DI_MAX_RADS) * 100.0
 }
 
 /// Converts a knockback value and angle into the initial X knockback velocity imparted on the
@@ -270,7 +274,7 @@ pub fn should_kill(
     let stage = Stage::try_from(stage_id).unwrap();
 
     let travel = knockback_travel(kb, position, gravity, max_fall_speed);
-
+    // TODO check if passing through platform
     for pos in travel {
         if stage.is_past_blastzone(pos) {
             return true;

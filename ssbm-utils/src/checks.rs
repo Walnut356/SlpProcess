@@ -273,3 +273,5 @@ pub fn lost_stock(current: u8, prev: u8) -> bool {
 pub fn just_pressed<T: PrimInt>(target: impl BitFlags<Other = T> + Buttons, current: T, prev: T) -> bool {
     target.contained_by(current) && !target.contained_by(prev)
 }
+
+// TODO get_randall_position() https://github.com/altf4/libmelee/blob/c98c26b776a0ad5024efa81487ae6a0ce27b6ab5/melee/stages.py#L160

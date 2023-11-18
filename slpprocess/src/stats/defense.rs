@@ -8,7 +8,7 @@ use ssbm_utils::{
         should_kill,
     },
     checks::{get_damage_taken, is_in_hitlag, is_shielding_flag, is_thrown, just_took_damage},
-    enums::{Character, StickRegion},
+    enums::{Character, StickRegion, Attack},
     types::{Degrees, Position, StickPos, Velocity},
 };
 
@@ -18,20 +18,24 @@ fn as_vec_i8(input: Vec<StickRegion>) -> Vec<i8> {
     input.into_iter().map(|s| s as i8).collect()
 }
 
+fn as_vec_static_str<T: Into<&'static str>>(input: Vec<T>) -> Vec<&'static str> {
+    input.into_iter().map(|x| x.into()).collect::<Vec<&'static str>>()
+}
+
 #[derive(Debug, Default)]
 struct DefenseStats {
     frame_index: Vec<u32>,
     stocks_remaining: Vec<u8>,
     percent: Vec<f32>,
     damage_taken: Vec<f32>,
-    last_hit_by: Vec<u8>,
+    last_hit_by: Vec<Attack>,
     state_before_hit: Vec<u16>,
     grounded: Vec<bool>,
     crouch_cancel: Vec<bool>,
     hitlag_frames: Vec<u8>,
     stick_during_hitlag: Vec<Vec<StickRegion>>,
     sdi_inputs: Vec<Vec<StickRegion>>,
-    asdi: Vec<i8>,
+    asdi: Vec<StickRegion>,
     kb: Vec<Velocity>,
     kb_angle: Vec<Degrees>,
     di_stick: Vec<StickPos>,
@@ -65,6 +69,7 @@ impl DefenseStats {
         self.di_stick.push(stat.di_stick);
         self.di_kb.push(stat.di_kb);
         self.di_efficacy.push(stat.di_efficacy);
+        self.di_kb_angle.push(stat.di_kb_angle);
         self.hitlag_start.push(stat.hitlag_start);
         self.hitlag_end.push(stat.hitlag_end);
         self.kills_with_di.push(stat.kills_with_di);
@@ -82,11 +87,12 @@ impl From<DefenseStats> for DataFrame {
             Series::new(col::StocksRemaining.into(), val.stocks_remaining),
             Series::new(col::Percent.into(), val.percent),
             Series::new(col::DamageTaken.into(), val.damage_taken),
-            Series::new(col::LastHitBy.into(), val.last_hit_by),
+            Series::new(col::LastHitBy.into(), as_vec_static_str(val.last_hit_by)),
             Series::new(col::StateBeforeHit.into(), val.state_before_hit),
             Series::new(col::Grounded.into(), val.grounded),
             Series::new(col::CrouchCancel.into(), val.crouch_cancel),
             Series::new(col::HitlagFrames.into(), val.hitlag_frames),
+
             Series::new(
                 col::StickDuringHitlag.into(),
                 val.stick_during_hitlag
@@ -94,14 +100,17 @@ impl From<DefenseStats> for DataFrame {
                     .map(|x| Series::new("", as_vec_i8(x)))
                     .collect::<Vec<_>>(),
             ),
+
             Series::new(
                 col::SDIInputs.into(),
                 val.sdi_inputs
                     .into_iter()
-                    .map(|x| Series::new("", as_vec_i8(x)))
+                    .map(|x| Series::new("", as_vec_static_str(x)))
                     .collect::<Vec<_>>(),
             ),
-            Series::new(col::ASDI.into(), val.asdi),
+
+            Series::new(col::ASDI.into(), as_vec_static_str(val.asdi)),
+
             StructChunked::new(
                 col::Knockback.into(),
                 &[
@@ -111,6 +120,9 @@ impl From<DefenseStats> for DataFrame {
             )
             .unwrap()
             .into_series(),
+
+            Series::new(col::KBAngle.into(), val.kb_angle),
+
             StructChunked::new(
                 col::DIStick.into(),
                 &[
@@ -120,6 +132,7 @@ impl From<DefenseStats> for DataFrame {
             )
             .unwrap()
             .into_series(),
+
             StructChunked::new(
                 col::DIKnockback.into(),
                 &[
@@ -129,22 +142,20 @@ impl From<DefenseStats> for DataFrame {
             )
             .unwrap()
             .into_series(),
+
+            Series::new(col::DIKBAngle.into(), val.di_kb_angle),
             Series::new(col::DIEfficacy.into(), val.di_efficacy),
+
             StructChunked::new(
                 col::HitlagStart.into(),
                 &[
-                    Series::new(
-                        "x",
-                        val.hitlag_start.iter().map(|p| p.x).collect::<Vec<_>>(),
-                    ),
-                    Series::new(
-                        "y",
-                        val.hitlag_start.iter().map(|p| p.y).collect::<Vec<_>>(),
-                    ),
+                    Series::new("x", val.hitlag_start.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.hitlag_start.iter().map(|p| p.y).collect::<Vec<_>>()),
                 ],
             )
             .unwrap()
             .into_series(),
+
             StructChunked::new(
                 col::HitlagEnd.into(),
                 &[
@@ -154,6 +165,7 @@ impl From<DefenseStats> for DataFrame {
             )
             .unwrap()
             .into_series(),
+
             Series::new(col::KillsWithDI.into(), val.kills_with_di),
             Series::new(col::KillsNoDI.into(), val.kills_no_di),
             Series::new(col::KillsAllDI.into(), val.kills_any_di),
@@ -169,14 +181,14 @@ struct DefenseRow {
     stocks_remaining: u8,
     percent: f32,
     damage_taken: f32,
-    last_hit_by: u8,
+    last_hit_by: Attack,
     state_before_hit: u16,
     grounded: bool,
     crouch_cancel: bool,
     hitlag_frames: u8,
     stick_during_hitlag: Vec<StickRegion>,
     sdi_inputs: Vec<StickRegion>,
-    asdi: i8,
+    asdi: StickRegion,
     kb: Velocity,
     kb_angle: Degrees,
     di_stick: StickPos,
@@ -196,7 +208,7 @@ impl DefenseRow {
         stocks_remaining: u8,
         percent: f32,
         damage_taken: f32,
-        last_hit_by: u8,
+        last_hit_by: Attack,
         state_before_hit: u16,
         grounded: bool,
         start: Position,
@@ -255,7 +267,7 @@ pub(crate) fn find_defense(
                 post.stocks[i],
                 post.percent[i],
                 damage_taken,
-                attacks[i],
+                Attack::from(attacks[i]),
                 post.action_state[i - 1],
                 post.is_grounded.as_ref().unwrap()[i],
                 post.position[i],
@@ -287,15 +299,15 @@ pub(crate) fn find_defense(
 
             row.hitlag_end = post.position[i - 1];
 
-            let effective_stick = pre.joystick[i].with_deadzone();
+            let effective_stick = pre.joystick[i];
 
             row.di_stick = effective_stick;
 
             let cstick = pre.cstick[i].as_stickregion();
             row.asdi = if !cstick.is_deadzone() {
-                cstick as i8
+                cstick
             } else {
-                effective_stick.as_stickregion() as i8
+                effective_stick.as_stickregion()
             };
 
             let kb_angle_rads = row.kb.as_angle();

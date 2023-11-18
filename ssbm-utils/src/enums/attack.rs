@@ -118,3 +118,10 @@ pub enum Attack {
     SUPER_SCOPE_CHARGED = 92,
     HAMMER = 93,
 }
+
+impl Default for Attack {
+    #[inline]
+    fn default() -> Self {
+        Self::NONE
+    }
+}

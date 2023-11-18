@@ -87,11 +87,9 @@ pub fn find_lcancels(frames: &Frames, stage: &Stage) -> DataFrame {
             continue;
         }
 
-        let temp: &'static str = attack.unwrap().into();
-
         frame_index_col.push(i as i32 - 123);
         stocks_col.push(stocks[i]);
-        attack_col.push(temp);
+        attack_col.push(attack.unwrap().into());
         lcancelled_col.push(LCancel::from_repr(lcancel) == Some(LCancel::SUCCESS));
         l_input_col.push(l_input_frame);
         position_col.push(stage.ground_from_id(last_ground_ids[i]).into());

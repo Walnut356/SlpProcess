@@ -18,7 +18,7 @@ impl From<Wavedashes> for DataFrame {
         let vec_series = vec![
             Series::new(col::FrameIndex.into(), val.frame_index),
             Series::new(col::Angle.into(), val.angle),
-            Series::new(col::Direction.into(), val.direction.into_iter().map(|x| x as i8).collect::<Vec<_>>()),
+            Series::new(col::Direction.into(), val.direction.into_iter().map(Into::<&str>::into).collect::<Vec<_>>()),
             StructChunked::new(
                 col::StartPosition.into(),
                 &[

@@ -133,24 +133,35 @@ pub enum StickRegion {
     UP_LEFT = 7,
 }
 
+impl Default for StickRegion {
+    #[inline]
+    fn default() -> Self {
+        Self::DEAD_ZONE
+    }
+}
+
 impl StickRegion {
-    pub fn from_coordinates(x: f32, y: f32) -> Self {
+    pub fn from_coordinates(mut x: f32, mut y: f32) -> Self {
         use StickRegion as R;
+
+        if -0.2875 < x && x < 0.2875 {
+            x = 0.0;
+        }
+        if -0.2875 < y && y < 0.2875 {
+            y = 0.0;
+        }
 
         // is this idiomatic? It's less ugly and more compact than elif chains
         match () {
-            // this one goes first because i get the feeling it's most common by a lot.
-            // also, since we know it's non-deadzone past the first entry, we can just do pos/neg
-            // check instead of checking against exact values which reads a little easier
-            _ if (-0.2875 < x && x < 0.2875) && (-0.2875 < y && y < 0.2875) => R::DEAD_ZONE,
-            _ if x.is_positive() && y.is_positive() => R::UP_RIGHT,
-            _ if x.is_positive() && y.is_negative() => R::DOWN_RIGHT,
-            _ if x.is_negative() && y.is_negative() => R::DOWN_LEFT,
-            _ if x.is_negative() && y.is_positive() => R::UP_LEFT,
-            _ if y.is_positive() => R::UP,
-            _ if x.is_positive() => R::RIGHT,
-            _ if y.is_negative() => R::DOWN,
-            _ if x.is_negative() => R::LEFT,
+            _ if x == 0.0 && y == 0.0 => R::DEAD_ZONE,
+            _ if x > 0.0 && y > 0.0 => R::UP_RIGHT,
+            _ if x > 0.0 && y < 0.0 => R::DOWN_RIGHT,
+            _ if x < 0.0 && y < 0.0 => R::DOWN_LEFT,
+            _ if x < 0.0 && y > 0.0 => R::UP_LEFT,
+            _ if y > 0.0 => R::UP,
+            _ if x > 0.0 => R::RIGHT,
+            _ if y < 0.0 => R::DOWN,
+            _ if x < 0.0 => R::LEFT,
             _ => R::DEAD_ZONE,
         }
     }

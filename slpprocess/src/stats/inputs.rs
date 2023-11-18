@@ -1,7 +1,7 @@
 use polars::prelude::*;
 use ssbm_utils::enums::{
     buttons::{ANYTRIGGER_MASK, CSTICK_MASK, DIGITAL_TRIGGER_MASK, JOYSTICK_MASK},
-    ControllerInput,
+    ControllerInput, BitFlags,
 };
 
 use crate::{columns::InputStats, player::Frames};
@@ -32,8 +32,9 @@ use crate::{columns::InputStats, player::Frames};
 
 pub fn find_inputs(frames: &Frames, duration: u64) -> DataFrame {
     let en_btn = &frames.pre.engine_buttons;
-
     let ctrl_btn = &frames.pre.controller_buttons;
+    let trig = &frames.pre.engine_trigger;
+
 
     let mut digital_counts = 0;
     let mut stick_counts = 0;
@@ -55,19 +56,19 @@ pub fn find_inputs(frames: &Frames, duration: u64) -> DataFrame {
 
         digital_counts += ctrl_changed.count_ones();
 
-        if ctrl_changed & u16::from(ControllerInput::L) != 0 {
+        if ControllerInput::L.intersects(ctrl_changed) {
             l_count += 1.0;
         }
 
-        if ctrl_changed & u16::from(ControllerInput::R) != 0 {
+        if ControllerInput::R.intersects(ctrl_changed) {
             r_count += 1.0;
         }
 
-        if ctrl_changed & u16::from(ControllerInput::X) != 0 {
+        if ControllerInput::X.intersects(ctrl_changed) {
             x_count += 1.0;
         }
 
-        if ctrl_changed & u16::from(ControllerInput::Y) != 0 {
+        if ControllerInput::Y.intersects(ctrl_changed) {
             y_count += 1.0;
         }
 
@@ -94,7 +95,7 @@ pub fn find_inputs(frames: &Frames, duration: u64) -> DataFrame {
         // special handling to detect analog trigger
         if en_changed & ANYTRIGGER_MASK != 0 // if anytrigger was just pressed
             && en_changed & DIGITAL_TRIGGER_MASK == 0 // and we didn't just digital press
-            && ctrl_changed & u16::from(ControllerInput::Z) == 0
+            && !ControllerInput::Z.intersects(ctrl_changed)
         // and we didn't just start pressing Z
         {
             trigger_counts += 1;

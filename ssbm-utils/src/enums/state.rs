@@ -5,12 +5,12 @@ use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 use crate::enums::Character;
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, IntoStaticStr, Display,
+    Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Display,
 )]
 #[repr(u16)]
 pub enum State {
     Universal(ActionState),
-    Unique(CharacterState)
+    Unique(CharacterState),
 }
 
 impl State {
@@ -22,6 +22,17 @@ impl State {
         }
     }
 }
+
+impl From<State> for &'static str {
+    fn from(value: State) -> Self {
+        match value {
+            State::Universal(x) => x.into(),
+            State::Unique(x) => x.into(),
+        }
+    }
+}
+
+
 
 /// Individual Action State IDs. See ActionRange for state ranges.
 ///
