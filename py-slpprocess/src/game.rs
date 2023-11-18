@@ -22,7 +22,7 @@ impl PyGame {
         let players = game
             .players
             .iter()
-            .map(|x| PyPlayer::new(x.load().clone()))
+            .map(|x| PyPlayer::new(x.clone()))
             .collect();
         PyGame { game, players }
     }

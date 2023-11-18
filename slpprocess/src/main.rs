@@ -29,7 +29,7 @@ pub fn main() {
     let game = games.pop().unwrap();
 
     for player in game.players.iter() {
-        let p = player.load();
+        let p = player;
         dbg!(&p.connect_code);
         dbg!(&p.frames.post.stocks.first());
         dbg!(&p.frames.post.stocks.last());

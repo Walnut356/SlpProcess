@@ -1,7 +1,6 @@
 #![allow(non_upper_case_globals)]
 
 use anyhow::{anyhow, ensure, Result};
-use arc_swap::ArcSwap;
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
 use nohash_hasher::IntMap;
@@ -260,7 +259,7 @@ impl Game {
             end: game_end,
             duration,
             total_frames: frame_count,
-            players: players.map(|x| ArcSwap::from(Arc::new(x))),
+            players: players.map(|x| Arc::new(x)),
             version,
             item_frames: item_frames.map(Arc::new),
             path: Arc::new(path.to_owned()),

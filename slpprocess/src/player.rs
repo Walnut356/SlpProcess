@@ -11,7 +11,7 @@ use crate::{
         post_frame::{PostFrames, PostRow},
         pre_frame::{PreFrames, PreRow},
     },
-    stats::combos::Combos,
+    stats::{combos::Combos, Stats},
 };
 
 ///
@@ -78,91 +78,4 @@ impl Frames {
     pub fn get_frame(&self, index: usize) -> (PreRow, PostRow) {
         (self.pre.get_frame(index), self.post.get_frame(index))
     }
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct Stats {
-    /// Minimum Replay Version: Any
-    pub input: DataFrame,
-    /// Minimum Replay Version: Any
-    pub wavedash: DataFrame,
-    /// Minimum Replay Version: 2.0
-    pub l_cancel: Option<DataFrame>,
-    /// Minimum Replay Version: 3.0
-    pub item: Option<DataFrame>,
-    /// Minimum Replay Version 3.5
-    pub defense: Option<DataFrame>,
-}
-
-impl Stats {
-    /// Returns an owned stat object
-    pub fn get(&self, stat_type: StatType) -> Option<DataFrame> {
-        match stat_type {
-            StatType::Input => Some(self.input.clone()),
-            StatType::Wavedash => Some(self.wavedash.clone()),
-            StatType::LCancel => self.l_cancel.clone(),
-            StatType::Item => self.item.clone(),
-            StatType::Defense => self.defense.clone(),
-        }
-    }
-}
-
-impl From<&[Arc<Stats>]> for Stats {
-    fn from(values: &[Arc<Stats>]) -> Self {
-        let mut input = DataFrame::default();
-        let mut wavedash = DataFrame::default();
-        let mut l_cancel = DataFrame::default();
-        let mut item = DataFrame::default();
-        let mut defense = DataFrame::default();
-
-        for val in values {
-            input = input.vstack(&val.input).unwrap();
-            wavedash = wavedash.vstack(&val.wavedash).unwrap();
-            if let Some(lc) = &val.l_cancel {
-                l_cancel = l_cancel.vstack(lc).unwrap();
-            }
-            if let Some(it) = &val.item {
-                item = item.vstack(it).unwrap();
-            }
-            if let Some(d) = &val.defense {
-                defense = defense.vstack(d).unwrap();
-            }
-        }
-
-        Stats {
-            input,
-            wavedash,
-            l_cancel: match l_cancel.height() {
-                0 => None,
-                _ => Some(l_cancel)
-            },
-            item: match item.height() {
-                0 => None,
-                _ => Some(item)
-            },
-            defense: match defense.height() {
-                0 => None,
-                _ => Some(defense)
-            },
-        }
-    }
-}
-
-impl From<Vec<Arc<Stats>>> for Stats {
-    fn from(value: Vec<Arc<Stats>>) -> Self {
-        Stats::from(value.as_slice())
-    }
-}
-
-#[derive(Debug, Copy, Clone, EnumString, IntoStaticStr, PartialEq, Eq)]
-#[strum(ascii_case_insensitive)]
-pub enum StatType {
-    Input,
-    Wavedash,
-    #[strum(serialize="L Cancel")]
-    #[strum(serialize="LCancel")]
-    #[strum(serialize="L_Cancel")]
-    LCancel,
-    Item,
-    Defense,
 }

@@ -3,7 +3,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{anyhow, ensure, Result};
-use arc_swap::{ArcSwap, Guard};
 use itertools::Itertools;
 
 use polars::prelude::*;
@@ -15,10 +14,10 @@ use crate::{
         game_start::{GameStart, Version},
         item_frames::ItemFrames,
     },
-    player::{Player, Stats},
+    player::Player,
     stats::{
         combos::find_combos, defense::find_defense, inputs::find_inputs, items::find_items,
-        lcancel::find_lcancels, wavedash::find_wavedashes,
+        lcancel::find_lcancels, wavedash::find_wavedashes, Stats
     },
 };
 
@@ -41,7 +40,7 @@ pub struct Game {
     /// Contains exactly 2 Players in threadsafe containers (`.load()` to access). Players are in
     /// port order, but may be any combination of ports. Port numbers are stored in the Player
     /// objects
-    pub players: [ArcSwap<Player>; 2],
+    pub players: [Arc<Player>; 2],
     /// Contains Item Frames if the replay is new enough. Item frames themselves may be empty if no
     /// items spawned during the match (highly unlikely), but the container will populate so long as
     /// the replay is new enough
@@ -69,32 +68,32 @@ impl Game {
         Ok(game)
     }
 
-    pub fn player_by_port(&self, port: Port) -> Result<Guard<Arc<Player>>> {
-        for p_lock in self.players.as_ref().iter() {
+    pub fn player_by_port(&self, port: Port) -> Result<Arc<Player>> {
+        for p_lock in self.players.iter() {
             // TODO i don't like making this a string, but RwLock errors require Sync/Send so
             // they can't be directly converted to anyhow errors without some fiddling. I don't
             // feel super confident about that, but it's also not very important atm so i'll
             // look into it later
-            let player = p_lock.load();
+            let player = p_lock;
 
             if player.port == port {
-                return Ok(player);
+                return Ok(player.clone());
             }
         }
 
         Err(anyhow!("Unable to find player with port {:?}", port))
     }
 
-    pub fn player_by_code(&self, connect_code: &str) -> Result<Guard<Arc<Player>>> {
+    pub fn player_by_code(&self, connect_code: &str) -> Result<Arc<Player>> {
         for p_lock in self.players.iter() {
-            let player = p_lock.load();
+            let player = p_lock;
 
             if player
                 .connect_code
                 .as_ref()
                 .is_some_and(|x| x.to_ascii_uppercase() == connect_code.to_ascii_uppercase())
             {
-                return Ok(player);
+                return Ok(player.clone());
             }
         }
 
@@ -106,11 +105,12 @@ impl Game {
 
     fn get_stats(&mut self) {
         let version = self.version;
+        let mut result: Vec<Arc<Player>> = Vec::new();
 
         for players in self.players.iter().permutations(2) {
             // inner scope for read-only operations
-            let player = players[0].load();
-            let opponent = players[1].load();
+            let player = players[0];
+            let opponent = players[1];
             let items = &self.item_frames;
 
             // inputs are available in every replay version
@@ -169,7 +169,7 @@ impl Game {
             and i'm lazy =)
              */
 
-            players[0].store(Arc::new(Player {
+            result.push(Arc::new(Player {
                 character: player.character,
                 costume: player.costume,
                 port: player.port,
@@ -181,8 +181,11 @@ impl Game {
                 combos,
                 frames: player.frames.clone(),
                 nana_frames: player.nana_frames.clone(),
-            }))
+            }));
         }
+
+        assert_eq!(result.len(), 2);
+        self.players = result.try_into().unwrap();
     }
 
     // pub fn get_combos(&mut self) {
@@ -198,8 +201,8 @@ impl Game {
             "Cannot determine winner of game with no frame data"
         );
 
-        let p1 = self.players[0].load();
-        let p2 = self.players[1].load();
+        let p1 = &self.players[0];
+        let p2 = &self.players[1];
 
         // Anyone who LRAS's loses by default (matches slippi behavior)
         if self
