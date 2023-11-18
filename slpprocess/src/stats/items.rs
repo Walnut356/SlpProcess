@@ -27,11 +27,6 @@ pub fn find_items(frames: &Frames, port: Port, item_frames: &ItemFrames) -> Data
         }
 
         let id = ids[i];
-        // if id == 0x62 {
-        //     dbg!(item_frames.frame_index[i]);
-        //     dbg!(item_frames.position_x[i]);
-        //     dbg!(item_frames.position_y[i]);
-        // }
 
         if unique.insert(spawn_ids[i]) {
             if let Some(x) = item_counter.get_mut(&id) {

@@ -8,7 +8,7 @@ use ssbm_utils::{
         should_kill,
     },
     checks::{get_damage_taken, is_in_hitlag, is_shielding_flag, is_thrown, just_took_damage},
-    enums::{Character, StickRegion, Attack},
+    enums::{Character, StickRegion, Attack, State},
     types::{Degrees, Position, StickPos, Velocity},
 };
 
@@ -29,7 +29,7 @@ struct DefenseStats {
     percent: Vec<f32>,
     damage_taken: Vec<f32>,
     last_hit_by: Vec<Attack>,
-    state_before_hit: Vec<u16>,
+    state_before_hit: Vec<State>,
     grounded: Vec<bool>,
     crouch_cancel: Vec<bool>,
     hitlag_frames: Vec<u8>,
@@ -88,7 +88,7 @@ impl From<DefenseStats> for DataFrame {
             Series::new(col::Percent.into(), val.percent),
             Series::new(col::DamageTaken.into(), val.damage_taken),
             Series::new(col::LastHitBy.into(), as_vec_static_str(val.last_hit_by)),
-            Series::new(col::StateBeforeHit.into(), val.state_before_hit),
+            Series::new(col::StateBeforeHit.into(), as_vec_static_str(val.state_before_hit)),
             Series::new(col::Grounded.into(), val.grounded),
             Series::new(col::CrouchCancel.into(), val.crouch_cancel),
             Series::new(col::HitlagFrames.into(), val.hitlag_frames),
@@ -182,7 +182,7 @@ struct DefenseRow {
     percent: f32,
     damage_taken: f32,
     last_hit_by: Attack,
-    state_before_hit: u16,
+    state_before_hit: State,
     grounded: bool,
     crouch_cancel: bool,
     hitlag_frames: u8,
@@ -209,7 +209,7 @@ impl DefenseRow {
         percent: f32,
         damage_taken: f32,
         last_hit_by: Attack,
-        state_before_hit: u16,
+        state_before_hit: State,
         grounded: bool,
         start: Position,
     ) -> Self {
@@ -268,7 +268,7 @@ pub(crate) fn find_defense(
                 post.percent[i],
                 damage_taken,
                 Attack::from(attacks[i]),
-                post.action_state[i - 1],
+                State::from_char_and_state(player_char, post.action_state[i - 1]),
                 post.is_grounded.as_ref().unwrap()[i],
                 post.position[i],
             ));

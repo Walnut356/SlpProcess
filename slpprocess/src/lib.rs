@@ -7,14 +7,7 @@ pub mod events {
     pub mod post_frame;
     pub mod pre_frame;
 }
-pub mod stats {
-    pub mod combos;
-    pub mod defense;
-    pub mod inputs;
-    pub mod items;
-    pub mod lcancel;
-    pub mod wavedash;
-}
+pub mod stats;
 pub mod columns;
 pub mod game;
 pub mod parse;
@@ -24,7 +17,7 @@ pub mod utils;
 
 pub use crate::game::Game;
 use crate::stats::combos::Combos;
-use player::Stats;
+use stats::Stats;
 use serde_json::json;
 pub use ssbm_utils::enums::Port;
 
@@ -119,6 +112,17 @@ pub fn to_dolphin_queue(target_path: PathBuf, combo_list: &[Arc<Combos>]) {
     let mut f = File::create(target_path).unwrap();
     serde_json::to_writer_pretty(f, &playback_queue).unwrap();
     // f.write_all(playback_queue.to_string().as_bytes()).unwrap();
+}
+
+pub mod prelude {
+    pub use crate::{parse, get_combos, get_stats, to_dolphin_queue};
+    pub use crate::{
+        stats::Stats,
+        player::Player,
+        game::Game,
+    };
+
+    pub use ssbm_utils::enums::BitFlags;
 }
 
 #[cfg(test)]

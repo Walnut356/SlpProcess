@@ -11,6 +11,7 @@ use crate::enums::Character;
 pub enum State {
     Universal(ActionState),
     Unique(CharacterState),
+    Unknown(u16),
 }
 
 impl State {
@@ -23,11 +24,18 @@ impl State {
     }
 }
 
+impl Default for State {
+    fn default() -> Self {
+        State::Unknown(u16::MAX)
+    }
+}
+
 impl From<State> for &'static str {
     fn from(value: State) -> Self {
         match value {
             State::Universal(x) => x.into(),
             State::Unique(x) => x.into(),
+            State::Unknown(x) => "Unknown",
         }
     }
 }
