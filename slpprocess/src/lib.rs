@@ -24,6 +24,7 @@ pub mod utils;
 
 pub use crate::game::Game;
 use crate::stats::combos::Combos;
+use player::Stats;
 use serde_json::json;
 pub use ssbm_utils::enums::Port;
 
@@ -70,6 +71,17 @@ pub fn parse(path: &str) -> Vec<Game> {
         return result;
     }
     panic!("invalid file path")
+}
+
+/// Returns a single stats object containing the stats from all individual games.
+pub fn get_stats(games: &[Game], connect_code: &str) -> Stats {
+    games.iter().filter_map(|game| {
+        let player = game.player_by_code(connect_code);
+        match player {
+            Ok(p) => Some(p.stats.clone()),
+            Err(_) => None,
+        }
+    }).collect::<Vec<_>>().into()
 }
 
 pub fn get_combos(games: &[Game], connect_code: &str) -> Vec<Arc<Combos>> {
