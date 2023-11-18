@@ -92,7 +92,7 @@ impl Game {
             if player
                 .connect_code
                 .as_ref()
-                .is_some_and(|x| x.as_str() == connect_code)
+                .is_some_and(|x| x.to_ascii_uppercase() == connect_code.to_ascii_uppercase())
             {
                 return Ok(player);
             }
@@ -242,17 +242,17 @@ impl Game {
             timeouts (stock and percent check),
         */
         match p1_stocks.cmp(&p2_stocks) {
-            std::cmp::Ordering::Less => return Some(p2.port),
-            std::cmp::Ordering::Greater => return Some(p1.port),
+            std::cmp::Ordering::Less => Some(p2.port),
+            std::cmp::Ordering::Greater => Some(p1.port),
             std::cmp::Ordering::Equal => {
                 // The percent as seen on the HUD
                 let p1_percent = p1.frames.post.percent.last().unwrap().floor();
                 let p2_percent = p2.frames.post.percent.last().unwrap().floor();
 
                 match p1_percent.partial_cmp(&p2_percent).unwrap() {
-                    std::cmp::Ordering::Less => return Some(p2.port),
-                    std::cmp::Ordering::Greater => return Some(p1.port),
-                    std::cmp::Ordering::Equal => return None,
+                    std::cmp::Ordering::Less => Some(p2.port),
+                    std::cmp::Ordering::Greater => Some(p1.port),
+                    std::cmp::Ordering::Equal => None,
                 }
             }
         }
