@@ -92,14 +92,15 @@ pub fn find_inputs(frames: &Frames, duration: u64) -> DataFrame {
             cstick_counts += changed.count_ones()
         }
 
+        //TODO fix this
         // special handling to detect analog trigger
-        if en_changed & ANYTRIGGER_MASK != 0 // if anytrigger was just pressed
-            && en_changed & DIGITAL_TRIGGER_MASK == 0 // and we didn't just digital press
-            && !ControllerInput::Z.intersects(ctrl_changed)
-        // and we didn't just start pressing Z
-        {
-            trigger_counts += 1;
-        }
+    //     if en_changed & ANYTRIGGER_MASK != 0 // if anytrigger was just pressed
+    //         && en_changed & DIGITAL_TRIGGER_MASK == 0 // and we didn't just digital press
+    //         && !ControllerInput::Z.intersects(ctrl_changed)
+    //     // and we didn't just start pressing Z
+    //     {
+    //         trigger_counts += 1;
+    //     }
     }
 
     let trigger_pref: &str = {
@@ -140,7 +141,7 @@ pub fn find_inputs(frames: &Frames, duration: u64) -> DataFrame {
     df!(Digital.into() => [digital_counts],
     Joystick.into() => [stick_counts],
     Cstick.into() => [cstick_counts],
-    AnalogTrigger.into() => [trigger_counts],
+    // AnalogTrigger.into() => [trigger_counts],
     APM.into() => [(digital_counts + stick_counts + cstick_counts + trigger_counts) as f32 / (duration as f32 / 60.0 / 60.0)],
     TriggerPref.into() => [trigger_pref],
     JumpPref.into() => [jump_pref],).unwrap()

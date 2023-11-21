@@ -147,7 +147,7 @@ pub fn is_in_magnifying_glass(flags: u64) -> bool {
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 #[inline]
 pub fn is_shielding_flag(flags: u64) -> bool {
-    Flags::from(flags).contains(*Flags::SHIELDING)
+    Flags::SHIELDING.intersects(flags)
 }
 
 /// Returns true if the character has the fastfall bitflag active
@@ -155,7 +155,7 @@ pub fn is_shielding_flag(flags: u64) -> bool {
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 #[inline]
 pub fn is_fastfalling(flags: u64) -> bool {
-    Flags::from(flags).contains(*Flags::FASTFALL)
+    Flags::FASTFALL.intersects(flags)
 }
 
 /// Returns true if the character is in any tumble or reeling animation, or if they are in the jab reset animation

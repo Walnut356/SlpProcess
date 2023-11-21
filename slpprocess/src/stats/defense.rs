@@ -84,7 +84,7 @@ impl From<DefenseStats> for DataFrame {
 
         let vec_series = vec![
             Series::new(col::FrameIndex.into(), val.frame_index),
-            Series::new(col::StocksRemaining.into(), val.stocks_remaining),
+            Series::new(col::Stocks.into(), val.stocks_remaining),
             Series::new(col::Percent.into(), val.percent),
             Series::new(col::DamageTaken.into(), val.damage_taken),
             Series::new(col::LastHitBy.into(), as_vec_static_str(val.last_hit_by)),

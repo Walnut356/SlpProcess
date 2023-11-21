@@ -19,6 +19,10 @@ polars = { version = "0.35.2", features = [
     "dtype-struct",
     "dtype-datetime",
     "dtype-duration",
+    "rows",
+    "mode",
+    "is_in",
+    "list_count"
 ] }
 byteorder = "1.4.3"
 num_enum = "0.7.0"

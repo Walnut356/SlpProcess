@@ -118,7 +118,7 @@ pub enum ItemFrame {
 pub enum LCancelStats {
     FrameIndex,
     Attack,
-    StocksRemaining,
+    Stocks,
     Percent,
     LCancelled,
     TriggerFrame,
@@ -141,7 +141,7 @@ pub enum InputStats {
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
 pub enum DefenseStats {
     FrameIndex,
-    StocksRemaining,
+    Stocks,
     Percent,
     DamageTaken,
     LastHitBy,

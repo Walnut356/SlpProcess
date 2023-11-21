@@ -6,6 +6,7 @@ use bytes::{Buf, Bytes};
 use encoding_rs::SHIFT_JIS;
 use num_enum::{FromPrimitive, IntoPrimitive, TryFromPrimitive};
 use polars::prelude::*;
+use strum_macros::IntoStaticStr;
 
 use crate::{
     player::{Player, UCFToggles},
@@ -22,7 +23,7 @@ pub enum Mode {
     Unknown = 0,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, FromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, FromPrimitive, IntoPrimitive, IntoStaticStr)]
 #[repr(u8)]
 pub enum MatchType {
     // ascii character values for u, r, d
@@ -651,6 +652,7 @@ impl GameStart {
 /// | 3.13.0  | Aug 30 2022 |
 /// | 3.14.0  | Nov 04 2022 |
 /// | 3.15.0  | May 27 2023 |
+/// | 3.16.0  | Sep 20 2023 |
 ///
 /// Some noteable dates in the Slippi ecosystem:
 ///

@@ -103,6 +103,17 @@ impl Game {
         ))
     }
 
+    pub fn summarize(&self) -> DataFrame {
+        df!(
+            "MatchID" => &[self.metadata.match_id.clone()],
+            "MatchType" => &[self.metadata.match_type.map(Into::<&str>::into)],
+            "GameNumber" => &[self.metadata.game_number],
+            "TiebreakNumber" => &[self.metadata.tiebreak_number],
+            "Stage" => &[Into::<&str>::into(self.metadata.stage)],
+
+        ).unwrap()
+    }
+
     fn get_stats(&mut self) {
         let version = self.version;
         let mut result: Vec<Arc<Player>> = Vec::new();
@@ -161,8 +172,7 @@ impl Game {
             30 for display name)
 
             I'm not super happy with how this turned out, but the ergonomics for the end-user are
-            nicer than Arc<RwLock<>> or RwLock<Arc<>>and ArcSwap is heavily optimized for
-            seldom-write, often-read which is exactly my usecase.
+            nicer than Arc<RwLock<>> or RwLock<Arc<>>.
 
             The alternative (i think?) is to use something like OnceLock<Arc<Stats>>, which i may
             still change to later. It's a negligable performance impact to save typing .get()
@@ -193,13 +203,12 @@ impl Game {
     // }
 
     /// Returns the winner of the match if one can be decided conclusively
-    fn get_winner(&self) -> Option<Port> {
-        // this will panic before the unwraps further down panic. I don't think it's even possible
-        // to have a replay with no frames tbh
-        assert!(
-            self.total_frames > 0,
-            "Cannot determine winner of game with no frame data"
-        );
+    pub fn get_winner(&self) -> Option<Port> {
+        // I'm not sure a replay can even have 0 frames, but this saves us from possible panics
+        // down the line
+        if self.total_frames == 0 {
+            return None;
+        }
 
         let p1 = &self.players[0];
         let p2 = &self.players[1];

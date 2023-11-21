@@ -93,14 +93,14 @@ pub fn find_lcancels(frames: &Frames, stage: &Stage) -> DataFrame {
         lcancelled_col.push(LCancel::from_repr(lcancel) == Some(LCancel::SUCCESS));
         l_input_col.push(l_input_frame);
         position_col.push(stage.ground_from_id(last_ground_ids[i]).into());
-        fastfall_col.push(is_fastfalling(flags[i]));
+        fastfall_col.push(is_fastfalling(flags[i - 1]));
         hitlag_col.push(during_hitlag);
         percent_col.push(percents[i]);
     }
 
     df!(LCancelStats::FrameIndex.into() => frame_index_col,
     LCancelStats::Attack.into() => attack_col,
-    LCancelStats::StocksRemaining.into() => stocks_col,
+    LCancelStats::Stocks.into() => stocks_col,
     LCancelStats::Percent.into() => percent_col,
     LCancelStats::LCancelled.into() => lcancelled_col,
     LCancelStats::TriggerFrame.into() => l_input_col,
