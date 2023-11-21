@@ -103,7 +103,7 @@ pub fn is_magnifying_damage(damage_taken: f32, flags: &[u64], index: usize) -> b
     let min = index.saturating_sub(60);
 
     for flagset in &flags[min..=index] {
-        if !Flags::from(*flagset).contains(*Flags::OFFSCREEN) {
+        if !Flags::OFFSCREEN.intersects(*flagset) {
             return false;
         }
     }
@@ -115,7 +115,7 @@ pub fn is_magnifying_damage(damage_taken: f32, flags: &[u64], index: usize) -> b
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 #[inline]
 pub fn is_in_hitlag(flags: u64) -> bool {
-    Flags::from(flags).contains(*Flags::HITLAG)
+    Flags::HITLAG.intersects(flags)
 }
 
 /// Returns true if the character has the hitstun bitflag active
@@ -123,7 +123,7 @@ pub fn is_in_hitlag(flags: u64) -> bool {
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 #[inline]
 pub fn is_in_hitstun(flags: u64) -> bool {
-    Flags::from(flags).contains(*Flags::HITSTUN)
+    Flags::HITSTUN.intersects(flags)
 }
 
 /// Returns true if the character has the defender-hitlag bitflag active
@@ -131,7 +131,7 @@ pub fn is_in_hitstun(flags: u64) -> bool {
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 #[inline]
 pub fn is_in_defender_hitlag(flags: u64) -> bool {
-    Flags::from(flags).contains(*Flags::DEFENDER_HITLAG)
+    Flags::DEFENDER_HITLAG.intersects(flags)
 }
 
 /// Returns true if the character has the magnifying glass bitflag active
@@ -139,7 +139,7 @@ pub fn is_in_defender_hitlag(flags: u64) -> bool {
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 #[inline]
 pub fn is_in_magnifying_glass(flags: u64) -> bool {
-    Flags::from(flags).contains(*Flags::OFFSCREEN)
+    Flags::OFFSCREEN.intersects(flags)
 }
 
 /// Returns true if the character has the shielding bitflag active
