@@ -227,15 +227,16 @@ impl StickRegion {
 
     pub fn valid_sdi(&self, prev: StickRegion) -> bool {
         // stick must not be deadzone and must have moved since the previous frame
-        if self.is_deadzone() || prev.is_deadzone() || *self == prev {
+        if self.is_deadzone() || *self == prev {
             return false;
         }
 
         /*
             We know that self is not deadzone and != prev. If prev is a cardinal direction, self
-            must be a diagonal. All cardinal to diagonal stick regions are valid SDI
+            must be a diagonal or a different cardinal. All cardinal to diagonal stick regions are
+            valid SDI, and so are any cardinal to cardinal. Same is true for prev being deadzone
         */
-        if prev.is_cardinal() {
+        if prev.is_cardinal() || prev.is_deadzone() {
             return true;
         }
 
