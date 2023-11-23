@@ -40,3 +40,4 @@ strum_macros = "0.25.2"
 itertools = "0.12.0"
 ssbm_utils = { path = "../ssbm-utils" }
 derive-new = "0.6.0"
+chrono = "0.4.31"

@@ -3,6 +3,7 @@
 use std::time::Duration;
 
 use bytes::{Buf, Bytes};
+use chrono::{DateTime, FixedOffset};
 use encoding_rs::SHIFT_JIS;
 use num_enum::{FromPrimitive, IntoPrimitive, TryFromPrimitive};
 use polars::prelude::*;
@@ -66,12 +67,15 @@ pub struct GameStart {
     pub match_type: Option<MatchType>,
     pub game_number: Option<u32>,
     pub tiebreak_number: Option<u32>,
+    pub date: Option<DateTime<FixedOffset>>,
 }
 
 impl GameStart {
     // the awkward return type here is because this will only ever be constructed internally, and because it will help
     // a LOT down the line to have the players contained in the top level Game object rather than the GameStart event.
-    pub fn parse(mut raw: Bytes) -> (Self, Version, [Player; 2]) {
+    pub fn parse(mut raw: Bytes,  date: Option<DateTime<FixedOffset>>) -> (Self, Version, [Player; 2],) {
+
+
         let version = Version::new(raw.get_u8(), raw.get_u8(), raw.get_u8());
         raw.advance(9); // skip past revision number, game bitfields 1-4 and bomb rain
 
@@ -115,6 +119,22 @@ impl GameStart {
         let mut game_number = None;
         let mut tiebreak_number = None;
 
+        let mut result = GameStart {
+                    random_seed,
+                    is_teams,
+                    stage,
+                    timer: timer_length,
+                    is_pal,
+                    is_frozen_stadium,
+                    is_netplay,
+                    match_id,
+                    match_type,
+                    game_number,
+                    tiebreak_number,
+                    damage_ratio,
+                    date,
+                };
+
         if !raw.has_remaining() {
             // version < 1.0.0
             let mut players: [Player; 2] = [Player::default(), Player::default()];
@@ -139,20 +159,7 @@ impl GameStart {
                 }
             }
             return (
-                GameStart {
-                    random_seed,
-                    is_teams,
-                    stage,
-                    timer: timer_length,
-                    is_pal,
-                    is_frozen_stadium,
-                    is_netplay,
-                    match_id,
-                    match_type,
-                    game_number,
-                    tiebreak_number,
-                    damage_ratio,
-                },
+                result,
                 version,
                 players,
             );
@@ -191,20 +198,7 @@ impl GameStart {
                 }
             }
             return (
-                GameStart {
-                    random_seed,
-                    is_teams,
-                    stage,
-                    timer: timer_length,
-                    is_pal,
-                    is_frozen_stadium,
-                    is_netplay,
-                    match_id,
-                    match_type,
-                    game_number,
-                    tiebreak_number,
-                    damage_ratio,
-                },
+                result,
                 version,
                 players,
             );
@@ -236,26 +230,13 @@ impl GameStart {
                 }
             }
             return (
-                GameStart {
-                    random_seed,
-                    is_teams,
-                    stage,
-                    timer: timer_length,
-                    is_pal,
-                    is_frozen_stadium,
-                    is_netplay,
-                    match_id,
-                    match_type,
-                    game_number,
-                    tiebreak_number,
-                    damage_ratio,
-                },
+                result,
                 version,
                 players,
             );
         }
 
-        is_pal = Some(raw.get_u8() != 0);
+        result.is_pal = Some(raw.get_u8() != 0);
 
         if !raw.has_remaining() {
             // version < 2.0.0
@@ -281,26 +262,13 @@ impl GameStart {
                 }
             }
             return (
-                GameStart {
-                    random_seed,
-                    is_teams,
-                    stage,
-                    timer: timer_length,
-                    is_pal,
-                    is_frozen_stadium,
-                    is_netplay,
-                    match_id,
-                    match_type,
-                    game_number,
-                    tiebreak_number,
-                    damage_ratio,
-                },
+                result,
                 version,
                 players,
             );
         }
 
-        is_frozen_stadium = Some(raw.get_u8() != 0);
+        result.is_frozen_stadium = Some(raw.get_u8() != 0);
 
         if !raw.has_remaining() {
             // version < 3.7.0
@@ -326,27 +294,14 @@ impl GameStart {
                 }
             }
             return (
-                GameStart {
-                    random_seed,
-                    is_teams,
-                    stage,
-                    timer: timer_length,
-                    is_pal,
-                    is_frozen_stadium,
-                    is_netplay,
-                    match_id,
-                    match_type,
-                    game_number,
-                    tiebreak_number,
-                    damage_ratio,
-                },
+                result,
                 version,
                 players,
             );
         }
 
         raw.advance(1); // skip minor scene
-        is_netplay = Some(raw.get_u8() == 8);
+        result.is_netplay = Some(raw.get_u8() == 8);
 
         if !raw.has_remaining() {
             // version < 3.9.0
@@ -372,20 +327,7 @@ impl GameStart {
                 }
             }
             return (
-                GameStart {
-                    random_seed,
-                    is_teams,
-                    stage,
-                    timer: timer_length,
-                    is_pal,
-                    is_frozen_stadium,
-                    is_netplay,
-                    match_id,
-                    match_type,
-                    game_number,
-                    tiebreak_number,
-                    damage_ratio,
-                },
+                result,
                 version,
                 players,
             );
@@ -435,20 +377,7 @@ impl GameStart {
                 }
             }
             return (
-                GameStart {
-                    random_seed,
-                    is_teams,
-                    stage,
-                    timer: timer_length,
-                    is_pal,
-                    is_frozen_stadium,
-                    is_netplay,
-                    match_id,
-                    match_type,
-                    game_number,
-                    tiebreak_number,
-                    damage_ratio,
-                },
+                result,
                 version,
                 players,
             );
@@ -490,20 +419,7 @@ impl GameStart {
                 }
             }
             return (
-                GameStart {
-                    random_seed,
-                    is_teams,
-                    stage,
-                    timer: timer_length,
-                    is_pal,
-                    is_frozen_stadium,
-                    is_netplay,
-                    match_id,
-                    match_type,
-                    game_number,
-                    tiebreak_number,
-                    damage_ratio,
-                },
+                result,
                 version,
                 players,
             );
@@ -535,20 +451,7 @@ impl GameStart {
                 }
             }
             return (
-                GameStart {
-                    random_seed,
-                    is_teams,
-                    stage,
-                    timer: timer_length,
-                    is_pal,
-                    is_frozen_stadium,
-                    is_netplay,
-                    match_id,
-                    match_type,
-                    game_number,
-                    tiebreak_number,
-                    damage_ratio,
-                },
+                result,
                 version,
                 players,
             );
@@ -559,15 +462,15 @@ impl GameStart {
         let end = match_id_bytes.iter().position(|&x| x == 0).unwrap_or(50);
         match_id_bytes.truncate(end);
         let match_id_len = match_id_bytes.len();
-        match_id = Some(String::from_utf8(match_id_bytes).unwrap());
+        result.match_id = Some(String::from_utf8(match_id_bytes).unwrap());
 
-        game_number = Some(raw.get_u32());
-        tiebreak_number = Some(raw.get_u32());
+        result.game_number = Some(raw.get_u32());
+        result.tiebreak_number = Some(raw.get_u32());
 
-        match_type = {
+        result.match_type = {
             if match_id_len > 5 {
                 Some(MatchType::from(
-                    match_id.as_ref().map(|x| x.as_bytes()[5]).unwrap(),
+                    result.match_id.as_ref().map(|x| x.as_bytes()[5]).unwrap(),
                 ))
             } else {
                 Some(MatchType::Unknown)
@@ -597,20 +500,7 @@ impl GameStart {
         }
 
         (
-            GameStart {
-                random_seed,
-                is_teams,
-                stage,
-                timer: timer_length,
-                is_pal,
-                is_frozen_stadium,
-                is_netplay,
-                match_id,
-                match_type,
-                game_number,
-                tiebreak_number,
-                damage_ratio,
-            },
+            result,
             version,
             players,
         )

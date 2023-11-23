@@ -7,10 +7,10 @@ use nohash_hasher::IntMap;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use polars::prelude::*;
 
+use std::fs::File;
 use std::io::{prelude::*, Cursor};
 use std::path::Path;
 use std::time::Duration;
-use std::fs::File;
 
 use crate::{
     events::{
@@ -152,6 +152,11 @@ impl Game {
             duration = Duration::from_millis(millis);
         };
 
+        let mut date = None;
+        if let serde_json::Value::String(start_at) = &metadata["startAt"] {
+            date = chrono::DateTime::parse_from_rfc3339(start_at.as_str()).ok();
+        }
+
         stream.set_position(return_pos);
 
         let event_sizes: IntMap<u8, u16> = Self::get_event_sizes(&mut stream)?;
@@ -166,9 +171,9 @@ impl Game {
                 ..(stream.position() + event_sizes[&EventType::GameStart.into()] as u64) as usize,
         );
 
-        let (game_start, version, mut players) = GameStart::parse(raw_start);
+        let (game_start, version, mut players) = GameStart::parse(raw_start, date);
 
-                // i could map but this gives me arrays instead of slices without into
+        // i could map but this gives me arrays instead of slices without into
         let ports = [players[0].port, players[1].port];
         let ics = [
             players[0].character == Character::IceClimbers,
@@ -204,15 +209,9 @@ impl Game {
             let raw_data = stream.get_ref();
 
             match event {
-                EventType::PreFrame => {
-                    pre_offsets.push(stream.position())
-                }
-                EventType::PostFrame => {
-                    post_offsets.push(stream.position())
-                }
-                EventType::Item => {
-                    item_offsets.push(stream.position())
-                }
+                EventType::PreFrame => pre_offsets.push(stream.position()),
+                EventType::PostFrame => post_offsets.push(stream.position()),
+                EventType::Item => item_offsets.push(stream.position()),
                 EventType::GameEnd => {
                     game_end_bytes = Some(raw_data.slice(pos as usize..(pos + size) as usize))
                 }
@@ -228,7 +227,6 @@ impl Game {
             game_end = Some(parse_gameend(bytes));
         }
 
-
         let mut item_frames = None;
 
         if version.at_least(3, 0, 0) {
@@ -236,8 +234,26 @@ impl Game {
         }
 
         let (mut pre_frames, mut post_frames) = rayon::join(
-            || parse_preframes(stream.clone(), version, &pre_offsets, frame_count, ports, ics),
-            || parse_postframes(stream.clone(), version, &post_offsets, frame_count, ports, ics),
+            || {
+                parse_preframes(
+                    stream.clone(),
+                    version,
+                    &pre_offsets,
+                    frame_count,
+                    ports,
+                    ics,
+                )
+            },
+            || {
+                parse_postframes(
+                    stream.clone(),
+                    version,
+                    &post_offsets,
+                    frame_count,
+                    ports,
+                    ics,
+                )
+            },
         );
 
         for player in players.iter_mut() {

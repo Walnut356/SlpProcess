@@ -250,7 +250,7 @@ pub fn parse_preframes(
         /* splitting these out saves us a small amount of time in conditional logic, and allows for
         exact iterator chunk sizes. */
         if !ics[0] && !ics[1] {
-            unpack_frames(stream, frames, ports, version)
+            unpack_frames(stream, frames, duration, ports, version)
         } else {
             unpack_frames_ics(stream, frames, duration, ports, ics, version)
         }
@@ -268,6 +268,7 @@ pub fn parse_preframes(
 pub fn unpack_frames(
     mut stream: Cursor<Bytes>,
     frames: &[u64],
+    duration: u64,
     ports: [Port; 2],
     version: Version,
 ) -> IntMap<u8, (PreFrames, Option<PreFrames>)> {
@@ -276,16 +277,16 @@ pub fn unpack_frames(
     the constructor though */
 
     let frames_iter = frames.chunks_exact(2).enumerate();
-    let len = frames_iter.len();
 
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
-    p_frames.insert(ports[0] as u8, (PreFrames::new(len, version), None));
-    p_frames.insert(ports[1] as u8, (PreFrames::new(len, version), None));
+    p_frames.insert(ports[0] as u8, (PreFrames::new(duration as usize, version), None));
+    p_frames.insert(ports[1] as u8, (PreFrames::new(duration as usize, version), None));
 
-    for (i, offsets) in frames_iter {
+    for (_, offsets) in frames_iter {
         for offset in offsets {
             stream.set_position(*offset);
             let frame_number = stream.get_i32();
+            let i = (frame_number + 123) as usize;
             let port = stream.get_u8();
             stream.advance(1); // skip nana byte
 
@@ -294,7 +295,7 @@ pub fn unpack_frames(
             // i has to be 0..frames_iter.len(), and that length was used to construct all of the
             // vecs that make up the PreFrames objects.
             unsafe {
-                *working.frame_index.get_unchecked_mut(i) = frame_number;
+                working.frame_index[i] = frame_number;
                 *working.random_seed.get_unchecked_mut(i) = stream.get_u32();
                 *working.action_state.get_unchecked_mut(i) = stream.get_u16();
                 *working.position.get_unchecked_mut(i) =

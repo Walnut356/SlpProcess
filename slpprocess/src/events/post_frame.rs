@@ -478,7 +478,7 @@ pub fn parse_postframes(
     /* splitting these out saves us a small amount of time in conditional logic, and allows for
     exact iterator chunk sizes. */
     if !ics[0] && !ics[1] {
-        unpack_frames(stream, frames, ports, version)
+        unpack_frames(stream, frames, duration, ports, version)
     } else {
         unpack_frames_ics(stream, frames, duration, ports, ics, version)
     }
@@ -489,20 +489,21 @@ pub fn parse_postframes(
 pub fn unpack_frames(
     mut stream: Cursor<Bytes>,
     frames: &[u64],
+    duration: u64,
     ports: [Port; 2],
     version: Version,
 ) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
     let offsets_iter = frames.chunks_exact(2).enumerate();
-    let len = offsets_iter.len();
 
     let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
-    p_frames.insert(ports[0] as u8, (PostFrames::new(len, version), None));
-    p_frames.insert(ports[1] as u8, (PostFrames::new(len, version), None));
+    p_frames.insert(ports[0] as u8, (PostFrames::new(duration as usize, version), None));
+    p_frames.insert(ports[1] as u8, (PostFrames::new(duration as usize, version), None));
 
-    for (i, offsets) in offsets_iter {
+    for (_, offsets) in offsets_iter {
         for offset in offsets {
             stream.set_position(*offset);
             let frame_number = stream.get_i32();
+            let i = (frame_number + 123) as usize;
             let port = stream.get_u8();
 
             stream.advance(1); // skip nana byte
@@ -510,7 +511,8 @@ pub fn unpack_frames(
             let (working, _) = p_frames.get_mut(&port).unwrap();
 
             unsafe {
-                *working.frame_index.get_unchecked_mut(i) = frame_number;
+                // this one won't be unchecked just to make sure i don't accidentally overflow =)
+                working.frame_index[i] = frame_number;
                 *working.character.get_unchecked_mut(i) = stream.get_u8();
                 *working.action_state.get_unchecked_mut(i) = stream.get_u16();
                 *working.position.get_unchecked_mut(i) =
@@ -540,7 +542,7 @@ pub fn unpack_frames(
                     *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
                     *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
                     *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) =
-                        stream.get_u8() != 0;
+                        stream.get_u8() == 0;
                     *working
                         .last_ground_id
                         .as_mut()
