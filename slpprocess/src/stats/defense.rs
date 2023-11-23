@@ -120,7 +120,30 @@ impl From<DefenseStats> for DataFrame {
                     .map(|x| Series::new("", as_vec_arrow(x)))
                     .collect::<Vec<_>>(),
             ),
-
+            StructChunked::new(
+                col::HitlagStart.into(),
+                &[
+                    Series::new(
+                        "x",
+                        val.hitlag_start.iter().map(|p| p.x).collect::<Vec<_>>(),
+                    ),
+                    Series::new(
+                        "y",
+                        val.hitlag_start.iter().map(|p| p.y).collect::<Vec<_>>(),
+                    ),
+                ],
+            )
+            .unwrap()
+            .into_series(),
+            StructChunked::new(
+                col::HitlagEnd.into(),
+                &[
+                    Series::new("x", val.hitlag_end.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.hitlag_end.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
             StructChunked::new(
                 col::Knockback.into(),
                 &[
@@ -151,30 +174,6 @@ impl From<DefenseStats> for DataFrame {
             .into_series(),
             Series::new(col::DIKBAngle.into(), val.di_kb_angle),
             Series::new(col::DIEfficacy.into(), val.di_efficacy),
-            StructChunked::new(
-                col::HitlagStart.into(),
-                &[
-                    Series::new(
-                        "x",
-                        val.hitlag_start.iter().map(|p| p.x).collect::<Vec<_>>(),
-                    ),
-                    Series::new(
-                        "y",
-                        val.hitlag_start.iter().map(|p| p.y).collect::<Vec<_>>(),
-                    ),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            StructChunked::new(
-                col::HitlagEnd.into(),
-                &[
-                    Series::new("x", val.hitlag_end.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.hitlag_end.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
             Series::new(col::KillsWithDI.into(), val.kills_with_di),
             Series::new(col::KillsNoDI.into(), val.kills_no_di),
             Series::new(col::KillsAllDI.into(), val.kills_any_di),
