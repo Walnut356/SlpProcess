@@ -145,6 +145,7 @@ impl Game {
                     &opponent.frames,
                     self.metadata.stage as u16,
                     player.character,
+                    opponent.character,
                 )
             });
 
@@ -270,11 +271,14 @@ impl Game {
         }
     }
 
-    // pub fn get_summary(&self) -> DataFrame {
-    //     let vec_series = vec![
-    //         Series::new()
-    //     ]
-
-    //     DataFrame::default()
-    // }
+    pub fn get_summary(&self) -> DataFrame {
+        df![
+            "FileName" => &[self.path.file_stem().unwrap().to_str()],
+            "Datetime" => &[self.metadata.date.map(|x| x.timestamp_nanos_opt().unwrap())],
+            "MatchID" => &[self.metadata.match_id.clone()],
+            "MatchType" => &[self.metadata.match_type.map(Into::<&str>::into)],
+            "Game" => &[self.metadata.game_number],
+            "Tiebreak" => &[self.metadata.tiebreak_number],
+        ].unwrap()
+    }
 }
