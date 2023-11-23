@@ -34,7 +34,7 @@ fn as_vec_arrow(input: Vec<StickRegion>) -> Vec<&'static str> {
 
 #[derive(Debug, Default)]
 struct DefenseStats {
-    frame_index: Vec<u32>,
+    frame_index: Vec<i32>,
     stocks_remaining: Vec<u8>,
     percent: Vec<f32>,
     damage_taken: Vec<f32>,
@@ -185,7 +185,7 @@ impl From<DefenseStats> for DataFrame {
 
 #[derive(Debug, Default, Clone)]
 struct DefenseRow {
-    frame_index: u32,
+    frame_index: i32,
     stocks_remaining: u8,
     percent: f32,
     damage_taken: f32,
@@ -212,7 +212,7 @@ struct DefenseRow {
 
 impl DefenseRow {
     pub fn new(
-        frame_index: u32,
+        frame_index: i32,
         stocks_remaining: u8,
         percent: f32,
         damage_taken: f32,
@@ -267,13 +267,12 @@ pub(crate) fn find_defense(
         let damage_taken = get_damage_taken(post.percent[i], post.percent[i - 1]);
 
         // ----------------------------------- event detection ---------------------------------- //
-        // TODO CC check
-        if (!was_in_hitlag && took_damage)
-            || (!in_hitlag && took_damage && is_thrown(states[i]))
+        // TODO check for being hit while already in hitlag
+        if (!was_in_hitlag && took_damage) || (!in_hitlag && took_damage && is_thrown(states[i]))
         // && !is_magnifying_damage(damage_taken, flags, i)
         {
             event = Some(DefenseRow::new(
-                i as u32,
+                i as i32 - 123,
                 post.stocks[i],
                 post.percent[i],
                 damage_taken,
@@ -302,7 +301,6 @@ pub(crate) fn find_defense(
         }
 
         // ----------------------------------- finalize event ----------------------------------- //
-        // TODO asdi, list output,
 
         if !in_hitlag && was_in_hitlag && event.is_some() {
             let row = event.as_mut().unwrap();
