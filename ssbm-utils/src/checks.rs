@@ -241,7 +241,6 @@ pub fn is_shield_broken(state: u16) -> bool {
     (AR::GUARD_BREAK_START..=AR::GUARD_BREAK_END).contains(&state)
 }
 
-
 /// Returns trie if the character is currently hanging from the ledge or performing any ledge action
 ///
 /// Minimum Slippi Version: 0.1.0
@@ -270,8 +269,56 @@ pub fn lost_stock(current: u8, prev: u8) -> bool {
 }
 
 #[inline]
-pub fn just_pressed<T: PrimInt>(target: impl BitFlags<Other = T> + Buttons, current: T, prev: T) -> bool {
+pub fn just_pressed<T: PrimInt>(
+    target: impl BitFlags<Other = T> + Buttons,
+    current: T,
+    prev: T,
+) -> bool {
     target.contained_by(current) && !target.contained_by(prev)
+}
+
+/// Returns true if the character's attack has the `electric` property (affects hitlag duration).
+/// Does not include grabs (e.g. falco dthrow, pikachu bthrow)
+pub fn is_electric_attack(attack: Attack, character: &Character) -> bool {
+    match character {
+        Character::CaptainFalcon => attack == Attack::FAIR,
+        Character::DrMario => attack == Attack::F_SMASH,
+        Character::Falco | Character::Fox => attack == Attack::DOWN_SPECIAL,
+        Character::Ganondorf => [Attack::JAB_1, Attack::DAIR, Attack::UP_SPECIAL].contains(&attack),
+        Character::Mewtwo => [Attack::NAIR, Attack::PUMMEL].contains(&attack),
+        Character::Ness => [Attack::BAIR, Attack::DASH_ATTACK, Attack::FAIR].contains(&attack),
+        Character::Pichu => {
+            [Attack::DAIR, Attack::F_SMASH, Attack::PUMMEL, Attack::FAIR].contains(&attack)
+        }
+        Character::Pikachu => [
+            Attack::DAIR,
+            Attack::D_SMASH,
+            Attack::FAIR,
+            Attack::F_SMASH,
+            Attack::PUMMEL,
+        ]
+        .contains(&attack),
+        // samus Zair is countaed as NonStaling, nothing else she does aside from banned items are
+        // NonStaling, so this shouldn't have false positives
+        Character::Samus => [
+            Attack::NON_STALING,
+            Attack::NEUTRAL_SPECIAL,
+            Attack::UP_SPECIAL,
+        ]
+        .contains(&attack),
+        Character::Zelda => [
+            Attack::BAIR,
+            Attack::DASH_ATTACK,
+            Attack::FAIR,
+            Attack::F_SMASH,
+            Attack::JAB_1,
+            Attack::PUMMEL,
+            Attack::U_SMASH,
+            Attack::U_TILT,
+        ]
+        .contains(&attack),
+        _ => false,
+    }
 }
 
 // TODO get_randall_position() https://github.com/altf4/libmelee/blob/c98c26b776a0ad5024efa81487ae6a0ce27b6ab5/melee/stages.py#L160

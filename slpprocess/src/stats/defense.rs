@@ -7,8 +7,11 @@ use ssbm_utils::{
         apply_di, get_di_efficacy, initial_x_velocity, initial_y_velocity, kb_from_initial,
         should_kill,
     },
-    checks::{get_damage_taken, is_in_hitlag, is_shielding_flag, is_thrown, just_took_damage},
-    enums::{Character, StickRegion, Attack, State},
+    checks::{
+        get_damage_taken, is_cmd_grabbed, is_electric_attack, is_grabbed, is_in_hitlag,
+        is_shielding_flag, is_thrown, just_took_damage,
+    },
+    enums::{Attack, Character, State, StickRegion},
     types::{Degrees, Position, StickPos, Velocity},
 };
 
@@ -19,7 +22,14 @@ fn as_vec_i8(input: Vec<StickRegion>) -> Vec<i8> {
 }
 
 fn as_vec_static_str<T: Into<&'static str>>(input: Vec<T>) -> Vec<&'static str> {
-    input.into_iter().map(|x| x.into()).collect::<Vec<&'static str>>()
+    input
+        .into_iter()
+        .map(|x| x.into())
+        .collect::<Vec<&'static str>>()
+}
+
+fn as_vec_arrow(input: Vec<StickRegion>) -> Vec<&'static str> {
+    input.into_iter().map(|x| x.to_utf_arrow()).collect()
 }
 
 #[derive(Debug, Default)]
@@ -88,28 +98,28 @@ impl From<DefenseStats> for DataFrame {
             Series::new(col::Percent.into(), val.percent),
             Series::new(col::DamageTaken.into(), val.damage_taken),
             Series::new(col::LastHitBy.into(), as_vec_static_str(val.last_hit_by)),
-            Series::new(col::StateBeforeHit.into(), as_vec_static_str(val.state_before_hit)),
+            Series::new(
+                col::StateBeforeHit.into(),
+                as_vec_static_str(val.state_before_hit),
+            ),
             Series::new(col::Grounded.into(), val.grounded),
             Series::new(col::CrouchCancel.into(), val.crouch_cancel),
+            Series::new(col::ASDI.into(), as_vec_arrow(val.asdi)),
             Series::new(col::HitlagFrames.into(), val.hitlag_frames),
-
             Series::new(
                 col::StickDuringHitlag.into(),
                 val.stick_during_hitlag
                     .into_iter()
-                    .map(|x| Series::new("", as_vec_i8(x)))
+                    .map(|x| Series::new("", as_vec_arrow(x)))
                     .collect::<Vec<_>>(),
             ),
-
             Series::new(
                 col::SDIInputs.into(),
                 val.sdi_inputs
                     .into_iter()
-                    .map(|x| Series::new("", as_vec_static_str(x)))
+                    .map(|x| Series::new("", as_vec_arrow(x)))
                     .collect::<Vec<_>>(),
             ),
-
-            Series::new(col::ASDI.into(), as_vec_static_str(val.asdi)),
 
             StructChunked::new(
                 col::Knockback.into(),
@@ -120,9 +130,7 @@ impl From<DefenseStats> for DataFrame {
             )
             .unwrap()
             .into_series(),
-
             Series::new(col::KBAngle.into(), val.kb_angle),
-
             StructChunked::new(
                 col::DIStick.into(),
                 &[
@@ -132,7 +140,6 @@ impl From<DefenseStats> for DataFrame {
             )
             .unwrap()
             .into_series(),
-
             StructChunked::new(
                 col::DIKnockback.into(),
                 &[
@@ -142,20 +149,23 @@ impl From<DefenseStats> for DataFrame {
             )
             .unwrap()
             .into_series(),
-
             Series::new(col::DIKBAngle.into(), val.di_kb_angle),
             Series::new(col::DIEfficacy.into(), val.di_efficacy),
-
             StructChunked::new(
                 col::HitlagStart.into(),
                 &[
-                    Series::new("x", val.hitlag_start.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.hitlag_start.iter().map(|p| p.y).collect::<Vec<_>>()),
+                    Series::new(
+                        "x",
+                        val.hitlag_start.iter().map(|p| p.x).collect::<Vec<_>>(),
+                    ),
+                    Series::new(
+                        "y",
+                        val.hitlag_start.iter().map(|p| p.y).collect::<Vec<_>>(),
+                    ),
                 ],
             )
             .unwrap()
             .into_series(),
-
             StructChunked::new(
                 col::HitlagEnd.into(),
                 &[
@@ -165,7 +175,6 @@ impl From<DefenseStats> for DataFrame {
             )
             .unwrap()
             .into_series(),
-
             Series::new(col::KillsWithDI.into(), val.kills_with_di),
             Series::new(col::KillsNoDI.into(), val.kills_no_di),
             Series::new(col::KillsAllDI.into(), val.kills_any_di),
@@ -232,12 +241,14 @@ pub(crate) fn find_defense(
     opnt_frames: &Frames,
     stage_id: u16,
     player_char: Character,
+    opnt_char: Character,
 ) -> DataFrame {
     let pre = &plyr_frames.pre;
     let post = &plyr_frames.post;
     let attacks = &opnt_frames.post.last_attack_landed;
 
     let flags: &[u64] = post.flags.as_ref().unwrap();
+    let states: &[u16] = post.action_state.as_ref();
 
     let mut event = None;
     let mut stat_table = DefenseStats::default();
@@ -259,7 +270,7 @@ pub(crate) fn find_defense(
         // ----------------------------------- event detection ---------------------------------- //
         // TODO CC check
         if (!was_in_hitlag && took_damage)
-            || (!in_hitlag && took_damage && is_thrown(post.action_state[i]))
+            || (!in_hitlag && took_damage && is_thrown(states[i]))
         // && !is_magnifying_damage(damage_taken, flags, i)
         {
             event = Some(DefenseRow::new(
@@ -267,8 +278,8 @@ pub(crate) fn find_defense(
                 post.stocks[i],
                 post.percent[i],
                 damage_taken,
-                Attack::from(attacks[i]),
-                State::from_char_and_state(player_char, post.action_state[i - 1]),
+                Attack::from(attacks[i + 1]),
+                State::from_char_and_state(player_char, states[i - 1]),
                 post.is_grounded.as_ref().unwrap()[i],
                 post.position[i],
             ));
@@ -296,6 +307,21 @@ pub(crate) fn find_defense(
 
         if !in_hitlag && was_in_hitlag && event.is_some() {
             let row = event.as_mut().unwrap();
+
+            // check for crouch cancel. I could use action states, but there's complications with
+            // if you just entered crouch, or if you crouched during a subframe event, so we're just
+            // gaonna check against the expected hitlag frames.
+
+            let expected_hitlag = ssbm_utils::calc::attack::hitlag(
+                row.damage_taken,
+                is_electric_attack(row.last_hit_by, &opnt_char),
+                true,
+            );
+            if row.grounded // can't CC in the air
+                && row.hitlag_frames as u32 == expected_hitlag / 2
+            {
+                row.crouch_cancel = true;
+            }
 
             row.hitlag_end = post.position[i - 1];
 
@@ -350,7 +376,7 @@ pub(crate) fn find_defense(
 
                 row.kills_any_di = {
                     let mut result = true;
-                    for i in -90..90 {
+                    for i in -90..=90 {
                         let new_traj = kb_angle_rads - (i as f32 / 5.0).to_radians();
                         if !should_kill(
                             stage_id,

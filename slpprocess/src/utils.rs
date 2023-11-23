@@ -1,4 +1,5 @@
 use thiserror::Error;
+use polars::prelude::*;
 
 #[derive(Debug, Error)]
 pub enum ParseError {
@@ -8,4 +9,9 @@ pub enum ParseError {
     PlayerCount,
     #[error("Expected {0}, got {1}")]
     Value(String, String),
+}
+
+pub fn downcast_u8(series: &Series) -> Result<Vec<Option<u8>>, PolarsError> {
+    let chunked = series.u8()?;
+    Ok(chunked.to_vec())
 }

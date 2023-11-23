@@ -141,6 +141,22 @@ impl Default for StickRegion {
 }
 
 impl StickRegion {
+    /// Returns a unicode arrow (e.g. ↗) corresponding to the stick direction.
+
+    pub fn to_utf_arrow(&self) -> &'static str {
+        // I could do this through strum but I don't want to lock people into the arrows
+        match self {
+            StickRegion::DEAD_ZONE => "•",
+            StickRegion::UP => "↑",
+            StickRegion::UP_RIGHT => "↗",
+            StickRegion::RIGHT => "→",
+            StickRegion::DOWN_RIGHT => "↘",
+            StickRegion::DOWN => "↓",
+            StickRegion::DOWN_LEFT => "↙",
+            StickRegion::LEFT => "←",
+            StickRegion::UP_LEFT => "↖",
+        }
+    }
     pub fn from_coordinates(mut x: f32, mut y: f32) -> Self {
         use StickRegion as R;
 
