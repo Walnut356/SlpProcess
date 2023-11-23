@@ -105,10 +105,12 @@ impl Game {
 
     pub fn summarize(&self) -> DataFrame {
         df!(
-            "MatchID" => &[self.metadata.match_id.clone()],
+            "FileName" => &[self.path.file_stem().unwrap().to_str()],
+            "Datetime" => &[self.metadata.date.map(|x| x.naive_local().to_string())],
+            // "MatchID" => &[self.metadata.match_id.clone()],
             "MatchType" => &[self.metadata.match_type.map(Into::<&str>::into)],
-            "GameNumber" => &[self.metadata.game_number],
-            "TiebreakNumber" => &[self.metadata.tiebreak_number],
+            "Game" => &[self.metadata.game_number],
+            "Tiebreak" => &[self.metadata.tiebreak_number],
             "Stage" => &[Into::<&str>::into(self.metadata.stage)],
 
         ).unwrap()
@@ -271,14 +273,4 @@ impl Game {
         }
     }
 
-    pub fn get_summary(&self) -> DataFrame {
-        df![
-            "FileName" => &[self.path.file_stem().unwrap().to_str()],
-            "Datetime" => &[self.metadata.date.map(|x| x.timestamp_nanos_opt().unwrap())],
-            "MatchID" => &[self.metadata.match_id.clone()],
-            "MatchType" => &[self.metadata.match_type.map(Into::<&str>::into)],
-            "Game" => &[self.metadata.game_number],
-            "Tiebreak" => &[self.metadata.tiebreak_number],
-        ].unwrap()
-    }
 }
