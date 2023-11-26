@@ -171,7 +171,7 @@ impl Game {
                 ..(stream.position() + event_sizes[&EventType::GameStart.into()] as u64) as usize,
         );
 
-        let (game_start, version, mut players) = GameStart::parse(raw_start, date);
+        let (game_start, version, mut players) = GameStart::parse(raw_start, date)?;
 
         // i could map but this gives me arrays instead of slices without into
         let ports = [players[0].port, players[1].port];

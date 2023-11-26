@@ -2,6 +2,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
+use anyhow::{Result, anyhow};
 
 /// Ports P1-P4. Can be converted to the 0-indexed u8 value via `as u8`
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, FromRepr, Default)]
@@ -15,17 +16,17 @@ pub enum Port {
 }
 
 impl TryFrom<i8> for Port {
-    fn try_from(val: i8) -> Result<Self, Self::Error> {
+    fn try_from(val: i8) -> Result<Self> {
         match val {
             0 => Ok(Port::P1),
             1 => Ok(Port::P2),
             2 => Ok(Port::P3),
             3 => Ok(Port::P4),
-            _ => Err("Port must be a number 0-3 inclusive"),
+            _ => Err(anyhow!("Unable to convert i8 {val} into Port, expected value 0-3")),
         }
     }
 
-    type Error = &'static str;
+    type Error = anyhow::Error;
 }
 
 /// The current direction the character is facing, can be LEFT, RIGHT, or DOWN*

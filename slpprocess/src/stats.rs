@@ -6,8 +6,10 @@ pub mod lcancel;
 pub mod wavedash;
 
 use std::cell::OnceCell;
+use std::ops::Div;
 
 use polars::prelude::*;
+
 use strum_macros::{EnumString, IntoStaticStr};
 
 macro_rules! into_str {
@@ -103,17 +105,83 @@ impl Stats {
     }
 
     fn def_summary(&self) -> Option<DataFrame> {
-        use crate::columns::DefenseStats as col;
+        use crate::columns::DefenseStats as clm;
         if let Some(df) = &self.defense {
+            let lf = df.clone().lazy();
+            return lf
+                .select(&[
+                    col(clm::DamageTaken.into()).sum(),
+                    col(clm::DamageTaken.into()).count().alias("HitsTaken"),
+                    col(clm::DIEfficacy.into()).mean(),
+                    col(clm::LastHitBy.into()).mode().alias("MostHitBy"),
+                    col(clm::StateBeforeHit.into())
+                        .mode()
+                        .implode()
+                        .cast(DataType::List(Box::new(DataType::Utf8)))
+                        .alias("StateMostPunished"),
+                    col(clm::SDIInputs.into())
+                        .list()
+                        .len()
+                        .sum()
+                        .cast(DataType::Float32)
+                        .div(lit(df.height() as u64))
+                        .alias("SDIPerHit"),
+                    col(clm::KillsWithDI.into())
+                        .filter(
+                            col(clm::KillsSomeDI.into())
+                                .eq(lit(true))
+                                .and(col(clm::KillsAllDI.into()).eq(lit(false))),
+                        )
+                        .mean()
+                        .alias("LivableHitsLived"),
+                    col(clm::KillsWithDI.into())
+                        .filter(
+                            col(clm::KillsSomeDI.into())
+                                .eq(lit(true))
+                                .and(col(clm::KillsAllDI.into()).eq(lit(false))),
+                        )
+                        .count()
+                        .alias("LivableHits"),
+                    col(clm::HitlagFrames.into()).sum().alias("FramesInHitlag"),
+                    // col(clm::KillsWithDI.into())
+                    //     .filter(
+                    //         col(clm::KillsWithDI.into())
+                    //             .eq(lit(false))
+                    //             .and(col(clm::KillsSomeDI.into()).eq(lit(true)))
+                    //     )
+                    //     .count()
+                    //     .alias("DILives")
+                    //     ,
+                    // col(clm::KillsSomeDI.into()).filter(col(clm::KillsSomeDI.into()).eq(lit(true))).count().alias("CouldDie")
+                ])
+                .collect()
+                .ok();
+
+            // return Some(lf.select(&[
+            //     col(clm::DamageTaken.into()).sum(),
+            //     col(clm::DIEfficacy.into()).mean(),
+            //     col(clm::LastHitBy.into()).mode().alias("MostHitBy"),
+            //     col(clm::StateBeforeHit.into()).mode().alias("StateMostPunished"),
+            //     col(clm::SDIInputs.into()).list().len().sum().alias("SDIPerHit"),
+            //     col(clm::KillsAllDI.into()).eq(lit(false)).and(col(clm::KillsWithDI.into()).eq(lit(true)).or(col(clm::KillsNoDI.into()).eq(lit(true)))).alias("DIOpportunities"),
+            //     col(clm::KillsWithDI.into()).eq(lit(true)).and(col(clm::KillsAllDI.into()).eq(lit(false))).count().alias("DIDeaths"),
+            //     col(clm::KillsWithDI.into()).eq(lit(false)).and(col(clm::KillsNoDI.into()).eq(lit(true))).count().alias("DILives"),
+            // ]).collect().unwrap());
             let total_dmg = df
-                .column(into_str!(col::DamageTaken))
+                .column(into_str!(clm::DamageTaken))
                 .unwrap()
                 .f32()
                 .unwrap()
                 .sum();
+            let avg_di = df
+                .column(into_str!(clm::DIEfficacy))
+                .unwrap()
+                .f32()
+                .unwrap()
+                .mean();
             let common_hit = {
                 // if these aren't 2 different statements the borrow checker gets mad =')
-                let temp_1 = mode::mode(df.column(into_str!(col::LastHitBy)).unwrap()).unwrap();
+                let temp_1 = mode::mode(df.column(into_str!(clm::LastHitBy)).unwrap()).unwrap();
                 let temp_2 = temp_1.get(0);
                 match temp_2 {
                     Ok(AnyValue::Utf8(x)) => x.to_owned(),
@@ -122,7 +190,7 @@ impl Stats {
                 }
             };
             let avg_sdi = if df.height() > 0 {
-                let temp = df.column(into_str!(col::SDIInputs)).unwrap();
+                let temp = df.column(into_str!(clm::SDIInputs)).unwrap();
                 let mut total = 0;
                 for val in temp.iter() {
                     match val {
@@ -135,11 +203,37 @@ impl Stats {
                 0.0
             };
 
+            let lf = df.clone().lazy();
+            let di_lived = lf
+                .clone()
+                .filter(
+                    col(clm::KillsWithDI.into())
+                        .eq(lit(false))
+                        .and(col(clm::KillsNoDI.into()).eq(lit(true))),
+                )
+                .collect()
+                .unwrap()
+                .height();
+
+            let di_opps = lf
+                .clone()
+                .filter(
+                    col(clm::KillsWithDI.into())
+                        .eq(lit(true))
+                        .and(col(clm::KillsAllDI.into()).eq(lit(false))),
+                )
+                .collect()
+                .unwrap()
+                .height();
+
             return Some(
                 df![
-                    "TotalDamage" => &[total_dmg],
+                    "DamageTaken" => &[total_dmg],
                     "MostHitBy" => &[common_hit],
-                    "SDIPerHit" => &[avg_sdi as f32],
+                    "DIEfficacy" => &[avg_di],
+                    "SDIPerHit" => &[avg_sdi],
+                    "SavedByDI" => &[di_lived as u64],
+                    "DIOpportunities" => &[di_opps as u64],
                 ]
                 .unwrap(),
             );

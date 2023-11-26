@@ -287,10 +287,16 @@ pub fn unpack_frames(
             stream.set_position(*offset);
             let frame_number = stream.get_i32();
             let i = (frame_number + 123) as usize;
+            if i == duration as usize || i == (duration + 1) as usize {
+                #[cfg(debug_assertions)]
+                println!("Skipping frame {i} due to game-end rollback");
+
+                continue;
+            }
             let port = stream.get_u8();
             stream.advance(1); // skip nana byte
 
-            let (working, _) = p_frames.get_mut(&port).unwrap();
+            let (working, _) = p_frames.get_mut(&port).unwrap_or_else(|| panic!("Frame {frame_number} contains data for invalid port: {port}. Ports present in match: {ports:?}",));
             // if the compiler doesn't catch that these are in-bounds, it's still fairly obvious.
             // i has to be 0..frames_iter.len(), and that length was used to construct all of the
             // vecs that make up the PreFrames objects.
@@ -377,7 +383,7 @@ pub fn unpack_frames_ics(
         };
 
         unsafe {
-            *working.frame_index.get_unchecked_mut(i) = frame_number;
+            working.frame_index[i] = frame_number;
             *working.random_seed.get_unchecked_mut(i) = stream.get_u32();
             *working.action_state.get_unchecked_mut(i) = stream.get_u16();
             *working.position.get_unchecked_mut(i) =

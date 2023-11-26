@@ -57,6 +57,7 @@ struct DefenseStats {
     kills_with_di: Vec<bool>,
     kills_no_di: Vec<bool>,
     kills_any_di: Vec<bool>,
+    kills_some_di: Vec<bool>,
 }
 
 impl DefenseStats {
@@ -85,6 +86,7 @@ impl DefenseStats {
         self.kills_with_di.push(stat.kills_with_di);
         self.kills_no_di.push(stat.kills_no_di);
         self.kills_any_di.push(stat.kills_any_di);
+        self.kills_some_di.push(stat.kills_some_di);
     }
 }
 
@@ -177,6 +179,7 @@ impl From<DefenseStats> for DataFrame {
             Series::new(col::KillsWithDI.into(), val.kills_with_di),
             Series::new(col::KillsNoDI.into(), val.kills_no_di),
             Series::new(col::KillsAllDI.into(), val.kills_any_di),
+            Series::new(col::KillsSomeDI.into(), val.kills_some_di),
         ];
 
         DataFrame::new(vec_series).unwrap()
@@ -208,6 +211,7 @@ struct DefenseRow {
     kills_with_di: bool,
     kills_no_di: bool,
     kills_any_di: bool,
+    kills_some_di: bool,
 }
 
 impl DefenseRow {
@@ -271,12 +275,15 @@ pub(crate) fn find_defense(
         if (!was_in_hitlag && took_damage) || (!in_hitlag && took_damage && is_thrown(states[i]))
         // && !is_magnifying_damage(damage_taken, flags, i)
         {
+            // if attacks.len() >= (i + 2) {
+            // assert_eq!(attacks[i], attacks[i + 1]);
+            // }
             event = Some(DefenseRow::new(
                 i as i32 - 123,
                 post.stocks[i],
                 post.percent[i],
                 damage_taken,
-                Attack::from(attacks[i + 1]),
+                Attack::from(attacks[i]),
                 State::from_char_and_state(player_char, states[i - 1]),
                 post.is_grounded.as_ref().unwrap()[i],
                 post.position[i],
@@ -388,6 +395,7 @@ pub(crate) fn find_defense(
                             result = false;
                             break;
                         }
+                        row.kills_some_di = true;
                     }
 
                     result

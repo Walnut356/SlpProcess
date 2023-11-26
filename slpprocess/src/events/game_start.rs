@@ -8,6 +8,7 @@ use encoding_rs::SHIFT_JIS;
 use num_enum::{FromPrimitive, IntoPrimitive, TryFromPrimitive};
 use polars::prelude::*;
 use strum_macros::IntoStaticStr;
+use anyhow::{Result, anyhow};
 
 use crate::{
     player::{Player, UCFToggles},
@@ -73,7 +74,7 @@ pub struct GameStart {
 impl GameStart {
     // the awkward return type here is because this will only ever be constructed internally, and because it will help
     // a LOT down the line to have the players contained in the top level Game object rather than the GameStart event.
-    pub fn parse(mut raw: Bytes,  date: Option<DateTime<FixedOffset>>) -> (Self, Version, [Player; 2],) {
+    pub fn parse(mut raw: Bytes,  date: Option<DateTime<FixedOffset>>) -> Result<(Self, Version, [Player; 2],)> {
 
 
         let version = Version::new(raw.get_u8(), raw.get_u8(), raw.get_u8());
@@ -93,8 +94,8 @@ impl GameStart {
 
         let mut temp_players = Vec::new();
         for _ in 0..4 {
-            let character = Character::try_from_css(raw.get_u8()).unwrap();
-            let p_type = PlayerType::try_from(raw.get_u8()).unwrap();
+            let character = Character::try_from_css(raw.get_u8())?;
+            let p_type = PlayerType::try_from(raw.get_u8())?;
             raw.advance(1);
             let costume = raw.get_u8();
 
@@ -103,21 +104,31 @@ impl GameStart {
             raw.advance(32) // skip to next port
         }
 
+        let mut p_count = 0;
+        for (i, (_, p_type, _)) in temp_players.iter().enumerate() {
+            match p_type {
+                PlayerType::Human => p_count += 1,
+                PlayerType::CPU => return Err(anyhow!("CPU player detected in port {i}. Parser only tolerates replays with 2 Human players")),
+                PlayerType::Demo => return Err(anyhow!("Demo player detected in port {i}. How did this even happen?")),
+                PlayerType::Empty => continue,
+            }
+        }
+
         raw.advance(72); // skip past "players" 5 and 6
 
         let random_seed = raw.get_u32();
 
         // Null out potentially uninitialized values:
         let mut temp_ucf: [Option<UCFToggles>; 4] = [None; 4];
-        let mut is_pal = None;
-        let mut is_frozen_stadium = None;
-        let mut is_netplay = None;
+        let is_pal = None;
+        let is_frozen_stadium = None;
+        let is_netplay = None;
         let mut display_names = [None, None, None, None];
         let mut connect_codes = [None, None, None, None];
-        let mut match_id = None;
-        let mut match_type = None;
-        let mut game_number = None;
-        let mut tiebreak_number = None;
+        let match_id = None;
+        let match_type = None;
+        let game_number = None;
+        let tiebreak_number = None;
 
         let mut result = GameStart {
                     random_seed,
@@ -158,11 +169,11 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return (
+            return Ok((
                 result,
                 version,
                 players,
-            );
+            ));
         }
 
         for val in temp_ucf.iter_mut() {
@@ -183,7 +194,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as i8).unwrap(),
+                        port: Port::try_from(i as i8)?,
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -197,11 +208,11 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return (
+            return Ok((
                 result,
                 version,
                 players,
-            );
+            ));
         }
 
         raw.advance(64); // skip past in-game tags
@@ -215,7 +226,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as i8).unwrap(),
+                        port: Port::try_from(i as i8)?,
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -229,10 +240,10 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return (
-                result,
+            return Ok(
+                (result,
                 version,
-                players,
+                players),
             );
         }
 
@@ -247,7 +258,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as i8).unwrap(),
+                        port: Port::try_from(i as i8)?,
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -261,11 +272,11 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return (
+            return Ok((
                 result,
                 version,
                 players,
-            );
+            ));
         }
 
         result.is_frozen_stadium = Some(raw.get_u8() != 0);
@@ -279,7 +290,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as i8).unwrap(),
+                        port: Port::try_from(i as i8)?,
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -293,11 +304,11 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return (
+            return Ok((
                 result,
                 version,
                 players,
-            );
+            ));
         }
 
         raw.advance(1); // skip minor scene
@@ -312,7 +323,7 @@ impl GameStart {
                 if temp_players[i].1 == PlayerType::Human {
                     players[count] = Player {
                         character: temp_players[i].0,
-                        port: Port::try_from(i as i8).unwrap(),
+                        port: Port::try_from(i as i8)?,
                         connect_code: connect_codes[i].clone(),
                         display_name: display_names[i].clone(),
                         is_winner: None,
@@ -326,11 +337,11 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return (
+            return Ok((
                 result,
                 version,
                 players,
-            );
+            ));
         }
 
         for val in display_names.iter_mut() {
@@ -376,11 +387,11 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return (
+            return Ok((
                 result,
                 version,
                 players,
-            );
+            ));
         }
 
         raw.advance(29 * 4); // skip past slippi uid
@@ -418,11 +429,11 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return (
+            return Ok((
                 result,
                 version,
                 players,
-            );
+            ));
         }
 
         raw.advance(1); // skip language option
@@ -450,11 +461,11 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return (
+            return Ok((
                 result,
                 version,
                 players,
-            );
+            ));
         }
 
         let mut match_id_bytes = vec![0; 51];
@@ -499,11 +510,11 @@ impl GameStart {
             }
         }
 
-        (
+        Ok((
             result,
             version,
             players,
-        )
+        ))
     }
 }
 

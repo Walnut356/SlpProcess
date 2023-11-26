@@ -150,7 +150,7 @@ pub fn apply_di(original_angle: Radians, joystick: StickPos) -> Radians {
 /// Returns a percentage representing how much the DI affected the final trajectory, relative to the
 /// maximum possible effect that DI can have.
 pub fn get_di_efficacy(old_angle: Radians, new_angle: Radians) -> f32 {
-    ((new_angle - old_angle).abs() / DI_MAX_RADS) * 100.0
+    (new_angle - old_angle).abs() / DI_MAX_RADS
 }
 
 /// Converts a knockback value and angle into the initial X knockback velocity imparted on the
