@@ -8,7 +8,7 @@ use slpprocess::Game;
 
 #[pyfunction]
 pub fn parse(path: String) -> Vec<PyGame> {
-    let vals: Vec<Game> = slpprocess::parse(&path);
+    let vals: Vec<Game> = slpprocess::parse(&path, true);
 
     vals.into_iter().map(PyGame::new).collect()
 }

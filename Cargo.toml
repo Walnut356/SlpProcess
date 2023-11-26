@@ -1,6 +1,3 @@
 [workspace]
 members = ["./slpprocess", "./ssbm-utils", "./py-slpprocess"]
 resolver = "2"
-
-[profile.dev.package."*"]
-opt-level = 3

@@ -7,21 +7,21 @@ pub mod events {
     pub mod post_frame;
     pub mod pre_frame;
 }
-pub mod stats;
 pub mod columns;
 pub mod game;
 pub mod parse;
 pub mod player;
+pub mod stats;
 pub(crate) mod ubjson;
 pub mod utils;
 
 pub use crate::game::Game;
 use crate::stats::combos::Combos;
-use stats::Stats;
 use serde_json::json;
 pub use ssbm_utils::enums::Port;
+use stats::Stats;
 
-use rayon::prelude::*;
+use rayon::{prelude::*, iter::FilterMap, slice::Iter, vec::IntoIter};
 use std::{
     fs::{self, File},
     path::{Path, PathBuf},
@@ -34,7 +34,7 @@ use std::{
 /// Replays that error out during parsing for any reason are skipped.
 ///
 /// Directory parsing is multi-threaded by default, can end up IO limited if replays aren't on an SSD
-pub fn parse(path: &str) -> Vec<Game> {
+pub fn parse(path: &str, multithreaded: bool) -> Vec<Game> {
     let f_path = Path::new(path);
     if f_path.is_file() {
         return vec![Game::new(f_path).unwrap()];
@@ -56,10 +56,52 @@ pub fn parse(path: &str) -> Vec<Game> {
             })
             .collect();
 
-        let result: Vec<Game> = files
-            .par_iter()
-            .filter_map(|path| Game::new(path.as_path()).ok())
-            .collect();
+        let result: Vec<Game> = if multithreaded {
+            files
+                .par_iter()
+                .filter_map(|path| Game::new(path.as_path()).ok())
+                .collect()
+        } else {
+            files
+                .iter()
+                .filter_map(|path| {
+                    #[cfg(debug_assertions)]
+                    dbg!(path);
+
+                    Game::new(path.as_path()).ok()
+                })
+                .collect()
+        };
+
+        return result;
+    }
+    panic!("invalid file path")
+}
+
+/// Returns a parallel iterator over all .slp files in a directory. Any files that error out during
+/// processing are ignored
+pub fn parse_iter(path: &str) -> FilterMap<IntoIter<PathBuf>, impl Fn(PathBuf) -> Option<Game>> {
+    let f_path = Path::new(path);
+    if f_path.is_dir() {
+        let files = fs::read_dir(f_path)
+            .unwrap()
+            .filter_map(|file| {
+                if let Ok(entry) = file {
+                    let path = entry.path();
+                    if path.is_file() && path.extension().is_some_and(|x| x == "slp") {
+                        Some(path)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let result = files
+            .into_par_iter()
+            .filter_map(move |path| Game::new(path.as_path()).ok());
 
         return result;
     }
@@ -68,13 +110,17 @@ pub fn parse(path: &str) -> Vec<Game> {
 
 /// Returns a single stats object containing the stats from all individual games.
 pub fn get_stats(games: &[Game], connect_code: &str) -> Stats {
-    games.iter().filter_map(|game| {
-        let player = game.player_by_code(connect_code);
-        match player {
-            Ok(p) => Some(p.stats.clone()),
-            Err(_) => None,
-        }
-    }).collect::<Vec<_>>().into()
+    games
+        .iter()
+        .filter_map(|game| {
+            let player = game.player_by_code(connect_code);
+            match player {
+                Ok(p) => Some(p.stats.clone()),
+                Err(_) => None,
+            }
+        })
+        .collect::<Vec<_>>()
+        .into()
 }
 
 pub fn get_combos(games: &[Game], connect_code: &str) -> Vec<Arc<Combos>> {
@@ -108,19 +154,14 @@ pub fn to_dolphin_queue(target_path: PathBuf, combo_list: &[Arc<Combos>]) {
         }
     }
 
-
     let mut f = File::create(target_path).unwrap();
     serde_json::to_writer_pretty(f, &playback_queue).unwrap();
     // f.write_all(playback_queue.to_string().as_bytes()).unwrap();
 }
 
 pub mod prelude {
-    pub use crate::{parse, get_combos, get_stats, to_dolphin_queue};
-    pub use crate::{
-        stats::Stats,
-        player::Player,
-        game::Game,
-    };
+    pub use crate::{game::Game, player::Player, stats::Stats};
+    pub use crate::{get_combos, get_stats, parse, to_dolphin_queue};
 
     pub use ssbm_utils::enums::BitFlags;
 }
@@ -133,7 +174,7 @@ mod test {
     #[test]
     fn test_ics() {
         let replay = r"../../py-slippi-stats/test/Bench Replays/ics_ditto.slp";
-        let game = parse(replay).pop().unwrap();
+        let game = parse(replay, true).pop().unwrap();
 
         let player = game.player_by_port(Port::P1).unwrap();
 

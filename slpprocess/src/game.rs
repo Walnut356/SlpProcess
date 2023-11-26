@@ -105,8 +105,9 @@ impl Game {
 
     pub fn summarize(&self) -> DataFrame {
         df!(
-            "FileName" => &[self.path.file_stem().unwrap().to_str()],
+            "File" => &[self.path.file_stem().unwrap().to_str()],
             "Datetime" => &[self.metadata.date.map(|x| x.naive_local().to_string())],
+            "Duration" => &[format!("{}:{:02}", self.duration.as_secs() / 60, self.duration.as_secs() % 60)],
             // "MatchID" => &[self.metadata.match_id.clone()],
             "MatchType" => &[self.metadata.match_type.map(Into::<&str>::into)],
             "Game" => &[self.metadata.game_number],
