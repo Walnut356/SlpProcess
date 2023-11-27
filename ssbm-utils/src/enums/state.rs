@@ -4,6 +4,8 @@ use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 
 use crate::enums::Character;
 
+/// Wrapper enum for ActionState, CharacterState, and any possibly unknown values. Mainly useful via
+/// `State::from_state_and_char`
 #[derive(
     Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Display,
 )]
@@ -15,11 +17,14 @@ pub enum State {
 }
 
 impl State {
-    pub fn from_char_and_state(character: Character, state: u16) -> Self {
+    pub fn from_state_and_char(state: u16, character: Option<Character>) -> Self {
         if state < 341 {
             Self::Universal(ActionState::from_repr(state).unwrap())
-        } else {
-            Self::Unique(CharacterState::from_char_and_state(character, state))
+        } else if let Some(c) = character {
+            Self::Unique(CharacterState::from_char_and_state(c, state))
+        }
+        else {
+            Self::Unknown(state)
         }
     }
 }
@@ -36,6 +41,16 @@ impl From<State> for &'static str {
             State::Universal(x) => x.into(),
             State::Unique(x) => x.into(),
             State::Unknown(_) => "Unknown",
+        }
+    }
+}
+
+impl From<State> for u16 {
+    fn from(value: State) -> Self {
+        match value {
+            State::Universal(x) => x as u16,
+            State::Unique(x) => x as u16,
+            State::Unknown(x) => x,
         }
     }
 }
@@ -658,11 +673,45 @@ impl PartialOrd<u16> for ActionState {
     }
 }
 
+impl PartialEq<ActionState> for u16 {
+    fn eq(&self, other: &ActionState) -> bool {
+        *self == (*other) as u16
+    }
+}
+
+impl PartialOrd<ActionState> for u16 {
+    fn partial_cmp(&self, other: &ActionState) -> Option<std::cmp::Ordering> {
+        self.partial_cmp(&(*other as u16))
+    }
+}
+
+impl AsRef<u16> for ActionState {
+    fn as_ref(&self) -> &u16 {
+        // using the same trick as bitflags to coerce to a reference since any attempt to extract
+        // the value will put it on the stack and we can't return a reference to that
+        unsafe { &(*(self as *const ActionState as *const u16)) }
+    }
+}
+
+impl PartialEq<ActionRange> for ActionState {
+    fn eq(&self, other: &ActionRange) -> bool {
+        *self as u16 == *other as u16
+    }
+}
+
+impl PartialOrd<ActionRange> for ActionState {
+    fn partial_cmp(&self, other: &ActionRange) -> Option<std::cmp::Ordering> {
+        self.partial_cmp(&(*other as u16))
+    }
+}
+
 /// Used to simplify checks for clusters of action states
 ///
 /// ranges are inclusive, comparisons should be GT/Eq or LT/Eq:
 /// ```
-/// ActionRange::AERIAL_ATTACK_START <= x <= ActionRange::AERIAL_ATTACK_END;
+/// use ssbm_utils::enums::{ActionRange as AR, ActionState};
+/// let x = ActionState::ATTACK_AIR_HI;
+/// assert!((AR::AERIAL_ATTACK_START..=AR::AERIAL_ATTACK_END).contains(&x));
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, FromRepr)]
 #[repr(u16)]
@@ -731,17 +780,18 @@ impl PartialOrd<ActionRange> for u16 {
     }
 }
 
-impl PartialEq<ActionState> for u16 {
+impl PartialEq<ActionState> for ActionRange {
     fn eq(&self, other: &ActionState) -> bool {
-        *self == (*other) as u16
+        *self as u16 == *other as u16
     }
 }
 
-impl PartialOrd<ActionState> for u16 {
+impl PartialOrd<ActionState> for ActionRange {
     fn partial_cmp(&self, other: &ActionState) -> Option<std::cmp::Ordering> {
-        self.partial_cmp(&(*other as u16))
+        self.partial_cmp(AsRef::<u16>::as_ref(other))
     }
 }
+
 
 // TODO character-specific action states
 

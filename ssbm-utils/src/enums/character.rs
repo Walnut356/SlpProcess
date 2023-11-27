@@ -6,7 +6,7 @@ use strum_macros::{Display, EnumString};
 /// In-game and Character Select Screen **do not** use the same numbering system. When retrieving
 /// a character, match your number's source to the correct `try_from`
 /// ```rust
-/// # use slpprocess::enums::character::Character;
+/// # use ssbm_utils::enums::character::Character;
 /// let char_1 = Character::try_from_css(0);
 /// let char_2 = Character::try_from_internal(0);
 /// assert!(char_1.is_ok_and(|char| char == Character::CaptainFalcon));
@@ -14,7 +14,7 @@ use strum_macros::{Display, EnumString};
 /// ```
 /// Several colloquial names for some characters are also valid, these are also case-insensitive
 /// ```
-/// # use slpprocess::enums::character::Character;
+/// # use ssbm_utils::enums::character::Character;
 /// let char_3 = Character::try_from("jiggs").unwrap();
 /// let char_4 = Character::try_from("puff").unwrap();
 /// let char_5 = Character::try_from("jIgGlYpUfF").unwrap();
@@ -64,7 +64,7 @@ pub enum Character {
     /// ```
     #[strum(serialize = "ics", serialize = "iceclimbers")]
     IceClimbers = 14,
-    #[strum(serialize = "puff", serialize = "jigglypuff", serialize = "jigglypuff")]
+    #[strum(serialize = "puff", serialize = "jiggs", serialize = "jigglypuff")]
     Jigglypuff = 15,
     Samus = 16,
     Yoshi = 17,

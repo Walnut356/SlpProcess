@@ -12,13 +12,14 @@ pub const DIGITAL_TRIGGER_MASK: u32 = 0x60;
 /// The buttons as interpreted by the game engine. See `buttons::Controller` for buttons as seen by
 /// the console's controller polls directly.
 ///
-/// Can be casted trivially to and from u32
+/// Can be casted trivially to and from u32 via deref abuse
 /// ```
-/// # use slpprocess::enums::buttons::Engine;
-/// let flags = Engine::X | Engine::A | Engine::L;
-/// let val: u32 = flags.bits();
-/// let back = BitFlags
-///
+/// # use ssbm_utils::enums::EngineInput;
+/// let flags = EngineInput::X | EngineInput::A | EngineInput::L;
+/// let val: u32 = *flags;
+/// let back: EngineInput = val.into();
+/// let back_again = EngineInput::from(val);
+/// ```
 /// Notably, the engine considers Z presses to be analog trigger 0.35 + Z + A, while the controller
 /// sees Z as just Z.
 ///
