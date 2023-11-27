@@ -1,15 +1,8 @@
 #![allow(clippy::too_many_arguments)]
 
-use std::{cmp, f32::consts::TAU};
+use std::cmp;
 
-use approx::assert_relative_eq;
 
-use crate::{
-    calc::knockback::knockback,
-    constants::{KB_DECAY, TUMBLE_THRESHOLD, Z_ANALOG},
-    enums::{character::*, stage::*},
-    types::Radians,
-};
 
 pub fn shield_stun(damage: f32, analog: f32, is_yoshi: bool) -> u32 {
     if is_yoshi {
@@ -134,58 +127,68 @@ pub fn unstaled_damage(damage: f32, stale_queue: &[bool]) -> f32 {
     damage / (1.0 - result)
 }
 
-#[test]
-fn test_shield_stun() {
-    // the values for these are equal parts manually tested and not.
-    // i'm not sure how uncle punch displays shield stun, but i don't think it quite lines up with how
-    // the community defines it or how it works intuitively? I'm not sure. But UP's values are universally 1 higher than
-    // these, maybe because the last frame of hitlag and the first frame of hitstun decrement at the same time?
-    let ss = shield_stun(17.0, 1.0, false);
-    assert_eq!(ss, 9);
+#[cfg(test)]
+mod test {
+    use approx::assert_relative_eq;
 
-    let ss = shield_stun(12.0, Z_ANALOG, false);
-    assert_eq!(ss, 18);
+    use crate::{
+        calc::{knockback::knockback, attack::*},
+        constants::Z_ANALOG,
+        enums::character::*,
+    };
+    #[test]
+    fn test_shield_stun() {
+        // the values for these are equal parts manually tested and not.
+        // i'm not sure how uncle punch displays shield stun, but i don't think it quite lines up with how
+        // the community defines it or how it works intuitively? I'm not sure. But UP's values are universally 1 higher than
+        // these, maybe because the last frame of hitlag and the first frame of hitstun decrement at the same time?
+        let ss = shield_stun(17.0, 1.0, false);
+        assert_eq!(ss, 9);
 
-    // tests weird animation shortening
-    let ss = shield_stun(20.0, 1.0, false);
-    assert_eq!(ss, 10);
-}
+        let ss = shield_stun(12.0, Z_ANALOG, false);
+        assert_eq!(ss, 18);
 
-#[test]
-fn test_hitstun() {
-    let fox = Character::Fox.get_stats();
-    // marth's tipper fsmash
-    // trajectory: 361.0
-    let kb = knockback(
-        20.0, 20.0, 70, 80, 0, false, &fox, 80.0, false, false, false, false, false, false,
-    );
-    let hs = hitstun(kb);
+        // tests weird animation shortening
+        let ss = shield_stun(20.0, 1.0, false);
+        assert_eq!(ss, 10);
+    }
 
-    assert_eq!(hs, 86);
+    #[test]
+    fn test_hitstun() {
+        let fox = Character::Fox.get_stats();
+        // marth's tipper fsmash
+        // trajectory: 361.0
+        let kb = knockback(
+            20.0, 20.0, 70, 80, 0, false, &fox, 80.0, false, false, false, false, false, false,
+        );
+        let hs = hitstun(kb);
 
-    // falco shine
-    // trajectory: 84.0
-    let kb = knockback(
-        8.0, 8.0, 50, 110, 0, false, &fox, 80.0, false, false, false, false, false, false,
-    );
-    let hs = hitstun(kb);
+        assert_eq!(hs, 86);
 
-    assert_eq!(hs, 61);
-}
+        // falco shine
+        // trajectory: 84.0
+        let kb = knockback(
+            8.0, 8.0, 50, 110, 0, false, &fox, 80.0, false, false, false, false, false, false,
+        );
+        let hs = hitstun(kb);
 
-#[test]
-fn test_stale_damage() {
-    let sd = staled_damage(
-        15.0,
-        &[true, true, false, false, false, true, false, false, false],
-    );
+        assert_eq!(hs, 61);
+    }
 
-    assert_relative_eq!(sd, 11.85);
+    #[test]
+    fn test_stale_damage() {
+        let sd = staled_damage(
+            15.0,
+            &[true, true, false, false, false, true, false, false, false],
+        );
 
-    let usd = unstaled_damage(
-        sd,
-        &[true, true, false, false, false, true, false, false, false],
-    );
+        assert_relative_eq!(sd, 11.85);
 
-    assert_eq!(usd, 15.0);
+        let usd = unstaled_damage(
+            sd,
+            &[true, true, false, false, false, true, false, false, false],
+        );
+
+        assert_eq!(usd, 15.0);
+    }
 }

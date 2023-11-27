@@ -1,6 +1,5 @@
 #![allow(non_camel_case_types)]
 
-use num_traits::Signed;
 use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 
 use crate::enums::bitflag_impl::BitFlags;

@@ -1,22 +1,13 @@
 #![allow(clippy::too_many_arguments)]
 
-use std::{
-    cmp,
-    f32::consts::{PI, TAU},
-};
-
-use approx::assert_relative_eq;
+use std::f32::consts::{PI, TAU};
 
 use crate::{
     calc::attack::hitstun,
-    constants::{KB_DECAY, TUMBLE_THRESHOLD},
+    constants::{KB_DECAY, TUMBLE_THRESHOLD, DI_MAX_RADS},
     enums::{character::*, stage::*},
     types::{Position, Radians, StickPos, Velocity},
 };
-
-const DI_MAX_DEGREES: f32 = 18.0;
-// why is .to_radians() not const?
-const DI_MAX_RADS: f32 = 0.314159;
 
 /// Calculates the raw knockback value given the circumstances of the hit.
 ///
@@ -284,47 +275,53 @@ pub fn should_kill(
     false
 }
 
-// -------------------------------------------- Tests ------------------------------------------- //
 
-// TODO broke tests due to changing knockback travel to take x/y directly instead of KB + trajectory
-// #[test]
-// fn test_knockback() {
-//     let fox = Character::Fox.get_stats();
-//     // marth's tipper fsmash
-//     // trajectory: 361.0
-//     let kb = knockback(
-//         20.0, 20.0, 70, 80, 0, false, &fox, 80.0, false, false, false, false, false, false,
-//     );
-//     assert_relative_eq!(kb, 215.8);
+#[cfg(test)]
+mod tests {
+    use approx::assert_relative_eq;
 
-//     // falco shine
-//     // trajectory: 84.0
-//     let kb = knockback(
-//         8.0, 8.0, 50, 110, 0, false, &fox, 80.0, false, false, false, false, false, false,
-//     );
+    use crate::{enums::Character, calc::knockback::*};
 
-//     assert_relative_eq!(kb, 154.2);
-// }
+    // TODO broke tests due to changing knockback travel to take x/y directly instead of KB + trajectory
+    #[test]
+    fn test_knockback() {
+        let fox = Character::Fox.get_stats();
+        // marth's tipper fsmash
+        // trajectory: 361.0
+        let kb = knockback(
+            20.0, 20.0, 70, 80, 0, false, &fox, 80.0, false, false, false, false, false, false,
+        );
+        assert_relative_eq!(kb, 215.8);
 
-// #[test]
-// fn test_sakurai_angle() {
-//     let falco = Character::Falco.get_stats();
-//     // Marth sourspot jab
-//     let kb = knockback(
-//         4.0, 4.0, 50, 20, 0, false, &falco, 9.0, false, false, false, false, false, false,
-//     );
-//     let trajectory = 361.0;
+        // falco shine
+        // trajectory: 84.0
+        let kb = knockback(
+            8.0, 8.0, 50, 110, 0, false, &fox, 80.0, false, false, false, false, false, false,
+        );
 
-//     assert_eq!(kb, 32.033333);
-//     let modified = resolve_sakurai_angle(trajectory, kb, true);
-//     assert_eq!(modified, 14.666443);
+        assert_relative_eq!(kb, 154.2);
+    }
 
-//     let dk = Character::DonkeyKong.get_stats();
-//     // Marth sourspot jab, @ position 8 in the stale move queue
-//     let kb = knockback(
-//         3.92, 3.92, 50, 20, 0, false, &dk, 12.0, false, false, false, false, false, false,
-//     );
-//     assert_eq!(kb, 32.082825);
-//     let modified = resolve_sakurai_angle(trajectory, kb, true);
-//     assert_eq!(modified, 36.44287);
-// }
+    #[test]
+    fn test_sakurai_angle() {
+        let falco = Character::Falco.get_stats();
+        // Marth sourspot jab
+        let kb = knockback(
+            4.0, 4.0, 50, 20, 0, false, &falco, 9.0, false, false, false, false, false, false,
+        );
+        let trajectory = 361.0f32.to_radians();
+
+        assert_eq!(kb, 32.033333);
+        let modified = resolve_sakurai_angle(trajectory, kb, true);
+        assert_eq!(modified, 14.666443);
+
+        let dk = Character::DonkeyKong.get_stats();
+        // Marth sourspot jab, @ position 8 in the stale move queue
+        let kb = knockback(
+            3.92, 3.92, 50, 20, 0, false, &dk, 12.0, false, false, false, false, false, false,
+        );
+        assert_eq!(kb, 32.082825);
+        let modified = resolve_sakurai_angle(trajectory, kb, true);
+        assert_eq!(modified, 36.44287);
+    }
+    }

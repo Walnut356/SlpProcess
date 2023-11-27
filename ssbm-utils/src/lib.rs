@@ -58,4 +58,10 @@ pub mod constants {
 
     /// The max number of frames that will be present in a tournament match that ends in a time out
     pub const MAX_TOURNAMENT_GAME_LENGTH: usize = 28924;
+
+    /// The max amount that DI can change a knockback angle by, in degrees
+    pub const DI_MAX_DEGREES: f32 = 18.0;
+    // why is .to_radians() not const?
+    /// The max amount that DI can change a knockback angle by, in radians
+    pub const DI_MAX_RADS: f32 = 0.314159;
 }

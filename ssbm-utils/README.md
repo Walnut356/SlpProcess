@@ -12,5 +12,8 @@ Currently supports:
 * shield pushback for attacker and defender
 * jump arc
 * knockback/knockback travel (and associated helper functions such as modifying trajectory by DI)
+* Enums for states, bitflags, characters, etc.
+* Character stats
 
-The crate is currently designed around being easily extensible to FFI, but eventually there will be a dedicated version with better ergonomics for rust, alongside FFI libraries for C++ and python.
+The crate is currently designed around being easily extensible to FFI, but eventually there might be a
+dedicated version for rust with better ergonomics/type safety.

@@ -35,7 +35,7 @@ impl From<State> for &'static str {
         match value {
             State::Universal(x) => x.into(),
             State::Unique(x) => x.into(),
-            State::Unknown(x) => "Unknown",
+            State::Unknown(_) => "Unknown",
         }
     }
 }

@@ -305,24 +305,6 @@ impl EngineInput {
 
 // --------------------------------------- ControllerInput -------------------------------------- //
 
-impl ControllerInput {
-    const VAL_TABLE: [u16; 13] = [
-        1 << 0,
-        1 << 1,
-        1 << 2,
-        1 << 3,
-        1 << 4,
-        1 << 5,
-        1 << 6,
-        1 << 7,
-        1 << 8,
-        1 << 9,
-        1 << 10,
-        1 << 11,
-        1 << 12,
-    ];
-}
-
 impl From<u16> for ControllerInput {
     #[inline]
     fn from(val: u16) -> Self {
