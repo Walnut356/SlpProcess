@@ -284,7 +284,7 @@ pub(crate) fn find_defense(
                 post.percent[i],
                 damage_taken,
                 Attack::from(attacks[i]),
-                State::from_char_and_state(player_char, states[i - 1]),
+                State::from_state_and_char(states[i - 1], Some(player_char)),
                 post.is_grounded.as_ref().unwrap()[i],
                 post.position[i],
             ));
