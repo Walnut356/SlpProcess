@@ -67,38 +67,32 @@ impl Stats {
     // AnyValue I suppose
 
     fn wd_summary(&self) -> Option<DataFrame> {
-        use crate::columns::WavedashStats as col;
-        let avg_angle = self
-            .wavedash
-            .column(Into::<&'static str>::into(col::Angle))
-            .unwrap()
-            .f32()
-            .unwrap()
-            .mean()
-            .unwrap(); // select([Into::<&str>::into(col::Angle)]).unwrap().mean();
+        use crate::columns::WavedashStats as clm;
+        let lf = self.wavedash.clone().lazy();
 
-        df!(
-            "WavedashCount" => &[self.wavedash.height() as u32],
-            "AvgAngle" => &[avg_angle as f32]
-        )
+        lf.select(&[
+            col(clm::Waveland.into())
+                .filter(col(clm::Waveland.into()).eq(lit(false)))
+                .count()
+                .alias("Wavedashes"),
+            col(clm::Waveland.into())
+                .filter(col(clm::Waveland.into()).eq(lit(true)))
+                .count()
+                .alias("Wavelands"),
+            col(clm::Angle.into()).mean().alias("AvgAngle"),
+        ])
+        .collect()
         .ok()
     }
 
     fn lc_summary(&self) -> Option<DataFrame> {
-        use crate::columns::LCancelStats as col;
+        use crate::columns::LCancelStats as clm;
         if let Some(df) = &self.l_cancel {
-            let temp = df
-                .column(into_str!(col::LCancelled))
-                .unwrap()
-                .bool()
-                .unwrap()
-                .mean();
+            let lf = df.clone().lazy();
 
-            return df!(
-                "LCancelEvents" => &[df.height() as u32],
-                "LCancelPercent" => &[temp],
-            )
-            .ok();
+            return lf.select(&[
+                col(clm::LCancelled.into()).mean().alias("LCancelPercent"),
+            ]).collect().ok();
         }
 
         None
@@ -113,7 +107,11 @@ impl Stats {
                     col(clm::DamageTaken.into()).sum(),
                     col(clm::DamageTaken.into()).count().alias("HitsTaken"),
                     col(clm::DIEfficacy.into()).mean(),
-                    col(clm::LastHitBy.into()).mode().alias("MostHitBy"),
+                    col(clm::LastHitBy.into())
+                        .mode()
+                        .implode()
+                        .cast(DataType::List(Box::new(DataType::Utf8)))
+                        .alias("MostHitBy"),
                     col(clm::StateBeforeHit.into())
                         .mode()
                         .implode()
@@ -156,87 +154,6 @@ impl Stats {
                 ])
                 .collect()
                 .ok();
-
-            // return Some(lf.select(&[
-            //     col(clm::DamageTaken.into()).sum(),
-            //     col(clm::DIEfficacy.into()).mean(),
-            //     col(clm::LastHitBy.into()).mode().alias("MostHitBy"),
-            //     col(clm::StateBeforeHit.into()).mode().alias("StateMostPunished"),
-            //     col(clm::SDIInputs.into()).list().len().sum().alias("SDIPerHit"),
-            //     col(clm::KillsAllDI.into()).eq(lit(false)).and(col(clm::KillsWithDI.into()).eq(lit(true)).or(col(clm::KillsNoDI.into()).eq(lit(true)))).alias("DIOpportunities"),
-            //     col(clm::KillsWithDI.into()).eq(lit(true)).and(col(clm::KillsAllDI.into()).eq(lit(false))).count().alias("DIDeaths"),
-            //     col(clm::KillsWithDI.into()).eq(lit(false)).and(col(clm::KillsNoDI.into()).eq(lit(true))).count().alias("DILives"),
-            // ]).collect().unwrap());
-            let total_dmg = df
-                .column(into_str!(clm::DamageTaken))
-                .unwrap()
-                .f32()
-                .unwrap()
-                .sum();
-            let avg_di = df
-                .column(into_str!(clm::DIEfficacy))
-                .unwrap()
-                .f32()
-                .unwrap()
-                .mean();
-            let common_hit = {
-                // if these aren't 2 different statements the borrow checker gets mad =')
-                let temp_1 = mode::mode(df.column(into_str!(clm::LastHitBy)).unwrap()).unwrap();
-                let temp_2 = temp_1.get(0);
-                match temp_2 {
-                    Ok(AnyValue::Utf8(x)) => x.to_owned(),
-                    Err(_) => "null".to_string(),
-                    _ => panic!("Non-string value in column LastHitBy"),
-                }
-            };
-            let avg_sdi = if df.height() > 0 {
-                let temp = df.column(into_str!(clm::SDIInputs)).unwrap();
-                let mut total = 0;
-                for val in temp.iter() {
-                    match val {
-                        AnyValue::List(x) => total += x.len(),
-                        _ => panic!("Non-list value in column SDIInputs"),
-                    }
-                }
-                total as f32 / df.height() as f32
-            } else {
-                0.0
-            };
-
-            let lf = df.clone().lazy();
-            let di_lived = lf
-                .clone()
-                .filter(
-                    col(clm::KillsWithDI.into())
-                        .eq(lit(false))
-                        .and(col(clm::KillsNoDI.into()).eq(lit(true))),
-                )
-                .collect()
-                .unwrap()
-                .height();
-
-            let di_opps = lf
-                .clone()
-                .filter(
-                    col(clm::KillsWithDI.into())
-                        .eq(lit(true))
-                        .and(col(clm::KillsAllDI.into()).eq(lit(false))),
-                )
-                .collect()
-                .unwrap()
-                .height();
-
-            return Some(
-                df![
-                    "DamageTaken" => &[total_dmg],
-                    "MostHitBy" => &[common_hit],
-                    "DIEfficacy" => &[avg_di],
-                    "SDIPerHit" => &[avg_sdi],
-                    "SavedByDI" => &[di_lived as u64],
-                    "DIOpportunities" => &[di_opps as u64],
-                ]
-                .unwrap(),
-            );
         }
 
         None
