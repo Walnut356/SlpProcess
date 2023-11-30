@@ -31,6 +31,8 @@ pub mod enums {
 }
 pub mod checks;
 pub mod constants {
+    use std::f32::consts::PI;
+
     /// Damage is scaled by .7 when applied
     pub const SHIELD_HEALTH_MAX: f32 = 60.0;
 
@@ -61,7 +63,14 @@ pub mod constants {
 
     /// The max amount that DI can change a knockback angle by, in degrees
     pub const DI_MAX_DEGREES: f32 = 18.0;
-    // why is .to_radians() not const?
+
+    // Some of these get a little dumb because floating point functions aren't const =)
+
     /// The max amount that DI can change a knockback angle by, in radians
-    pub const DI_MAX_RADS: f32 = 0.314159;
+    pub const DI_MAX_RADS: f32 = 18.0 * (PI / 180.0);
+
+    /// The magnitude of the change in position per ASDI
+    pub const ASDIL_DIST: f32 = 3.0;
+    /// The magintude of the change in position per SDI input
+    pub const SDI_DIST: f32 = 6.0;
 }

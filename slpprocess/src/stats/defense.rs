@@ -4,14 +4,15 @@ use polars::prelude::*;
 
 use ssbm_utils::{
     calc::knockback::{
-        apply_di, get_di_efficacy, initial_x_velocity, initial_y_velocity, kb_from_initial,
-        should_kill,
+        apply_di, get_di_efficacy, get_horizontal_decay, get_vertical_decay, initial_x_velocity,
+        initial_y_velocity, kb_from_initial, should_kill,
     },
     checks::{
         get_damage_taken, is_cmd_grabbed, is_electric_attack, is_grabbed, is_in_hitlag,
-        is_shielding_flag, is_thrown, just_took_damage,
+        is_shielding_flag, is_thrown, is_vcancel_state, just_pressed_any, just_took_damage,
     },
-    enums::{Attack, Character, State, StickRegion},
+    constants::KB_DECAY,
+    enums::{ActionRange, Attack, Character, EngineInput, State, StickRegion},
     types::{Degrees, Position, StickPos, Velocity},
 };
 
@@ -41,7 +42,7 @@ struct DefenseStats {
     last_hit_by: Vec<Attack>,
     state_before_hit: Vec<State>,
     grounded: Vec<bool>,
-    crouch_cancel: Vec<bool>,
+    crouch_cancel: Vec<Option<bool>>,
     hitlag_frames: Vec<u8>,
     stick_during_hitlag: Vec<Vec<StickRegion>>,
     sdi_inputs: Vec<Vec<StickRegion>>,
@@ -58,6 +59,7 @@ struct DefenseStats {
     kills_no_di: Vec<bool>,
     kills_any_di: Vec<bool>,
     kills_some_di: Vec<bool>,
+    v_cancel: Vec<Option<bool>>,
 }
 
 impl DefenseStats {
@@ -87,6 +89,7 @@ impl DefenseStats {
         self.kills_no_di.push(stat.kills_no_di);
         self.kills_any_di.push(stat.kills_any_di);
         self.kills_some_di.push(stat.kills_some_di);
+        self.v_cancel.push(stat.v_cancel);
     }
 }
 
@@ -106,6 +109,7 @@ impl From<DefenseStats> for DataFrame {
             ),
             Series::new(col::Grounded.into(), val.grounded),
             Series::new(col::CrouchCancel.into(), val.crouch_cancel),
+            Series::new(col::VCancel.into(), val.v_cancel),
             Series::new(col::ASDI.into(), as_vec_arrow(val.asdi)),
             Series::new(col::HitlagFrames.into(), val.hitlag_frames),
             Series::new(
@@ -147,20 +151,19 @@ impl From<DefenseStats> for DataFrame {
             .unwrap()
             .into_series(),
             StructChunked::new(
-                col::Knockback.into(),
-                &[
-                    Series::new("x", val.kb.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.kb.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            Series::new(col::KBAngle.into(), val.kb_angle),
-            StructChunked::new(
                 col::DIStick.into(),
                 &[
                     Series::new("x", val.di_stick.iter().map(|p| p.x).collect::<Vec<_>>()),
                     Series::new("y", val.di_stick.iter().map(|p| p.y).collect::<Vec<_>>()),
+                ],
+            )
+            .unwrap()
+            .into_series(),
+            StructChunked::new(
+                col::Knockback.into(),
+                &[
+                    Series::new("x", val.kb.iter().map(|p| p.x).collect::<Vec<_>>()),
+                    Series::new("y", val.kb.iter().map(|p| p.y).collect::<Vec<_>>()),
                 ],
             )
             .unwrap()
@@ -174,6 +177,7 @@ impl From<DefenseStats> for DataFrame {
             )
             .unwrap()
             .into_series(),
+            Series::new(col::KBAngle.into(), val.kb_angle),
             Series::new(col::DIKBAngle.into(), val.di_kb_angle),
             Series::new(col::DIEfficacy.into(), val.di_efficacy),
             Series::new(col::KillsWithDI.into(), val.kills_with_di),
@@ -195,7 +199,7 @@ struct DefenseRow {
     last_hit_by: Attack,
     state_before_hit: State,
     grounded: bool,
-    crouch_cancel: bool,
+    crouch_cancel: Option<bool>,
     hitlag_frames: u8,
     stick_during_hitlag: Vec<StickRegion>,
     sdi_inputs: Vec<StickRegion>,
@@ -212,6 +216,7 @@ struct DefenseRow {
     kills_no_di: bool,
     kills_any_di: bool,
     kills_some_di: bool,
+    v_cancel: Option<bool>,
 }
 
 impl DefenseRow {
@@ -256,9 +261,23 @@ pub(crate) fn find_defense(
     let mut event = None;
     let mut stat_table = DefenseStats::default();
 
+    // value tracking for v cancel
+    let mut l_lockout: i32 = 0;
+    let mut most_recent_l = 0;
+
     // start 1 frame "late" to prevent index errors
     for i in 1..pre.frame_index.len() {
         // check for grab states
+
+        if just_pressed_any(
+            EngineInput::R | EngineInput::L,
+            pre.engine_buttons[i],
+            pre.engine_buttons[i - 1],
+        ) {
+            l_lockout = 40;
+            most_recent_l = i;
+        }
+        l_lockout -= 1;
 
         // just_in_hitlag, filtering out shield hits
         let in_hitlag = is_in_hitlag(flags[i]);
@@ -275,22 +294,33 @@ pub(crate) fn find_defense(
         if (!was_in_hitlag && took_damage) || (!in_hitlag && took_damage && is_thrown(states[i]))
         // && !is_magnifying_damage(damage_taken, flags, i)
         {
-            // if attacks.len() >= (i + 2) {
-            // assert_eq!(attacks[i], attacks[i + 1]);
-            // }
+            let prev_state = states[i - 1];
+
             event = Some(DefenseRow::new(
                 i as i32 - 123,
                 post.stocks[i],
                 post.percent[i],
                 damage_taken,
                 Attack::from(attacks[i]),
-                State::from_state_and_char(states[i - 1], Some(player_char)),
+                State::from_state_and_char(prev_state, Some(player_char)),
                 post.is_grounded.as_ref().unwrap()[i],
                 post.position[i],
             ));
 
             let row = event.as_mut().unwrap();
             row.kb = post.knockback.as_ref().unwrap()[i];
+
+            if row.grounded || !is_vcancel_state(prev_state) {
+                row.v_cancel = None;
+            } else if (1..3).contains(&(i - most_recent_l)) // must have hit l a max of 2 frames before the hit
+                && l_lockout.is_negative()
+            // must not be in L lockout
+            {
+                println!("Woah a vcancel!");
+                row.v_cancel = Some(true);
+            } else {
+                row.v_cancel = Some(false);
+            }
         }
 
         // ----------------------------------- mid-event data ----------------------------------- //
@@ -314,20 +344,27 @@ pub(crate) fn find_defense(
 
             // check for crouch cancel. I could use action states, but there's complications with
             // if you just entered crouch, or if you crouched during a subframe event, so we're just
-            // gaonna check against the expected hitlag frames.
+            // gonna check against the expected hitlag frames.
 
             let expected_hitlag = ssbm_utils::calc::attack::hitlag(
                 row.damage_taken,
                 is_electric_attack(row.last_hit_by, &opnt_char),
                 true,
             );
-            if row.grounded // can't CC in the air
-                && row.hitlag_frames as u32 == expected_hitlag / 2
-            {
-                row.crouch_cancel = true;
+            if row.grounded {
+                if row.hitlag_frames as u32 == expected_hitlag {
+                    row.crouch_cancel = Some(true);
+                } else {
+                    row.crouch_cancel = Some(false);
+                }
+            } else {
+                row.crouch_cancel = None;
             }
 
-            row.hitlag_end = post.position[i - 1];
+            let kb = post.knockback.as_ref().unwrap()[i];
+            let with_decay = kb - Velocity::new(KB_DECAY * kb.x, KB_DECAY * kb.y);
+
+            row.hitlag_end = post.position[i] - with_decay;
 
             let effective_stick = pre.joystick[i];
 

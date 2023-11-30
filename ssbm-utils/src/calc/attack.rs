@@ -42,7 +42,7 @@ pub fn hitlag(damage: f32, electric: bool, crouch_cancel: bool) -> u32 {
         false => 1.0,
     };
     cmp::min(
-        ((((damage / 3.0).floor() + 3.0).floor() * e).floor() * cc).floor() as u32,
+        ((((damage / 3.0) + 3.0).floor() * e).floor() * cc).floor() as u32,
         20,
     )
 }

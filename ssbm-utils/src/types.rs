@@ -82,6 +82,47 @@ impl Velocity {
     }
 }
 
+impl Add<Velocity> for Velocity {
+    type Output = Self;
+
+    #[inline]
+    fn add(self, rhs: Velocity) -> Self::Output {
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
+    }
+}
+
+impl AddAssign<Velocity> for Velocity {
+    #[inline]
+    fn add_assign(&mut self, rhs: Velocity) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
+}
+
+impl Sub<Velocity> for Velocity {
+    type Output = Self;
+
+    #[inline]
+    fn sub(self, rhs: Velocity) -> Self::Output {
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
+}
+
+impl SubAssign<Velocity> for Velocity {
+    #[inline]
+    fn sub_assign(&mut self, rhs: Velocity) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+    }
+}
+
+
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Position {
     pub x: f32,

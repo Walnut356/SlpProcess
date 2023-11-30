@@ -268,8 +268,21 @@ pub fn lost_stock(current: u8, prev: u8) -> bool {
     current < prev
 }
 
+/// Returns true if **any** of the target bits appear in the current frame, but **do not** appear in
+/// the previous frame. See alse: `just_pressed_all`
 #[inline]
-pub fn just_pressed<T: PrimInt>(
+pub fn just_pressed_any<T: PrimInt>(
+    target: impl BitFlags<Other = T> + Buttons,
+    current: T,
+    prev: T,
+) -> bool {
+    target.intersects(current) && !target.intersects(prev)
+}
+
+/// Returns true if **all** of the target bits appear in the current frame, but **do not** appear in
+/// the previous frame. See alse: `just_pressed_any`
+#[inline]
+pub fn just_pressed_all<T: PrimInt>(
     target: impl BitFlags<Other = T> + Buttons,
     current: T,
     prev: T,
@@ -319,6 +332,13 @@ pub fn is_electric_attack(attack: Attack, character: &Character) -> bool {
         .contains(&attack),
         _ => false,
     }
+}
+
+/// Returns true if the player is in a state that allows v-cancelling. See [this post](https://old.reddit.com/r/SSBM/comments/3n1kgf/new_global_technique_discovery_vcanceling_reduce/)
+/// for more details
+pub fn is_vcancel_state(state: u16) -> bool {
+    (ActionState::JUMP_F..=ActionState::DAMAGE_FALL).contains(&state)
+        || state == ActionState::ESCAPE_AIR
 }
 
 // TODO get_randall_position() https://github.com/altf4/libmelee/blob/c98c26b776a0ad5024efa81487ae6a0ce27b6ab5/melee/stages.py#L160

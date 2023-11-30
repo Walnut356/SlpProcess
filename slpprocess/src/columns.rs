@@ -148,6 +148,7 @@ pub enum DefenseStats {
     StateBeforeHit,
     Grounded,
     CrouchCancel,
+    VCancel,
     HitlagFrames,
     StickDuringHitlag,
     SDIInputs,
@@ -169,6 +170,7 @@ pub enum DefenseStats {
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
 pub enum WavedashStats {
     FrameIndex,
+    Waveland,
     Angle,
     Direction,
     StartPosition,
