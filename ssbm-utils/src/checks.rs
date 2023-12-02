@@ -1,3 +1,5 @@
+//! Contains an assortment of helper functions to determine when various events occur in replays.
+
 use num_traits::PrimInt;
 
 use crate::enums::ActionRange as AR;
@@ -216,6 +218,10 @@ pub fn is_special_fall(state: u16) -> bool {
     (AR::FALL_SPECIAL_START..=AR::FALL_SPECIAL_END).contains(&state)
 }
 
+/// NOTE: experimental
+///
+/// Returns true if the player is in `LAND_FALL_SPECIAL` but wasn't in jumpsquat or airdodge the
+/// previous frame
 #[inline]
 pub fn is_upb_lag(state: u16, prev_state: u16) -> bool {
     // TODO verify this more
@@ -226,7 +232,7 @@ pub fn is_upb_lag(state: u16, prev_state: u16) -> bool {
 }
 
 #[inline]
-pub fn lost_stock(current: u8, prev: u8) -> bool {
+pub fn just_lost_stock(current: u8, prev: u8) -> bool {
     current < prev
 }
 

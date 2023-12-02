@@ -5,7 +5,7 @@ use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 
 use crate::types::{Point, Position};
 
-#[derive(Debug, Copy, Clone, PartialEq, EnumString, Display, FromRepr, IntoStaticStr)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, EnumString, Display, FromRepr, IntoStaticStr)]
 #[repr(u16)]
 pub enum StageID {
     // Tournament

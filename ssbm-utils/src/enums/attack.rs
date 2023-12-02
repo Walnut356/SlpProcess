@@ -5,7 +5,7 @@
 use num_enum::{FromPrimitive, IntoPrimitive};
 use strum_macros::{Display, EnumString, IntoStaticStr};
 
-/// Attack values as they appear in the stale move queue, and the player's LastAttackLanded field.
+/// Attack values as they appear in the stale move queue, and the player's last_attack_landed field.
 #[derive(
     Debug,
     Clone,

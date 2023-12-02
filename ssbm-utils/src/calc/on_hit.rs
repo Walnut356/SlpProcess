@@ -1,5 +1,8 @@
 #![allow(clippy::too_many_arguments)]
 
+//! Contains various calculations for on-hit effects including shield stun, hitlag, and damage
+//! staling
+
 use std::cmp;
 
 
@@ -132,7 +135,7 @@ mod test {
     use approx::assert_relative_eq;
 
     use crate::{
-        calc::{knockback::knockback, attack::*},
+        calc::{knockback::knockback, on_hit::*},
         constants::Z_ANALOG,
         enums::character::*,
     };

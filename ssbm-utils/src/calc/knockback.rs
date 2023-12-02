@@ -1,9 +1,12 @@
 #![allow(clippy::too_many_arguments)]
 
+//! Contains helper functions for calculating knockback from in-game values, or generating in-game
+//! values from given knockback values.
+
 use std::f32::consts::{PI, TAU};
 
 use crate::{
-    calc::attack::hitstun,
+    calc::on_hit::hitstun,
     constants::{KB_DECAY, TUMBLE_THRESHOLD, DI_MAX_RADS},
     enums::{character::*, stage::*},
     types::{Position, Radians, StickPos, Velocity},

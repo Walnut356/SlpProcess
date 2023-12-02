@@ -1,3 +1,5 @@
+//! Contains misc functions that are useful for replicating in-game behavior
+
 /// Returns a sequence containing the character's height on each frame, relative to the starting location.
 ///
 /// Note that trying to determine the number of frames airborne from the vector length will frequently result in

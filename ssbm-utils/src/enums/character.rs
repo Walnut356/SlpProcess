@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use strum_macros::{Display, EnumString};
+use strum_macros::{Display, EnumString, IntoStaticStr};
 
 /// All in-game characters, including non-playable character such as the wireframes and masterhand.
 ///
@@ -22,7 +22,7 @@ use strum_macros::{Display, EnumString};
 /// assert_eq!(char_4, Character::Jigglypuff);
 /// assert_eq!(char_5, Character::Jigglypuff);
 /// ```
-#[derive(Debug, Clone, Default, Copy, PartialEq, EnumString, Display)]
+#[derive(Debug, Clone, Default, Copy, PartialEq, EnumString, Display, IntoStaticStr)]
 #[strum(ascii_case_insensitive)]
 pub enum Character {
     #[strum(serialize = "falcon", serialize = "captainfalcon")]
@@ -815,4 +815,246 @@ impl<'a> Attributes<'a> {
         dj_force_multiplier: DJType::Normal(0.86),
         weight: 90,
     };
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Default, EnumString, Display, IntoStaticStr)]
+#[allow(non_camel_case_types)]
+pub enum Costume {
+    #[default]
+    DEFAULT,
+    INDIGO,
+    BLACK,
+    RED,
+    WHITE,
+    GREEN,
+    BLUE,
+    BROWN,
+    PINK,
+    YELLOW,
+    PURPLE,
+    CYAN,
+    NAVY,
+    TAN,
+    ORANGE,
+    DAISY,
+    CAP,
+    PARTY_HAT,
+    COWBOY,
+    ROSE,
+    BOW,
+    HEADBAND,
+    CROWN,
+    BANDANA,
+    GOGGLES,
+    BACKPACK,
+}
+
+impl Character {
+    pub fn get_costume(&self, costume_id: u8) -> Costume {
+        use Costume as C;
+        match self {
+            Character::CaptainFalcon => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::BLACK,
+                2 => C::RED,
+                3 => C::WHITE,
+                4 => C::GREEN,
+                5 => C::BLUE,
+                _ => panic!("Invalid costume value. Expected 0-5, got {costume_id}"),
+            },
+            Character::DonkeyKong => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::BLACK,
+                2 => C::RED,
+                3 => C::BLUE,
+                4 => C::GREEN,
+                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+            },
+            Character::Fox => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::GREEN,
+                _ => panic!("Invalid costume value. Expected 0-3, got {costume_id}"),
+            },
+            Character::GameAndWatch => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::GREEN,
+                _ => panic!("Invalid costume value. Expected 0-3, got {costume_id}"),
+            },
+            Character::Kirby => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::YELLOW,
+                2 => C::BLUE,
+                3 => C::RED,
+                4 => C::GREEN,
+                5 => C::WHITE,
+                _ => panic!("Invalid costume value. Expected 0-5, got {costume_id}"),
+            },
+            Character::Bowser => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::BLACK,
+                _ => panic!("Invalid costume value. Expected 0-3, got {costume_id}"),
+            },
+            Character::Link => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::BLACK,
+                4 => C::WHITE,
+                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+            },
+            Character::Luigi => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::WHITE,
+                2 => C::BLUE,
+                3 => C::PINK,
+                _ => panic!("Invalid costume value. Expected 0-3, got {costume_id}"),
+            },
+            Character::Mario => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::YELLOW,
+                2 => C::BLACK,
+                3 => C::BLUE,
+                4 => C::GREEN,
+                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+            },
+            Character::Marth => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::GREEN,
+                3 => C::BLACK,
+                4 => C::WHITE,
+                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+            },
+            Character::Mewtwo => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::GREEN,
+                _ => panic!("Invalid costume value. Expected 0-3, got {costume_id}"),
+            },
+            Character::Ness => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::YELLOW,
+                2 => C::BLUE,
+                3 => C::GREEN,
+                _ => panic!("Invalid costume value. Expected 0-3, got {costume_id}"),
+            },
+            Character::Peach => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::DAISY,
+                2 => C::WHITE,
+                3 => C::BLUE,
+                4 => C::GREEN,
+                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+            },
+            Character::Pikachu => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::CAP,
+                2 => C::PARTY_HAT,
+                3 => C::COWBOY,
+                _ => panic!("Invalid costume value. Expected 0-3, got {costume_id}"),
+            },
+            Character::IceClimbers | Character::Popo | Character::Nana => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::GREEN,
+                2 => C::ORANGE,
+                3 => C::RED,
+                _ => panic!("Invalid costume value. Expected 0-3, got {costume_id}"),
+            },
+            Character::Jigglypuff => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::ROSE,
+                2 => C::BOW,
+                3 => C::HEADBAND,
+                4 => C::CROWN,
+                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+            },
+            Character::Samus => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::PINK,
+                2 => C::BLACK,
+                3 => C::GREEN,
+                4 => C::PURPLE,
+                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+            },
+            Character::Yoshi => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::YELLOW,
+                4 => C::PINK,
+                5 => C::CYAN,
+                _ => panic!("Invalid costume value. Expected 0-5, got {costume_id}"),
+            },
+            Character::Zelda => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::GREEN,
+                4 => C::WHITE,
+                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+            },
+            Character::Sheik => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::GREEN,
+                4 => C::WHITE,
+                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+            },
+            Character::Falco => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::GREEN,
+                _ => panic!("Invalid costume value. Expected 0-3, got {costume_id}"),
+            },
+            Character::YoungLink => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::WHITE,
+                4 => C::BLACK,
+                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+            },
+            Character::DrMario => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::GREEN,
+                4 => C::BLACK,
+                _ => panic!("Invalid costume value. Expected 0-5, got {costume_id}"),
+            },
+            Character::Roy => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::GREEN,
+                4 => C::YELLOW,
+                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+            },
+            Character::Pichu => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::BANDANA,
+                2 => C::GOGGLES,
+                3 => C::BACKPACK,
+                _ => panic!("Invalid costume value. Expected 0-3, got {costume_id}"),
+            },
+            Character::Ganondorf => match costume_id {
+                0 => C::DEFAULT,
+                1 => C::RED,
+                2 => C::BLUE,
+                3 => C::GREEN,
+                4 => C::PURPLE,
+                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+            },
+            _ => C::DEFAULT,
+        }
+    }
 }

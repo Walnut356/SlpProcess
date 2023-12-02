@@ -1,9 +1,20 @@
+//! # SSBM Utils
+//!
+//! A crate for interacting with data from Super Smash Bros. Melee. Contains enums, helper types,
+//! and various functions to replicate in-game calculations
+//!
+//!
+
+
 pub mod types;
 pub mod trackers;
 pub mod calc {
-    pub mod attack;
-    pub mod general;
-    pub mod knockback;
+    pub mod on_hit;
+    pub use on_hit::*;
+    mod general;
+    pub use general::*;
+    mod knockback;
+    pub use knockback::*;
 }
 pub mod enums {
     pub mod attack;
@@ -74,4 +85,10 @@ pub mod constants {
     pub const ASDIL_DIST: f32 = 3.0;
     /// The magintude of the change in position per SDI input
     pub const SDI_DIST: f32 = 6.0;
+}
+
+pub mod prelude {
+    pub use crate::constants::*;
+    pub use crate::enums::*;
+    pub use crate::calc::*;
 }

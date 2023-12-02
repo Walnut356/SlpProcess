@@ -5,8 +5,37 @@ use std::{
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
+/// Constructor macro for Velocity structs. Accepts 2 values that can be `as f32` casted.
+#[macro_export]
+macro_rules! vel {
+    ($x:expr, $y:expr) => {
+        Velocity { x: $x as f32, y: $y as f32}
+    };
+}
+
+/// Constructor macro for Position structs. Accepts 2 values that can be `as f32` casted.
+#[macro_export]
+macro_rules! pos {
+    ($x:expr, $y:expr) => {
+        Position { x: $x as f32, y: $y as f32}
+    };
+}
+
+/// Constructor macro for StickPosition structs. Accepts 2 values that can be `as f32` casted.
+#[macro_export]
+macro_rules! stick_pos {
+    ($x:expr, $y:expr) => {
+        StickPos { x: $x as f32, y: $y as f32}
+    };
+}
+
 pub type Radians = f32;
 pub type Degrees = f32;
+
+#[inline]
+fn float_eq(lhs: f32, rhs: f32) -> bool {
+    (lhs - rhs).abs() <= 0.000_1
+}
 
 /// Accepts a point, returns an angle in radians
 #[inline]
@@ -14,7 +43,7 @@ pub fn point_to_angle(x: f32, y: f32) -> Radians {
     (f32::atan2(y, x) + TAU) % TAU
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
@@ -26,8 +55,20 @@ impl Point {
         Self { x, y }
     }
 }
+impl std::fmt::Display for Point {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Point(x: {}, y: {})", self.x, self.y)
+    }
+}
 
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
+impl PartialEq for Point {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        float_eq(self.x, other.x) && float_eq(self.y, other.y)
+    }
+}
+
+#[derive(Debug, Copy, Clone, Default)]
 pub struct StickPos {
     pub x: f32,
     pub y: f32,
@@ -60,7 +101,20 @@ impl StickPos {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
+impl std::fmt::Display for StickPos {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "StickPos(x: {}, y: {})", self.x, self.y)
+    }
+}
+
+impl PartialEq for StickPos {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        float_eq(self.x, other.x) && float_eq(self.y, other.y)
+    }
+}
+
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Velocity {
     pub x: f32,
     pub y: f32,
@@ -80,6 +134,19 @@ impl Velocity {
     #[inline]
     pub fn is_zero(&self) -> bool {
         self.x == 0.0 && self.y == 0.0
+    }
+}
+
+impl std::fmt::Display for Velocity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Vel(x: {}, y: {})", self.x, self.y)
+    }
+}
+
+impl PartialEq for Velocity {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        float_eq(self.x, other.x) && float_eq(self.y, other.y)
     }
 }
 
@@ -124,7 +191,7 @@ impl SubAssign<Velocity> for Velocity {
 }
 
 
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Position {
     pub x: f32,
     pub y: f32,
@@ -139,6 +206,19 @@ impl Position {
     #[inline]
     pub fn distance(&self, other: Position) -> f32 {
         f32::hypot(self.x - other.x, self.y - other.y)
+    }
+}
+
+impl std::fmt::Display for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Pos(x: {}, y: {})", self.x, self.y)
+    }
+}
+
+impl PartialEq for Position {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        float_eq(self.x, other.x) && float_eq(self.y, other.y)
     }
 }
 
