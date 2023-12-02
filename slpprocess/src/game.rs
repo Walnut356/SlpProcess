@@ -57,7 +57,7 @@ impl Game {
     /// Can panic if replay is severely malformed (Payload size doesn't match Payload Sizes listing,
     /// metadata event missing, etc.)
     pub fn new(path: &Path) -> Result<Self> {
-        ensure!(path.is_file() && path.extension().unwrap() == "slp");
+        ensure!(path.is_file() && path.extension().unwrap() == "slp", "Expected file with extension .slp, got path: {path:?}");
         let file_data = Self::get_file_contents(path)?;
         let mut game = Game::parse(file_data, path)?;
         // let now = Instant::now();
@@ -145,7 +145,7 @@ impl Game {
             // requires fields up to item.owner which was released just after rollback on 7/8/2020
             let item = version
                 .at_least(3, 6, 0)
-                .then(|| find_items(&player.frames, player.port, items.as_ref().unwrap()));
+                .then(|| find_items(player.port, items.as_ref().unwrap()));
 
             // requires knockback speed values which requires v3.5.0, released just before rollback
             // on 6/20/2020
@@ -197,7 +197,7 @@ impl Game {
                 port: player.port,
                 connect_code: player.connect_code.clone(),
                 display_name: player.display_name.clone(),
-                is_winner: player.is_winner,
+                is_winner: self.get_winner().map(|x| x == player.port),
                 ucf: player.ucf,
                 stats,
                 combos,
