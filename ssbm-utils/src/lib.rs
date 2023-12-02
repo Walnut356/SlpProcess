@@ -27,7 +27,7 @@ pub mod enums {
     pub use buttons::{ControllerInput, EngineInput, StickRegion};
 
     pub mod character;
-    pub use character::Character;
+    pub use character::{Character, Costume};
 
     mod general;
     pub use general::*;
