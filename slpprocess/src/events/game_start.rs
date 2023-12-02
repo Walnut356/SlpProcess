@@ -54,20 +54,50 @@ pub enum ControllerFix {
     Dween = 2,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GameStart {
+    /// Random seed at the start of the match
     pub random_seed: u32,
+    /// True if teams mode is active, regardless of the number of players in the match
     pub is_teams: bool,
+    /// Simple stage ID. For stage data (blast zones, ledge locations, etc.), cast into `Stage`
     pub stage: StageID,
+    /// The timer setting for the match, will usually be 8 minutes (480s)
     pub timer: Duration,
+    /// Damage ratio in the settings menu, should almost always be 1.0
     pub damage_ratio: f32,
+    /// True if PAL
+    ///
+    /// added v1.5.0
     pub is_pal: Option<bool>,
+    /// True if stadium is frozen
+    ///
+    /// added v2.0.0
     pub is_frozen_stadium: Option<bool>,
+    /// True if played on slippi netplay
+    ///
+    /// added v3.7.0
     pub is_netplay: Option<bool>,
+    /// Match id, usually very similar to the default file name
+    ///
+    /// added v3.14.0
     pub match_id: Option<String>,
+    /// Unranked, Ranked, Direct, or Unknown. Note that Doubles is not an option because this parser
+    /// handles 1v1 replays only
+    ///
+    /// added v3.14.0
     pub match_type: Option<MatchType>,
+    /// For the given match ID, this is Xth game played. Starts at 1
+    ///
+    /// added v3.14.0
     pub game_number: Option<u32>,
+    /// For the given match ID, this is the Xth tiebreak game played. Will almost always be 0
+    ///
+    /// added v3.14.0
     pub tiebreak_number: Option<u32>,
+    /// Datetime the match was played on.
+    ///
+    /// added v0.1.0 (parsing may still fail due to metadata event bugs)
     pub date: Option<DateTime<FixedOffset>>,
 }
 
@@ -97,7 +127,7 @@ impl GameStart {
             let character = Character::try_from_css(raw.get_u8())?;
             let p_type = PlayerType::try_from(raw.get_u8())?;
             raw.advance(1);
-            let costume = raw.get_u8();
+            let costume = character.get_costume(raw.get_u8());
 
             temp_players.push((character, p_type, costume));
 
@@ -112,6 +142,10 @@ impl GameStart {
                 PlayerType::Demo => return Err(anyhow!("Demo player detected in port {i}. How did this even happen?")),
                 PlayerType::Empty => continue,
             }
+        }
+
+        if p_count > 2 {
+            return Err(anyhow!("Invalid player countL {p_count}. Parser only tolerates 1v1 replays"));
         }
 
         raw.advance(72); // skip past "players" 5 and 6
@@ -163,7 +197,7 @@ impl GameStart {
                         combos: Default::default(),
                         frames: Default::default(),
                         nana_frames: None,
-                        costume: 0,
+                        costume: temp_players[i].2,
                         ucf: temp_ucf[i],
                     };
                     count += 1;
@@ -202,7 +236,7 @@ impl GameStart {
                         combos: Default::default(),
                         frames: Default::default(),
                         nana_frames: None,
-                        costume: 0,
+                        costume: temp_players[i].2,
                         ucf: temp_ucf[i],
                     };
                     count += 1;
@@ -234,7 +268,7 @@ impl GameStart {
                         combos: Default::default(),
                         frames: Default::default(),
                         nana_frames: None,
-                        costume: 0,
+                        costume: temp_players[i].2,
                         ucf: temp_ucf[i],
                     };
                     count += 1;
@@ -266,7 +300,7 @@ impl GameStart {
                         combos: Default::default(),
                         frames: Default::default(),
                         nana_frames: None,
-                        costume: 0,
+                        costume: temp_players[i].2,
                         ucf: temp_ucf[i],
                     };
                     count += 1;
@@ -298,7 +332,7 @@ impl GameStart {
                         combos: Default::default(),
                         frames: Default::default(),
                         nana_frames: None,
-                        costume: 0,
+                        costume: temp_players[i].2,
                         ucf: temp_ucf[i],
                     };
                     count += 1;
@@ -331,7 +365,7 @@ impl GameStart {
                         combos: Default::default(),
                         frames: Default::default(),
                         nana_frames: None,
-                        costume: 0,
+                        costume: temp_players[i].2,
                         ucf: temp_ucf[i],
                     };
                     count += 1;
@@ -381,7 +415,7 @@ impl GameStart {
                         combos: Default::default(),
                         frames: Default::default(),
                         nana_frames: None,
-                        costume: 0,
+                        costume: temp_players[i].2,
                         ucf: temp_ucf[i],
                     };
                     count += 1;
@@ -423,7 +457,7 @@ impl GameStart {
                         combos: Default::default(),
                         frames: Default::default(),
                         nana_frames: None,
-                        costume: 0,
+                        costume: temp_players[i].2,
                         ucf: temp_ucf[i],
                     };
                     count += 1;
@@ -455,7 +489,7 @@ impl GameStart {
                         combos: Default::default(),
                         frames: Default::default(),
                         nana_frames: None,
-                        costume: 0,
+                        costume: temp_players[i].2,
                         ucf: temp_ucf[i],
                     };
                     count += 1;
@@ -503,7 +537,7 @@ impl GameStart {
                     combos: Default::default(),
                     frames: Default::default(),
                     nana_frames: None,
-                    costume: 0,
+                    costume: temp_players[i].2,
                     ucf: temp_ucf[i],
                 };
                 count += 1;
@@ -604,6 +638,7 @@ impl Default for Version {
 }
 
 /// Added in slippi 2.2.0
+#[allow(dead_code)] // allowing as I might need these later
 fn parse_framestart(frames: Vec<Bytes>) -> DataFrame {
     let len = frames.len();
     // I choose to record frame number because it allow for accessing frames 0-indexed (through the
@@ -644,6 +679,7 @@ fn parse_framestart(frames: Vec<Bytes>) -> DataFrame {
     .unwrap()
 }
 
+#[allow(dead_code)] // allowing as I might need these later
 fn parse_frameend(frames: Vec<Bytes>) -> DataFrame {
     let frame_number = {
         let temp: Vec<i32> = Vec::with_capacity(frames.len());
