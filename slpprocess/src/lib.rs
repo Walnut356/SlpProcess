@@ -21,7 +21,7 @@ use serde_json::json;
 pub use ssbm_utils::enums::Port;
 use stats::Stats;
 
-use rayon::{prelude::*, iter::FilterMap, slice::Iter, vec::IntoIter};
+use rayon::{prelude::*, iter::FilterMap, vec::IntoIter};
 use std::{
     fs::{self, File},
     path::{Path, PathBuf},
@@ -154,7 +154,7 @@ pub fn to_dolphin_queue(target_path: PathBuf, combo_list: &[Arc<Combos>]) {
         }
     }
 
-    let mut f = File::create(target_path).unwrap();
+    let f = File::create(target_path).unwrap();
     serde_json::to_writer_pretty(f, &playback_queue).unwrap();
     // f.write_all(playback_queue.to_string().as_bytes()).unwrap();
 }
@@ -169,11 +169,11 @@ pub mod prelude {
 #[cfg(test)]
 mod test {
     use crate::parse;
-    use ssbm_utils::enums::Port;
+    use ssbm_utils::enums::{Port, Character};
 
     #[test]
     fn test_ics() {
-        let replay = r"../../py-slippi-stats/test/Bench Replays/ics_ditto.slp";
+        let replay = r"../test_replays/ics_ditto.slp";
         let game = parse(replay, true).pop().unwrap();
 
         let player = game.player_by_port(Port::P1).unwrap();
@@ -189,5 +189,7 @@ mod test {
             player.nana_frames.as_ref().unwrap().post.frame_index.len()
                 == game.total_frames as usize
         );
+
+        assert_eq!(player.character, Character::IceClimbers);
     }
 }

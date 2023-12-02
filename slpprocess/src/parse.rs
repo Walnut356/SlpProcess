@@ -275,7 +275,7 @@ impl Game {
             end: game_end,
             duration,
             total_frames: frame_count,
-            players: players.map(|x| Arc::new(x)),
+            players: players.map(Arc::new),
             version,
             item_frames: item_frames.map(Arc::new),
             path: Arc::new(path.to_owned()),

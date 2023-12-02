@@ -13,7 +13,7 @@ pub enum EndMethod {
     NoContest = 7,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GameEnd {
     pub end_method: EndMethod,
     pub lras_initiator: Option<i8>,

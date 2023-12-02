@@ -3,13 +3,12 @@
 use polars::prelude::*;
 
 use ssbm_utils::{
-    calc::knockback::{
+    calc::{
         apply_di, get_di_efficacy, initial_x_velocity,
         initial_y_velocity, kb_from_initial, should_kill,
     },
     checks::{
-        get_damage_taken, is_electric_attack, is_in_hitlag,
-        is_shielding_flag, is_thrown, is_vcancel_state, just_pressed_any, just_took_damage,
+        get_damage_taken, is_electric_attack, is_in_hitlag, is_thrown, is_vcancel_state, just_pressed_any, just_took_damage,
     },
     constants::KB_DECAY,
     enums::{Attack, Character, EngineInput, State, StickRegion},
@@ -120,7 +119,7 @@ pub(crate) fn find_defense(
             // if you just entered crouch, or if you crouched during a subframe event, so we're just
             // gonna check against the expected hitlag frames.
 
-            let expected_hitlag = ssbm_utils::calc::attack::hitlag(
+            let expected_hitlag = ssbm_utils::calc::on_hit::hitlag(
                 row.damage_taken,
                 is_electric_attack(row.last_hit_by, &opnt_char),
                 true,

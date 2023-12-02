@@ -17,10 +17,6 @@ pub fn downcast_u8(series: &Series) -> Result<Vec<Option<u8>>, PolarsError> {
     Ok(chunked.to_vec())
 }
 
-pub(crate) fn as_vec_i8(input: Vec<StickRegion>) -> Vec<i8> {
-    input.into_iter().map(|s| s as i8).collect()
-}
-
 pub(crate) fn as_vec_static_str<T: Into<&'static str>>(input: Vec<T>) -> Vec<&'static str> {
     input
         .into_iter()

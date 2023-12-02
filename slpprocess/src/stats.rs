@@ -6,18 +6,11 @@ pub mod lcancel;
 pub mod wavedash;
 pub mod tech;
 
-use std::cell::OnceCell;
 use std::ops::Div;
 
 use polars::prelude::*;
 
 use strum_macros::{EnumString, IntoStaticStr};
-
-macro_rules! into_str {
-    ($x:expr) => {
-        Into::<&'static str>::into($x)
-    };
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct Stats {

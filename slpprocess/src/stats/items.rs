@@ -3,9 +3,9 @@ use polars::prelude::*;
 use ssbm_utils::enums::{Item, Port};
 use std::collections::HashSet;
 
-use crate::{events::item_frames::ItemFrames, player::Frames};
+use crate::events::item_frames::ItemFrames;
 
-pub fn find_items(frames: &Frames, port: Port, item_frames: &ItemFrames) -> DataFrame {
+pub fn find_items(port: Port, item_frames: &ItemFrames) -> DataFrame {
     let ids = &item_frames.item_id;
     let spawn_ids = &item_frames.spawn_id;
     let missiles = item_frames.missile_type.as_ref().unwrap();

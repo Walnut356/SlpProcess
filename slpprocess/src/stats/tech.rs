@@ -3,7 +3,7 @@ use ssbm_utils::{
     checks::{is_in_defender_hitlag, is_teching, is_damaged, is_downed},
     enums::{
         stage::{GroundID, Stage},
-        Attack, TechType, ActionState, Flags, BitFlags,
+        Attack, TechType,
     },
     trackers::LockoutTracker,
     types::Position,
@@ -24,8 +24,6 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
 
     // value tracking for v cancel
     let mut lockout = LockoutTracker::default();
-    let mut input_during_hl = false;
-
 
     for i in 1..pre.len() {
         lockout.update(pre.engine_buttons[i], flags[i]);
@@ -59,7 +57,7 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
                 continue
             }
 
-            let most_recent_input = -40 + lockout.lockout_window;
+            let most_recent_input = lockout.frames_since_input();
             event = Some(TechRow::new(
                 i as i32 - 123,
                 post.stocks[i],
@@ -71,7 +69,7 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
                 post.position[i].distance(opnt_frames.post.position[i]),
                 (-40..=0).contains(&most_recent_input).then_some(most_recent_input),
                 lockout.is_locked_out(),
-                lockout.during_hitlag,
+                lockout.input_during_hitlag(),
             ));
         }
 

@@ -86,7 +86,7 @@ impl PyPlayer {
     }
     #[getter]
     fn get_costume(&self) -> PyResult<u8> {
-        Ok(self.player.costume)
+        Ok(self.player.costume as u8)
     }
     #[getter]
     fn get_port(&self) -> PyResult<u8> {

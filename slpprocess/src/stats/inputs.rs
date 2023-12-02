@@ -33,8 +33,6 @@ use crate::{columns::InputStats, player::Frames};
 pub fn find_inputs(frames: &Frames, duration: u64) -> DataFrame {
     let en_btn = &frames.pre.engine_buttons;
     let ctrl_btn = &frames.pre.controller_buttons;
-    let trig = &frames.pre.engine_trigger;
-
 
     let mut digital_counts = 0;
     let mut stick_counts = 0;

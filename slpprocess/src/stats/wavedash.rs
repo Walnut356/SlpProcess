@@ -1,7 +1,6 @@
 use polars::prelude::*;
 use ssbm_utils::{
-    checks::just_pressed_any,
-    enums::{ActionState, BitFlags, EngineInput as Input, Orientation},
+    enums::{ActionState, Orientation},
     types::{Position, StickPos},
 };
 
@@ -61,7 +60,6 @@ pub fn find_wavedashes(frames: &Frames) -> DataFrame {
 
     let mut wavedashes = Wavedashes::default();
 
-    let mut most_recent_l = 0;
 
     // start 20 frames "late" to prevent index errors
 
@@ -69,9 +67,6 @@ pub fn find_wavedashes(frames: &Frames) -> DataFrame {
         let state = state_frames[i];
         let prev_state = state_frames[i - 1];
 
-        if just_pressed_any(Input::L | Input::R, button_frames[i], button_frames[i - 1]) {
-            most_recent_l = i;
-        }
         // saves time and also prevents multiple wavedash events from being created once
         // land_fall_special is entered
         if state != ActionState::LAND_FALL_SPECIAL || prev_state == ActionState::LAND_FALL_SPECIAL {

@@ -1,4 +1,8 @@
-use std::{ops::{Deref, RangeBounds, Range}, path::PathBuf, sync::Arc};
+use std::{
+    ops::{Deref, Range},
+    path::PathBuf,
+    sync::Arc,
+};
 
 use derive_new::new;
 use serde_json::json;
@@ -6,7 +10,7 @@ use ssbm_utils::{
     checks::{
         get_damage_taken, is_cmd_grabbed, is_damaged, is_dodging, is_downed, is_dying, is_grabbed,
         is_in_hitlag, is_in_hitstun, is_ledge_action, is_shield_broken, is_shielding,
-        is_special_fall, is_teching, is_upb_lag, lost_stock,
+        is_special_fall, is_teching, is_upb_lag, just_lost_stock,
     },
     enums::{stage::Stage, Attack, Character, StageID},
     types::Position,
@@ -63,7 +67,9 @@ impl Combo {
     }
 
     pub fn filter_out_attack(&self, attacks: Vec<Attack>) -> impl Iterator<Item = &Move> {
-        self.move_list.iter().filter_map(move|m| attacks.contains(&m.move_id).then_some(m))
+        self.move_list
+            .iter()
+            .filter(move |m| attacks.contains(&m.move_id))
     }
 }
 
@@ -77,13 +83,11 @@ impl Combos {
     /// Creates a new combo object containing only combos whose starting percent are below a given
     /// value
     pub fn filter_max_start_percent(&self, value: f32) -> impl Iterator<Item = &Combo> {
-        self
-            .iter()
-            .filter(move |c| c.start_percent <= value)
+        self.iter().filter(move |c| c.start_percent <= value)
     }
 
     pub fn filter_hit_count(&self, value: Range<usize>) -> Combos {
-            Combos {
+        Combos {
             data: self
                 .iter()
                 .filter_map(|c| (value.contains(&c.move_list.len())).then_some(c.clone()))
@@ -92,8 +96,9 @@ impl Combos {
         }
     }
 
-    pub fn filter_min_duration(&self, value: Range<isize>) -> impl Iterator<Item = &Combo>{
-        self.iter().filter(move |c| value.contains(&((c.end_frame - c.start_frame).abs() as isize)))
+    pub fn filter_min_duration(&self, value: Range<isize>) -> impl Iterator<Item = &Combo> {
+        self.iter()
+            .filter(move |c| value.contains(&((c.end_frame - c.start_frame).abs() as isize)))
     }
 }
 
@@ -125,7 +130,7 @@ pub fn find_combos(
     plyr_frames: &Frames,
     opnt_frames: &Frames,
     stage_id: StageID,
-    player_char: Character,
+    _player_char: Character,
     path: Arc<PathBuf>,
 ) -> Combos {
     let mut result = Vec::new();
@@ -136,7 +141,6 @@ pub fn find_combos(
 
     for i in 1..plyr_frames.len() {
         let plyr_state = plyr_frames.post.action_state[i];
-        let prev_plyr_state = plyr_frames.post.action_state[i - 1];
         let plyr_position = plyr_frames.post.position[i];
 
         let opnt_state = opnt_frames.post.action_state[i];
@@ -252,12 +256,12 @@ pub fn find_combos(
 
         let plyr_is_grabbed = is_grabbed(plyr_state);
         let plyr_lost_stock =
-            lost_stock(plyr_frames.post.stocks[i], plyr_frames.post.stocks[i - 1]);
+            just_lost_stock(plyr_frames.post.stocks[i], plyr_frames.post.stocks[i - 1]);
 
         let mut should_terminate =
             combo_state.reset_counter == 0 || plyr_is_grabbed || plyr_lost_stock;
 
-        if lost_stock(opnt_frames.post.stocks[i], opnt_frames.post.stocks[i - 1]) {
+        if just_lost_stock(opnt_frames.post.stocks[i], opnt_frames.post.stocks[i - 1]) {
             should_terminate = true;
             event.as_mut().unwrap().did_kill = true;
         }
