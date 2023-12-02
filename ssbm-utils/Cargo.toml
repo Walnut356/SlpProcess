@@ -6,6 +6,7 @@ repository = "https://github.com/Walnut356/SlpProcess"
 readme = "./README.md"
 license = "MIT"
 description = "A collection of useful tools for working with data from Super Smash Bros Melee"
+exclude = ["./ReleaseHistory.md"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
