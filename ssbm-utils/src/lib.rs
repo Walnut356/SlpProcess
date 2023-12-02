@@ -82,7 +82,7 @@ pub mod constants {
     pub const DI_MAX_RADS: f32 = 18.0 * (PI / 180.0);
 
     /// The magnitude of the change in position per ASDI
-    pub const ASDIL_DIST: f32 = 3.0;
+    pub const ASDI_DIST: f32 = 3.0;
     /// The magintude of the change in position per SDI input
     pub const SDI_DIST: f32 = 6.0;
 }
