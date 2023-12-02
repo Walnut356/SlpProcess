@@ -188,3 +188,23 @@ pub enum WavedashStats {
 //     Player2,
 
 // }
+
+#[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
+pub enum TechStats {
+    FrameIndex,
+    Stocks,
+    Percent,
+    InputFrame,
+    TechType,
+    Punished,
+    Position,
+    Location,
+    MissedTech,
+    Lockout,
+    TowardsCenter,
+    TowardsOpnt,
+    JabReset,
+    LastHitBy,
+    OpntDistance,
+    DuringHitlag,
+}

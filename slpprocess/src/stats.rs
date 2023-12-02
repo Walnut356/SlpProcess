@@ -4,6 +4,7 @@ pub mod inputs;
 pub mod items;
 pub mod lcancel;
 pub mod wavedash;
+pub mod tech;
 
 use std::cell::OnceCell;
 use std::ops::Div;
@@ -24,11 +25,13 @@ pub struct Stats {
     pub input: DataFrame,
     /// Minimum Replay Version: Any
     pub wavedash: DataFrame,
-    /// Minimum Replay Version: 2.0
+    /// Minimum Replay Version: 2.0.0
     pub l_cancel: Option<DataFrame>,
-    /// Minimum Replay Version: 3.0
+    /// Minimum Replay Version: 2.0.0
+    pub tech: Option<DataFrame>,
+    /// Minimum Replay Version: 3.0.0
     pub item: Option<DataFrame>,
-    /// Minimum Replay Version 3.5
+    /// Minimum Replay Version 3.5.0
     pub defense: Option<DataFrame>,
 }
 
@@ -39,6 +42,7 @@ impl Stats {
             StatType::Input => Some(self.input.clone()),
             StatType::Wavedash => Some(self.wavedash.clone()),
             StatType::LCancel => self.l_cancel.clone(),
+            StatType::Tech => self.tech.clone(),
             StatType::Item => self.item.clone(),
             StatType::Defense => self.defense.clone(),
         }
@@ -55,9 +59,9 @@ impl Stats {
             // These are already basically summaries anyway
             StatType::Input => Some(self.input.clone()),
             StatType::Item => self.item.clone(),
-
             StatType::Wavedash => self.wd_summary(),
             StatType::LCancel => self.lc_summary(),
+            StatType::Tech => Some(DataFrame::default()),
             StatType::Defense => self.def_summary(),
         }
     }
@@ -165,6 +169,7 @@ impl From<&[Arc<Stats>]> for Stats {
         let mut input = DataFrame::default();
         let mut wavedash = DataFrame::default();
         let mut l_cancel = DataFrame::default();
+        let mut tech = DataFrame::default();
         let mut item = DataFrame::default();
         let mut defense = DataFrame::default();
 
@@ -173,6 +178,9 @@ impl From<&[Arc<Stats>]> for Stats {
             wavedash = wavedash.vstack(&val.wavedash).unwrap();
             if let Some(lc) = &val.l_cancel {
                 l_cancel = l_cancel.vstack(lc).unwrap();
+            }
+            if let Some(th) = &val.tech {
+                tech = tech.vstack(th).unwrap();
             }
             if let Some(it) = &val.item {
                 item = item.vstack(it).unwrap();
@@ -188,6 +196,10 @@ impl From<&[Arc<Stats>]> for Stats {
             l_cancel: match l_cancel.height() {
                 0 => None,
                 _ => Some(l_cancel),
+            },
+            tech: match tech.height() {
+                0 => None,
+                _ => Some(tech),
             },
             item: match item.height() {
                 0 => None,
@@ -216,6 +228,7 @@ pub enum StatType {
     #[strum(serialize = "LCancel")]
     #[strum(serialize = "L_Cancel")]
     LCancel,
+    Tech,
     Item,
     Defense,
 }

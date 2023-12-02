@@ -4,33 +4,229 @@ use polars::prelude::*;
 
 use ssbm_utils::{
     calc::knockback::{
-        apply_di, get_di_efficacy, get_horizontal_decay, get_vertical_decay, initial_x_velocity,
+        apply_di, get_di_efficacy, initial_x_velocity,
         initial_y_velocity, kb_from_initial, should_kill,
     },
     checks::{
-        get_damage_taken, is_cmd_grabbed, is_electric_attack, is_grabbed, is_in_hitlag,
+        get_damage_taken, is_electric_attack, is_in_hitlag,
         is_shielding_flag, is_thrown, is_vcancel_state, just_pressed_any, just_took_damage,
     },
     constants::KB_DECAY,
-    enums::{ActionRange, Attack, Character, EngineInput, State, StickRegion},
+    enums::{Attack, Character, EngineInput, State, StickRegion},
     types::{Degrees, Position, StickPos, Velocity},
 };
 
-use crate::player::Frames;
+use crate::{player::Frames, utils::{as_vec_static_str, as_vec_arrow}};
 
-fn as_vec_i8(input: Vec<StickRegion>) -> Vec<i8> {
-    input.into_iter().map(|s| s as i8).collect()
-}
+pub(crate) fn find_defense(
+    plyr_frames: &Frames,
+    opnt_frames: &Frames,
+    stage_id: u16,
+    player_char: Character,
+    opnt_char: Character,
+) -> DataFrame {
+    let pre = &plyr_frames.pre;
+    let post = &plyr_frames.post;
+    let attacks = &opnt_frames.post.last_attack_landed;
 
-fn as_vec_static_str<T: Into<&'static str>>(input: Vec<T>) -> Vec<&'static str> {
-    input
-        .into_iter()
-        .map(|x| x.into())
-        .collect::<Vec<&'static str>>()
-}
+    let flags: &[u64] = post.flags.as_ref().unwrap();
+    let states: &[u16] = post.action_state.as_ref();
 
-fn as_vec_arrow(input: Vec<StickRegion>) -> Vec<&'static str> {
-    input.into_iter().map(|x| x.to_utf_arrow()).collect()
+    let mut event = None;
+    let mut stat_table = DefenseStats::default();
+
+    // value tracking for v cancel
+    let mut l_lockout: i32 = 0;
+    let mut most_recent_l = 0;
+
+    // start 1 frame "late" to prevent index errors
+    for i in 1..pre.frame_index.len() {
+        // check for grab states
+
+        if just_pressed_any(
+            EngineInput::R | EngineInput::L,
+            pre.engine_buttons[i],
+            pre.engine_buttons[i - 1],
+        ) {
+            l_lockout = 40;
+            most_recent_l = i;
+        }
+        l_lockout -= 1;
+
+        // just_in_hitlag, filtering out shield hits
+        let in_hitlag = is_in_hitlag(flags[i]);
+        let was_in_hitlag = is_in_hitlag(flags[i - 1]);
+
+        // let shielding = is_shielding_flag(flags[i]);
+        // let grabbed_check = false;
+
+        let took_damage = just_took_damage(post.percent[i], post.percent[i - 1]);
+        let damage_taken = get_damage_taken(post.percent[i], post.percent[i - 1]);
+
+        // ----------------------------------- event detection ---------------------------------- //
+        // TODO check for being hit while already in hitlag
+        if (!was_in_hitlag && took_damage) || (!in_hitlag && took_damage && is_thrown(states[i]))
+        // && !is_magnifying_damage(damage_taken, flags, i)
+        {
+            let prev_state = states[i - 1];
+
+            event = Some(DefenseRow::new(
+                i as i32 - 123,
+                post.stocks[i],
+                post.percent[i],
+                damage_taken,
+                Attack::from(attacks[i]),
+                State::from_state_and_char(prev_state, Some(player_char)),
+                post.is_grounded.as_ref().unwrap()[i],
+                post.position[i],
+            ));
+
+            let row = event.as_mut().unwrap();
+            row.kb = post.knockback.as_ref().unwrap()[i];
+
+            if row.grounded || !is_vcancel_state(prev_state) {
+                row.v_cancel = None;
+            } else if (1..3).contains(&(i - most_recent_l)) // must have hit l a max of 2 frames before the hit
+                && l_lockout.is_negative()
+            // must not be in L lockout
+            {
+                println!("Woah a vcancel!");
+                row.v_cancel = Some(true);
+            } else {
+                row.v_cancel = Some(false);
+            }
+        }
+
+        // ----------------------------------- mid-event data ----------------------------------- //
+        if event.is_some() && in_hitlag {
+            let row = event.as_mut().unwrap();
+            row.hitlag_frames += 1;
+            let curr_stick = pre.joystick[i].as_stickregion();
+            row.stick_during_hitlag.push(curr_stick);
+
+            if row.hitlag_frames > 1 && curr_stick.valid_sdi(pre.joystick[i - 1].as_stickregion()) {
+                row.sdi_inputs.push(curr_stick)
+            }
+
+            continue;
+        }
+
+        // ----------------------------------- finalize event ----------------------------------- //
+
+        if !in_hitlag && was_in_hitlag && event.is_some() {
+            let row = event.as_mut().unwrap();
+
+            // check for crouch cancel. I could use action states, but there's complications with
+            // if you just entered crouch, or if you crouched during a subframe event, so we're just
+            // gonna check against the expected hitlag frames.
+
+            let expected_hitlag = ssbm_utils::calc::attack::hitlag(
+                row.damage_taken,
+                is_electric_attack(row.last_hit_by, &opnt_char),
+                true,
+            );
+            if row.grounded {
+                if row.hitlag_frames as u32 == expected_hitlag {
+                    row.crouch_cancel = Some(true);
+                } else {
+                    row.crouch_cancel = Some(false);
+                }
+            } else {
+                row.crouch_cancel = None;
+            }
+
+            let kb = post.knockback.as_ref().unwrap()[i];
+            let with_decay = kb - Velocity::new(KB_DECAY * kb.x, KB_DECAY * kb.y);
+
+            row.hitlag_end = post.position[i] - with_decay;
+
+            let effective_stick = pre.joystick[i];
+
+            row.di_stick = effective_stick;
+
+            let cstick = pre.cstick[i].as_stickregion();
+            row.asdi = if !cstick.is_deadzone() {
+                cstick
+            } else {
+                effective_stick.as_stickregion()
+            };
+
+            let kb_angle_rads = row.kb.as_angle();
+            row.kb_angle = kb_angle_rads.to_degrees();
+
+            if !row.kb.is_zero() {
+                let with_di = apply_di(kb_angle_rads, effective_stick);
+
+                row.di_efficacy = Some(get_di_efficacy(kb_angle_rads, with_di));
+                row.di_kb_angle = with_di.to_degrees();
+
+                let kb_scalar = kb_from_initial(row.kb);
+
+                row.di_kb = Velocity::new(
+                    initial_x_velocity(kb_scalar, with_di),
+                    initial_y_velocity(kb_scalar, with_di, row.grounded),
+                );
+
+                let char_stats = player_char.get_stats();
+
+                row.kills_no_di = should_kill(
+                    stage_id,
+                    row.kb,
+                    row.hitlag_end,
+                    char_stats.gravity,
+                    char_stats.max_fall_speed,
+                );
+
+                if effective_stick.x != 0.0 || effective_stick.y != 0.0 {
+                    row.kills_with_di = should_kill(
+                        stage_id,
+                        row.di_kb,
+                        row.hitlag_end,
+                        char_stats.gravity,
+                        char_stats.max_fall_speed,
+                    );
+                } else {
+                    row.kills_with_di = row.kills_no_di;
+                }
+
+                row.kills_any_di = {
+                    let mut result = true;
+                    for i in -90..=90 {
+                        let new_traj = kb_angle_rads - (i as f32 / 5.0).to_radians();
+                        if !should_kill(
+                            stage_id,
+                            Velocity::new(
+                                initial_x_velocity(kb_scalar, new_traj),
+                                initial_y_velocity(kb_scalar, new_traj, row.grounded),
+                            ),
+                            row.hitlag_end,
+                            char_stats.gravity,
+                            char_stats.max_fall_speed,
+                        ) {
+                            result = false;
+                            break;
+                        }
+                        row.kills_some_di = true;
+                    }
+
+                    result
+                }
+            } else {
+                // No reason to calculate when there's no knockback. Handles things like fox laser
+                row.di_efficacy = None;
+                row.di_kb = row.kb;
+                row.di_kb_angle = row.kb_angle;
+                row.kills_no_di = false;
+                row.kills_with_di = false;
+                row.kills_any_di = false;
+            }
+
+            stat_table.append(event.as_ref().unwrap());
+            event = None;
+        }
+    }
+
+    stat_table.into()
 }
 
 #[derive(Debug, Default)]
@@ -60,6 +256,8 @@ struct DefenseStats {
     kills_any_di: Vec<bool>,
     kills_some_di: Vec<bool>,
     v_cancel: Vec<Option<bool>>,
+    // TODO shieldpoke: Vec<Option<bool>>,
+    // TODO ground_id: Vec<Option<GroundID>>,
 }
 
 impl DefenseStats {
@@ -242,215 +440,4 @@ impl DefenseRow {
             ..Default::default()
         }
     }
-}
-
-pub(crate) fn find_defense(
-    plyr_frames: &Frames,
-    opnt_frames: &Frames,
-    stage_id: u16,
-    player_char: Character,
-    opnt_char: Character,
-) -> DataFrame {
-    let pre = &plyr_frames.pre;
-    let post = &plyr_frames.post;
-    let attacks = &opnt_frames.post.last_attack_landed;
-
-    let flags: &[u64] = post.flags.as_ref().unwrap();
-    let states: &[u16] = post.action_state.as_ref();
-
-    let mut event = None;
-    let mut stat_table = DefenseStats::default();
-
-    // value tracking for v cancel
-    let mut l_lockout: i32 = 0;
-    let mut most_recent_l = 0;
-
-    // start 1 frame "late" to prevent index errors
-    for i in 1..pre.frame_index.len() {
-        // check for grab states
-
-        if just_pressed_any(
-            EngineInput::R | EngineInput::L,
-            pre.engine_buttons[i],
-            pre.engine_buttons[i - 1],
-        ) {
-            l_lockout = 40;
-            most_recent_l = i;
-        }
-        l_lockout -= 1;
-
-        // just_in_hitlag, filtering out shield hits
-        let in_hitlag = is_in_hitlag(flags[i]);
-        let was_in_hitlag = is_in_hitlag(flags[i - 1]);
-
-        let shielding = is_shielding_flag(flags[i]);
-        let grabbed_check = false;
-
-        let took_damage = just_took_damage(post.percent[i], post.percent[i - 1]);
-        let damage_taken = get_damage_taken(post.percent[i], post.percent[i - 1]);
-
-        // ----------------------------------- event detection ---------------------------------- //
-        // TODO check for being hit while already in hitlag
-        if (!was_in_hitlag && took_damage) || (!in_hitlag && took_damage && is_thrown(states[i]))
-        // && !is_magnifying_damage(damage_taken, flags, i)
-        {
-            let prev_state = states[i - 1];
-
-            event = Some(DefenseRow::new(
-                i as i32 - 123,
-                post.stocks[i],
-                post.percent[i],
-                damage_taken,
-                Attack::from(attacks[i]),
-                State::from_state_and_char(prev_state, Some(player_char)),
-                post.is_grounded.as_ref().unwrap()[i],
-                post.position[i],
-            ));
-
-            let row = event.as_mut().unwrap();
-            row.kb = post.knockback.as_ref().unwrap()[i];
-
-            if row.grounded || !is_vcancel_state(prev_state) {
-                row.v_cancel = None;
-            } else if (1..3).contains(&(i - most_recent_l)) // must have hit l a max of 2 frames before the hit
-                && l_lockout.is_negative()
-            // must not be in L lockout
-            {
-                println!("Woah a vcancel!");
-                row.v_cancel = Some(true);
-            } else {
-                row.v_cancel = Some(false);
-            }
-        }
-
-        // ----------------------------------- mid-event data ----------------------------------- //
-        if event.is_some() && in_hitlag {
-            let row = event.as_mut().unwrap();
-            row.hitlag_frames += 1;
-            let curr_stick = pre.joystick[i].as_stickregion();
-            row.stick_during_hitlag.push(curr_stick);
-
-            if row.hitlag_frames > 1 && curr_stick.valid_sdi(pre.joystick[i - 1].as_stickregion()) {
-                row.sdi_inputs.push(curr_stick)
-            }
-
-            continue;
-        }
-
-        // ----------------------------------- finalize event ----------------------------------- //
-
-        if !in_hitlag && was_in_hitlag && event.is_some() {
-            let row = event.as_mut().unwrap();
-
-            // check for crouch cancel. I could use action states, but there's complications with
-            // if you just entered crouch, or if you crouched during a subframe event, so we're just
-            // gonna check against the expected hitlag frames.
-
-            let expected_hitlag = ssbm_utils::calc::attack::hitlag(
-                row.damage_taken,
-                is_electric_attack(row.last_hit_by, &opnt_char),
-                true,
-            );
-            if row.grounded {
-                if row.hitlag_frames as u32 == expected_hitlag {
-                    row.crouch_cancel = Some(true);
-                } else {
-                    row.crouch_cancel = Some(false);
-                }
-            } else {
-                row.crouch_cancel = None;
-            }
-
-            let kb = post.knockback.as_ref().unwrap()[i];
-            let with_decay = kb - Velocity::new(KB_DECAY * kb.x, KB_DECAY * kb.y);
-
-            row.hitlag_end = post.position[i] - with_decay;
-
-            let effective_stick = pre.joystick[i];
-
-            row.di_stick = effective_stick;
-
-            let cstick = pre.cstick[i].as_stickregion();
-            row.asdi = if !cstick.is_deadzone() {
-                cstick
-            } else {
-                effective_stick.as_stickregion()
-            };
-
-            let kb_angle_rads = row.kb.as_angle();
-            row.kb_angle = kb_angle_rads.to_degrees();
-
-            if !row.kb.is_zero() {
-                let with_di = apply_di(kb_angle_rads, effective_stick);
-
-                row.di_efficacy = Some(get_di_efficacy(kb_angle_rads, with_di));
-                row.di_kb_angle = with_di.to_degrees();
-
-                let kb_scalar = kb_from_initial(row.kb);
-
-                row.di_kb = Velocity::new(
-                    initial_x_velocity(kb_scalar, with_di),
-                    initial_y_velocity(kb_scalar, with_di, row.grounded),
-                );
-
-                let char_stats = player_char.get_stats();
-
-                row.kills_no_di = should_kill(
-                    stage_id,
-                    row.kb,
-                    row.hitlag_end,
-                    char_stats.gravity,
-                    char_stats.max_fall_speed,
-                );
-
-                if effective_stick.x != 0.0 || effective_stick.y != 0.0 {
-                    row.kills_with_di = should_kill(
-                        stage_id,
-                        row.di_kb,
-                        row.hitlag_end,
-                        char_stats.gravity,
-                        char_stats.max_fall_speed,
-                    );
-                } else {
-                    row.kills_with_di = row.kills_no_di;
-                }
-
-                row.kills_any_di = {
-                    let mut result = true;
-                    for i in -90..=90 {
-                        let new_traj = kb_angle_rads - (i as f32 / 5.0).to_radians();
-                        if !should_kill(
-                            stage_id,
-                            Velocity::new(
-                                initial_x_velocity(kb_scalar, new_traj),
-                                initial_y_velocity(kb_scalar, new_traj, row.grounded),
-                            ),
-                            row.hitlag_end,
-                            char_stats.gravity,
-                            char_stats.max_fall_speed,
-                        ) {
-                            result = false;
-                            break;
-                        }
-                        row.kills_some_di = true;
-                    }
-
-                    result
-                }
-            } else {
-                // No reason to calculate when there's no knockback. Handles things like fox laser
-                row.di_efficacy = None;
-                row.di_kb = row.kb;
-                row.di_kb_angle = row.kb_angle;
-                row.kills_no_di = false;
-                row.kills_with_di = false;
-                row.kills_any_di = false;
-            }
-
-            stat_table.append(event.as_ref().unwrap());
-            event = None;
-        }
-    }
-
-    stat_table.into()
 }

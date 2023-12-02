@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use polars::prelude::DataFrame;
-use serde_json::map::Values;
 use ssbm_utils::enums::{Character, Port};
-use strum_macros::{EnumString, IntoStaticStr};
 
 use crate::{
     events::{

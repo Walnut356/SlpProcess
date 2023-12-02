@@ -17,7 +17,7 @@ use crate::{
     player::Player,
     stats::{
         combos::find_combos, defense::find_defense, inputs::find_inputs, items::find_items,
-        lcancel::find_lcancels, wavedash::find_wavedashes, Stats
+        lcancel::find_lcancels, tech::find_techs, wavedash::find_wavedashes, Stats,
     },
 };
 
@@ -121,6 +121,9 @@ impl Game {
         let version = self.version;
         let mut result: Vec<Arc<Player>> = Vec::new();
 
+
+        let stage = Stage::from_id(self.metadata.stage);
+
         for players in self.players.iter().permutations(2) {
             // inner scope for read-only operations
             let player = players[0];
@@ -133,7 +136,11 @@ impl Game {
             // l cancel status was with 2.0.0 on 3/19/2019
             let l_cancel = version
                 .at_least(2, 0, 0)
-                .then(|| find_lcancels(&player.frames, &Stage::from_id(self.metadata.stage)));
+                .then(|| find_lcancels(&player.frames, &stage));
+
+            let tech = version
+                .at_least(2, 0, 0)
+                .then(|| find_techs(&player.frames, &opponent.frames, &stage));
 
             // requires fields up to item.owner which was released just after rollback on 7/8/2020
             let item = version
@@ -161,6 +168,7 @@ impl Game {
                 item,
                 defense,
                 wavedash,
+                tech,
             });
 
             let combos = Arc::new(find_combos(
@@ -224,7 +232,8 @@ impl Game {
             .is_some_and(|x| x.end_method == EndMethod::NoContest)
         {
             let lras = Port::from_repr(
-                self.end.as_ref()
+                self.end
+                    .as_ref()
                     .unwrap()
                     .lras_initiator
                     .unwrap()
@@ -273,5 +282,4 @@ impl Game {
             }
         }
     }
-
 }

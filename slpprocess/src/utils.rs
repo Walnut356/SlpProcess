@@ -1,3 +1,4 @@
+use ssbm_utils::enums::StickRegion;
 use thiserror::Error;
 use polars::prelude::*;
 
@@ -14,4 +15,19 @@ pub enum ParseError {
 pub fn downcast_u8(series: &Series) -> Result<Vec<Option<u8>>, PolarsError> {
     let chunked = series.u8()?;
     Ok(chunked.to_vec())
+}
+
+pub(crate) fn as_vec_i8(input: Vec<StickRegion>) -> Vec<i8> {
+    input.into_iter().map(|s| s as i8).collect()
+}
+
+pub(crate) fn as_vec_static_str<T: Into<&'static str>>(input: Vec<T>) -> Vec<&'static str> {
+    input
+        .into_iter()
+        .map(|x| x.into())
+        .collect::<Vec<&'static str>>()
+}
+
+pub(crate) fn as_vec_arrow(input: Vec<StickRegion>) -> Vec<&'static str> {
+    input.into_iter().map(|x| x.to_utf_arrow()).collect()
 }

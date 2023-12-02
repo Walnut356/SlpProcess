@@ -12,6 +12,8 @@ use polars::prelude::*;
 use rayon::prelude::*;
 use serde_json;
 use slpprocess::parse_iter;
+use slpprocess::player::Player;
+use slpprocess::stats::Stats;
 use slpprocess::{get_combos, parse, stats::StatType, to_dolphin_queue, Game};
 use ssbm_utils::enums::ActionState;
 use ssbm_utils::types::Point;
@@ -28,13 +30,13 @@ macro_rules! timeit {
 }
 
 pub fn main() {
+    rayon::ThreadPoolBuilder::default().stack_size(1048576 * 5).build_global().unwrap();
     std::env::set_var("POLARS_FMT_TABLE_CELL_LIST_LEN", "-1");
 
     // let replay = r"G:/temp";
-    let replay = r"E:\Slippi Replays\Netplay\";
-
+    // let replay = r"E:\Slippi Replays\Netplay\";
+    let replay = r"E:\Slippi Replays\Netplay\Game_20231128T184115.slp";
     // let replay = r"./";
-    // let replay = r"G:/temp\Game_20230627T174002.slp";
     // let replay = r"G:/temp/Game_20230622T053447.slp";
     // let replay = r"E:\Slippi Replays\Netplay\Game_20231018T005550.slp";
 
@@ -43,17 +45,10 @@ pub fn main() {
     // let replay = r"./Game_20230526T020459.slp";
 
     // let replay = r"E:\Slippi Replays\Netplay\Game_20230607T011346.slp";
-    print_stat(replay);
-    // // let game = games.pop().unwrap();
 
-    // // let player = game.player_by_code("NUT#356").unwrap();
-    // let df = &player.stats.wavedash;
-    // println!("{}", player.stats.get_summary(StatType::LCancel).unwrap())
+    let game = parse(replay, false).pop().unwrap();
+    dbg!(game.player_by_code("NUT#356").unwrap().frames.pre.action_state[312 + 124]);
 
-    // dbg!(df);
-    // let mut file = File::create("output.parquet").expect("could not create file");
-    // ParquetWriter::new(&mut file).with_compression(ParquetCompression::Snappy)
-    // .finish(&mut df.clone()).unwrap();
 }
 
 // fn print_summary(replay: &str) {
@@ -81,26 +76,24 @@ pub fn main() {
 
 fn print_stat(replay: &str) {
     use slpprocess::columns::DefenseStats as clm;
-    timeit!("create par_iter" let mut games = parse_iter(replay));
+    timeit!("create par_iter" let mut games = parse(replay, false));
 
     timeit!(
         "parse, filter, collect"
-    let stats: Vec<LazyFrame> = games
+    let stats: Vec<LazyFrame> = games.into_iter()
         .filter_map(|x| {
             x.player_by_code("nut#356")
-                .map(|y| y.stats.clone())
-                .map(|stat| stat.get_summary(StatType::Defense).map(|df| df.lazy()))
+                .map(|y| y.stats.clone().get_summary(StatType::Defense).map(|x| x.lazy()))
                 .ok()
                 .flatten()
         })
         .collect()
     );
 
-    // let mut result: Option<DataFrame> = None;
-
     timeit!(
-        "concat frames"
-        let lf = concat(stats, UnionArgs {parallel: true, rechunk: true, to_supertypes: false}).unwrap()
+        "vstack"
+        // let lf = stats.into_iter().reduce(|a, b| a.vstack(&b).unwrap()).unwrap().lazy()
+        let lf = concat(stats, UnionArgs::default()).unwrap()
     );
 
     timeit!(
@@ -120,10 +113,7 @@ fn print_stat(replay: &str) {
         .collect().unwrap()
     );
 
-    println!(
-        "{:?}",
-        result
-    );
+    println!("{:?}", result);
     // for game in games {
     //     println!(
     //         "{:?}",
