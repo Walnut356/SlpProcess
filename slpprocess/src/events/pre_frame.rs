@@ -222,7 +222,7 @@ impl From<PreFrames> for DataFrame {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct PreRow {
     pub frame_index: i32,
     pub random_seed: u32,
@@ -237,6 +237,12 @@ pub struct PreRow {
     pub controller_l: f32,
     pub controller_r: f32,
     pub percent: Option<f32>,
+}
+
+impl std::fmt::Display for PreRow {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:#?}",)
+    }
 }
 
 pub fn parse_preframes(
@@ -280,8 +286,14 @@ pub fn unpack_frames(
     let frames_iter = frames.chunks_exact(2).enumerate();
 
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
-    p_frames.insert(ports[0] as u8, (PreFrames::new(duration as usize, version), None));
-    p_frames.insert(ports[1] as u8, (PreFrames::new(duration as usize, version), None));
+    p_frames.insert(
+        ports[0] as u8,
+        (PreFrames::new(duration as usize, version), None),
+    );
+    p_frames.insert(
+        ports[1] as u8,
+        (PreFrames::new(duration as usize, version), None),
+    );
 
     for (_, offsets) in frames_iter {
         for offset in offsets {
@@ -392,7 +404,8 @@ pub fn unpack_frames_ics(
             *working.orientation.get_unchecked_mut(i) = stream.get_f32();
             *working.joystick.get_unchecked_mut(i) =
                 StickPos::new(stream.get_f32(), stream.get_f32());
-            *working.cstick.get_unchecked_mut(i) = StickPos::new(stream.get_f32(), stream.get_f32());
+            *working.cstick.get_unchecked_mut(i) =
+                StickPos::new(stream.get_f32(), stream.get_f32());
             *working.engine_trigger.get_unchecked_mut(i) = stream.get_f32();
             *working.engine_buttons.get_unchecked_mut(i) = stream.get_u32();
             *working.controller_buttons.get_unchecked_mut(i) = stream.get_u16();

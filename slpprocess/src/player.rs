@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ssbm_utils::enums::{Character, Port};
+use ssbm_utils::enums::{Character, Port, character::Costume};
 
 use crate::{
     events::{
@@ -18,7 +18,7 @@ pub struct Player {
     /// `.as_internal()` and `try_as_css()`
     pub character: Character,
     /// Character's interal costume value
-    pub costume: u8,
+    pub costume: Costume,
     /// Player's port number P1-P4. Can be cast into 0-indexed u8 port number via `as u8`
     pub port: Port,
     /// Player's connect code (if netplay) in the form "CODE#123"
@@ -72,7 +72,22 @@ impl Frames {
 
     /// Gets both the full pre-frame and post-frame for a given frame index (0-indexed). This is very
     /// slow compared to iterating through only the columns you need.
-    pub fn get_frame(&self, index: usize) -> (PreRow, PostRow) {
-        (self.pre.get_frame(index), self.post.get_frame(index))
+    pub fn get_frame(&self, index: usize) -> Frame {
+        Frame(self.pre.get_frame(index), self.post.get_frame(index))
+    }
+}
+
+#[derive(Default, PartialEq)]
+pub struct Frame(pub PreRow, pub PostRow);
+
+impl core::fmt::Debug for Frame {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Frame(\n\t{:#?}\n\t{:#?})", self.0, self.1)
+        // f.debug_tuple("Frame").field(&self.0).field(&self.1).finish()
+    }
+}
+impl std::fmt::Display for Frame {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:#?}")
     }
 }
