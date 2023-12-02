@@ -3,45 +3,6 @@ use num_traits::PrimInt;
 use crate::enums::ActionRange as AR;
 use crate::enums::*;
 
-pub struct StateTracker {
-    target: ActionState,
-    count: u32,
-    prev_state: u16,
-}
-
-impl StateTracker {
-    pub fn new(target: ActionState) -> Self {
-        Self {
-            target,
-            count: 0,
-            // you'll probably not ever be in this state, so it's an okay initial value =)
-            prev_state: u16::MAX,
-        }
-    }
-
-    pub fn check_entered(&mut self, state: u16) {
-        if state == self.target && state != self.prev_state {
-            self.count += 1;
-        }
-        self.prev_state = state;
-    }
-
-    pub fn check_exited(&mut self, state: u16) {
-        if state == self.prev_state && state != self.target {
-            self.count += 1;
-        }
-        self.prev_state = state;
-    }
-
-    pub fn get_count(&self) -> u32 {
-        self.count
-    }
-
-    pub fn reset(&mut self) {
-        self.count = 0
-    }
-}
-
 /// Returns true if the current state is different from the previous state
 ///
 /// Minimum Slippi Version: 0.1.0
@@ -164,6 +125,7 @@ pub fn is_fastfalling(flags: u64) -> bool {
 #[inline]
 pub fn is_damaged(state: u16) -> bool {
     (AR::DAMAGE_START..=AR::DAMAGE_END).contains(&state)
+        || ActionState::DAMAGE_FALL == state
         || ActionState::DOWN_DAMAGE_D == state
         || ActionState::DOWN_DAMAGE_U == state
 }

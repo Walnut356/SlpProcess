@@ -1,8 +1,10 @@
 #![allow(non_camel_case_types)]
 #![allow(clippy::upper_case_acronyms)]
 
+use anyhow::{anyhow, Result};
 use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
-use anyhow::{Result, anyhow};
+
+use super::ActionState as AS;
 
 /// Ports P1-P4. Can be converted to the 0-indexed u8 value via `as u8`
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, FromRepr, Default)]
@@ -22,14 +24,17 @@ impl TryFrom<i8> for Port {
             1 => Ok(Port::P2),
             2 => Ok(Port::P3),
             3 => Ok(Port::P4),
-            _ => Err(anyhow!("Unable to convert i8 {val} into Port, expected value 0-3")),
+            _ => Err(anyhow!(
+                "Unable to convert i8 {val} into Port, expected value 0-3"
+            )),
         }
     }
 
     type Error = anyhow::Error;
 }
 
-/// The current direction the character is facing, can be LEFT, RIGHT, or DOWN*
+/// The current direction the character is facing, can be LEFT, RIGHT, or DOWN*. Impl's TryFrom<f32>
+/// as melee stores this value as a float for some reason
 ///
 /// *Down is technically only used for warpstar item animation, but it's useful to give it a
 /// default value of 0 for stats
@@ -41,6 +46,22 @@ pub enum Orientation {
     LEFT = -1,
     DOWN = 0,
     RIGHT = 1,
+}
+
+impl TryFrom<f32> for Orientation {
+    type Error = anyhow::Error;
+
+    fn try_from(value: f32) -> std::prelude::v1::Result<Self, Self::Error> {
+        if value == -1.0 {
+            Ok(Self::LEFT)
+        } else if value == 0.0 {
+            Ok(Self::DOWN)
+        } else if value == 1.0 {
+            Ok(Self::RIGHT)
+        } else {
+            Err(anyhow!("Cannot construct orientation from value {value}. Expected -1.0, 0.0, or 1.0"))
+        }
+    }
 }
 
 /// L cancel status, active for 1 frame upon landing during an aerial attack, which indicates
@@ -179,4 +200,64 @@ pub enum Flags {
     /// Active when character is in the magnifying glass
     OFFSCREEN = 1 << 39,
     Raw(u64),
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
+)]
+pub enum TechType {
+    TECH_IN_PLACE,
+    TECH_LEFT,
+    TECH_RIGHT,
+    GET_UP_ATTACK,
+    MISSED_TECH,
+    WALL_TECH,
+    MISSED_WALL_TECH,
+    WALL_JUMP_TECH,
+    CEILING_TECH,
+    MISSED_CEILING_TECH,
+    JAB_RESET,
+    MISSED_TECH_GET_UP,
+    MISSED_TECH_ROLL_LEFT,
+    MISSED_TECH_ROLL_RIGHT,
+}
+
+impl TechType {
+    pub fn from_state(state: u16, direction: i8) -> Option<Self> {
+        let a_state = AS::from_repr(state);
+
+        match a_state? {
+            AS::PASSIVE => Some(TechType::TECH_IN_PLACE),
+            AS::DOWN_STAND_U | AS::DOWN_STAND_D => Some(TechType::MISSED_TECH_GET_UP),
+            AS::PASSIVE_STAND_F => match direction > 0 {
+                true => Some(TechType::TECH_RIGHT),
+                false => Some(TechType::TECH_LEFT),
+            },
+            AS::DOWN_FOWARD_U | AS::DOWN_FOWARD_D => match direction > 0 {
+                true => Some(TechType::MISSED_TECH_ROLL_RIGHT),
+                false => Some(TechType::MISSED_TECH_ROLL_LEFT),
+            },
+            AS::PASSIVE_STAND_B => match direction > 0 {
+                true => Some(TechType::TECH_LEFT),
+                false => Some(TechType::TECH_RIGHT),
+            },
+            AS::DOWN_BACK_U | AS::DOWN_BACK_D => match direction > 0 {
+                true => Some(TechType::MISSED_TECH_ROLL_LEFT),
+                false => Some(TechType::MISSED_TECH_ROLL_RIGHT),
+            },
+            AS::DOWN_ATTACK_U | AS::DOWN_ATTACK_D => Some(TechType::GET_UP_ATTACK),
+            AS::DOWN_BOUND_U
+            | AS::DOWN_BOUND_D
+            | AS::DOWN_WAIT_U
+            | AS::DOWN_WAIT_D
+            | AS::DOWN_REFLECT => Some(TechType::MISSED_TECH),
+            AS::DOWN_DAMAGE_U | AS::DOWN_DAMAGE_D => Some(TechType::JAB_RESET),
+            AS::PASSIVE_WALL => Some(TechType::WALL_TECH),
+            AS::PASSIVE_WALL_JUMP => Some(TechType::WALL_JUMP_TECH),
+            AS::PASSIVE_CEIL => Some(TechType::CEILING_TECH),
+            AS::FLY_REFLECT_CEIL => Some(TechType::MISSED_CEILING_TECH),
+            AS::FLY_REFLECT_WALL => Some(TechType::MISSED_WALL_TECH),
+            _ => None,
+        }
+    }
 }

@@ -77,6 +77,7 @@ impl Velocity {
         point_to_angle(self.x, self.y)
     }
 
+    #[inline]
     pub fn is_zero(&self) -> bool {
         self.x == 0.0 && self.y == 0.0
     }
@@ -133,6 +134,11 @@ impl Position {
     #[inline]
     pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
+    }
+
+    #[inline]
+    pub fn distance(&self, other: Position) -> f32 {
+        f32::hypot(self.x - other.x, self.y - other.y)
     }
 }
 
