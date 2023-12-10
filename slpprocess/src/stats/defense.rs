@@ -4,18 +4,22 @@ use polars::prelude::*;
 
 use ssbm_utils::{
     calc::{
-        apply_di, get_di_efficacy, initial_x_velocity,
-        initial_y_velocity, kb_from_initial, should_kill,
+        apply_di, get_di_efficacy, initial_x_velocity, initial_y_velocity, kb_from_initial,
+        should_kill,
     },
     checks::{
-        get_damage_taken, is_electric_attack, is_in_hitlag, is_thrown, is_vcancel_state, just_pressed_any, just_took_damage,
+        get_damage_taken, is_electric_attack, is_in_hitlag, is_thrown, is_vcancel_state,
+        just_pressed_any, just_took_damage,
     },
-    constants::KB_DECAY,
+    constants::{ASDI_DIST, KB_DECAY},
     enums::{Attack, Character, EngineInput, State, StickRegion},
     types::{Degrees, Position, StickPos, Velocity},
 };
 
-use crate::{player::Frames, utils::{as_vec_static_str, as_vec_arrow}};
+use crate::{
+    player::Frames,
+    utils::{as_vec_arrow, as_vec_static_str},
+};
 
 pub(crate) fn find_defense(
     plyr_frames: &Frames,
@@ -30,6 +34,7 @@ pub(crate) fn find_defense(
 
     let flags: &[u64] = post.flags.as_ref().unwrap();
     let states: &[u16] = post.action_state.as_ref();
+    let grounded: &[bool] = post.is_grounded.as_ref().unwrap();
 
     let mut event = None;
     let mut stat_table = DefenseStats::default();
@@ -64,7 +69,9 @@ pub(crate) fn find_defense(
 
         // ----------------------------------- event detection ---------------------------------- //
         // TODO check for being hit while already in hitlag
-        if (!was_in_hitlag && took_damage) || (!in_hitlag && took_damage && is_thrown(states[i]))
+        if event.is_none()
+            && ((!was_in_hitlag && took_damage)
+                || (!in_hitlag && took_damage && is_thrown(states[i])))
         // && !is_magnifying_damage(damage_taken, flags, i)
         {
             let prev_state = states[i - 1];
@@ -76,7 +83,7 @@ pub(crate) fn find_defense(
                 damage_taken,
                 Attack::from(attacks[i]),
                 State::from_state_and_char(prev_state, Some(player_char)),
-                post.is_grounded.as_ref().unwrap()[i],
+                grounded[i - 1],
                 post.position[i],
             ));
 
@@ -134,21 +141,31 @@ pub(crate) fn find_defense(
                 row.crouch_cancel = None;
             }
 
-            let kb = post.knockback.as_ref().unwrap()[i];
-            let with_decay = kb - Velocity::new(KB_DECAY * kb.x, KB_DECAY * kb.y);
-
-            row.hitlag_end = post.position[i] - with_decay;
-
             let effective_stick = pre.joystick[i];
 
             row.di_stick = effective_stick;
 
-            let cstick = pre.cstick[i].as_stickregion();
-            row.asdi = if !cstick.is_deadzone() {
-                cstick
+            let mut asdi_dist = Velocity::default();
+
+            let cstick = pre.cstick[i];
+            row.asdi = if !cstick.as_stickregion().is_deadzone() {
+                asdi_dist.x = cstick.x * ASDI_DIST;
+                asdi_dist.y = cstick.y * ASDI_DIST;
+                cstick.as_stickregion()
+
             } else {
+                asdi_dist.x = effective_stick.x * ASDI_DIST;
+                asdi_dist.y = effective_stick.y * ASDI_DIST;
                 effective_stick.as_stickregion()
             };
+
+
+            // let kb = post.knockback.as_ref().unwrap()[i];
+            // let with_decay = kb - Velocity::new(KB_DECAY * kb.x, KB_DECAY * kb.y);
+
+            // You can't SDI on the last frame of hitlag anyway, so the position on that last frame
+            // + the ASDI distance will equal your starting position before knockback takes effect
+            row.hitlag_end = post.position[i - 1] + asdi_dist;
 
             let kb_angle_rads = row.kb.as_angle();
             row.kb_angle = kb_angle_rads.to_degrees();
@@ -190,8 +207,8 @@ pub(crate) fn find_defense(
 
                 row.kills_any_di = {
                     let mut result = true;
-                    for i in -90..=90 {
-                        let new_traj = kb_angle_rads - (i as f32 / 5.0).to_radians();
+                    for j in -90..=90 {
+                        let new_traj = kb_angle_rads - (j as f32 / 5.0).to_radians();
                         if !should_kill(
                             stage_id,
                             Velocity::new(
@@ -203,9 +220,9 @@ pub(crate) fn find_defense(
                             char_stats.max_fall_speed,
                         ) {
                             result = false;
-                            break;
+                        } else {
+                            row.kills_some_di = true;
                         }
-                        row.kills_some_di = true;
                     }
 
                     result

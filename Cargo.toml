@@ -1,3 +1,7 @@
 [workspace]
 members = ["./slpprocess", "./ssbm-utils", "./py-slpprocess"]
 resolver = "2"
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true

@@ -6,7 +6,10 @@ use crate::{events::game_start::Version, Port};
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
-use ssbm_utils::types::{Position, StickPos};
+use ssbm_utils::{
+    enums::{Character, State, Orientation, EngineInput, ControllerInput},
+    types::{Position, StickPos},
+};
 
 /// Contains all pre-frame data for a single character. Stored in columnar format, thus row-wise
 /// access via `.get_frame(index)` will be very slow. If possible, only iterate through the columns
@@ -15,6 +18,7 @@ use ssbm_utils::types::{Position, StickPos};
 pub struct PreFrames {
     len: usize,
     version: Version,
+    character: Character,
     pub frame_index: Box<[i32]>,
     pub random_seed: Box<[u32]>,
     pub action_state: Box<[u16]>,
@@ -31,13 +35,14 @@ pub struct PreFrames {
 }
 
 impl PreFrames {
-    fn new(duration: usize, version: Version) -> Self {
+    fn new(duration: usize, version: Version, character: Character) -> Self {
         /* Because this is only used internally and only exists in this function, there's no real
         reason to 0-initialize the memory when we're immediately overwriting it anyway. Saves
         a fair few cycles */
         PreFrames {
             len: duration,
             version,
+            character,
             frame_index: unsafe {
                 let mut temp = Vec::with_capacity(duration);
                 temp.set_len(duration);
@@ -116,6 +121,7 @@ impl PreFrames {
     /// slow compared to iterating through only the columns you need.
     pub fn get_frame(&self, index: usize) -> PreRow {
         PreRow {
+            character: self.character,
             frame_index: self.frame_index[index],
             random_seed: self.random_seed[index],
             action_state: self.action_state[index],
@@ -143,11 +149,12 @@ impl PreFrames {
     /// a (possibly) nice result of this is that, unlike other parsers, we can guarantee that nana
     /// frames (if they exist) will always be the same length as leader frames, even if some of the
     /// data is filled with dummy "null" values.
-    fn ics(duration: usize, version: Version) -> Self {
+    fn ics(duration: usize, version: Version, character: Character) -> Self {
         let len = (duration - 123) as i32;
         PreFrames {
             len: duration,
             version,
+            character,
             frame_index: ((-123)..len).collect::<Vec<i32>>().into_boxed_slice(),
             random_seed: vec![0; duration].into_boxed_slice(),
             // Initialize to ActionState::Sleep, since that's what nana will be in when frames are
@@ -224,6 +231,7 @@ impl From<PreFrames> for DataFrame {
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct PreRow {
+    pub character: Character,
     pub frame_index: i32,
     pub random_seed: u32,
     pub action_state: u16,
@@ -241,7 +249,27 @@ pub struct PreRow {
 
 impl std::fmt::Display for PreRow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:#?}",)
+        write!(
+            f,
+            "PreFrame {{\n\tframe_index: {},\n\trandom_seed: {},\n\taction_state: {}({}),\n\tposition: Pos({},{}),\n\torientation: {},\n\tjoystick: StickPos({},{}),\n\tcstick: StickPos({},{}),\n\tengine_trigger: {},\n\tengine_buttons: {},\n\tcontroller_buttons: {},\n\tcontroller_trigger: (L: {}, R: {}),\n\tpercent: {:?}\n}}",
+            self.frame_index,
+            self.random_seed,
+            State::from_state_and_char(self.action_state, Some(self.character),),
+            self.action_state,
+            self.position.x,
+            self.position.y,
+            Into::<&'static str>::into(Orientation::try_from(self.orientation).unwrap()),
+            self.joystick.x,
+            self.joystick.y,
+            self.cstick.x,
+            self.cstick.y,
+            self.engine_trigger,
+            EngineInput::Raw(self.engine_buttons),
+            ControllerInput::Raw(self.controller_buttons),
+            self.controller_l,
+            self.controller_r,
+            self.percent,
+        )
     }
 }
 
@@ -252,14 +280,15 @@ pub fn parse_preframes(
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
+    characters: [Character; 2],
 ) -> IntMap<u8, (PreFrames, Option<PreFrames>)> {
     let p_frames = {
         /* splitting these out saves us a small amount of time in conditional logic, and allows for
         exact iterator chunk sizes. */
         if !ics[0] && !ics[1] {
-            unpack_frames(stream, frames, duration, ports, version)
+            unpack_frames(stream, frames, duration, ports, version, characters)
         } else {
-            unpack_frames_ics(stream, frames, duration, ports, ics, version)
+            unpack_frames_ics(stream, frames, duration, ports, ics, version, characters)
         }
     };
 
@@ -278,6 +307,7 @@ pub fn unpack_frames(
     duration: u64,
     ports: [Port; 2],
     version: Version,
+    characters: [Character; 2],
 ) -> IntMap<u8, (PreFrames, Option<PreFrames>)> {
     /* TODO defining it like this *should* eliminate bounds checks, but i need to inspect the
     assembly to be sure. It's gonna start looking real gross if it's having trouble seeing through
@@ -288,11 +318,11 @@ pub fn unpack_frames(
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
     p_frames.insert(
         ports[0] as u8,
-        (PreFrames::new(duration as usize, version), None),
+        (PreFrames::new(duration as usize, version, characters[0]), None),
     );
     p_frames.insert(
         ports[1] as u8,
-        (PreFrames::new(duration as usize, version), None),
+        (PreFrames::new(duration as usize, version, characters[1]), None),
     );
 
     for (_, offsets) in frames_iter {
@@ -355,6 +385,7 @@ pub fn unpack_frames_ics(
     ports: [Port; 2],
     ics: [bool; 2],
     version: Version,
+    characters: [Character; 2],
 ) -> IntMap<u8, (PreFrames, Option<PreFrames>)> {
     let len = duration as usize;
 
@@ -362,15 +393,15 @@ pub fn unpack_frames_ics(
     p_frames.insert(
         ports[0] as u8,
         (
-            PreFrames::new(len, version),
-            ics[0].then(|| PreFrames::ics(len, version)),
+            PreFrames::new(len, version, characters[0]),
+            ics[0].then(|| PreFrames::ics(len, version, characters[0])),
         ),
     );
     p_frames.insert(
         ports[1] as u8,
         (
-            PreFrames::new(len, version),
-            ics[1].then(|| PreFrames::ics(len, version)),
+            PreFrames::new(len, version, characters[1]),
+            ics[1].then(|| PreFrames::ics(len, version, characters[1])),
         ),
     );
 

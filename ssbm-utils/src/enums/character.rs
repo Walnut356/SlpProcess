@@ -25,12 +25,12 @@ use strum_macros::{Display, EnumString, IntoStaticStr};
 #[derive(Debug, Clone, Default, Copy, PartialEq, EnumString, Display, IntoStaticStr)]
 #[strum(ascii_case_insensitive)]
 pub enum Character {
-    #[strum(serialize = "falcon", serialize = "captainfalcon")]
+    #[strum(serialize = "falcon", serialize = "CaptainFalcon")]
     CaptainFalcon = 0,
-    #[strum(serialize = "dk", serialize = "donkeykong")]
+    #[strum(serialize = "dk", serialize = "DonkeyKong")]
     DonkeyKong = 1,
     Fox = 2,
-    #[strum(serialize = "gnw", serialize = "gameandwatch")]
+    #[strum(serialize = "gnw", serialize = "GameAndWatch")]
     GameAndWatch = 3,
     Kirby = 4,
     Bowser = 5,
@@ -38,11 +38,11 @@ pub enum Character {
     Luigi = 7,
     Mario = 8,
     Marth = 9,
-    #[strum(serialize = "mew2", serialize = "m2", serialize = "mewtwo")]
+    #[strum(serialize = "mew2", serialize = "m2", serialize = "MewTwo")]
     Mewtwo = 10,
     Ness = 11,
     Peach = 12,
-    #[strum(serialize = "pika", serialize = "pikachu")]
+    #[strum(serialize = "pika", serialize = "Pikachu")]
     Pikachu = 13,
     /// Individaul climbers can be accessed via
     /// ```
@@ -62,9 +62,9 @@ pub enum Character {
     /// let popo = Character::try_from("Popo").unwrap();
     /// let nana = Character::try_from("Nana").unwrap();
     /// ```
-    #[strum(serialize = "ics", serialize = "iceclimbers")]
+    #[strum(serialize = "ics", serialize = "IceClimbers")]
     IceClimbers = 14,
-    #[strum(serialize = "puff", serialize = "jiggs", serialize = "jigglypuff")]
+    #[strum(serialize = "puff", serialize = "jiggs", serialize = "Jigglypuff")]
     Jigglypuff = 15,
     Samus = 16,
     Yoshi = 17,
@@ -72,13 +72,13 @@ pub enum Character {
     Sheik = 19,
     Falco = 20,
     #[default] // for whatever reason, the game uses YL as the default/empty value for ports
-    #[strum(serialize = "ylink", serialize = "younglink")]
+    #[strum(serialize = "ylink", serialize = "YoungLink")]
     YoungLink = 21,
-    #[strum(serialize = "doc", serialize = "drmario")]
+    #[strum(serialize = "doc", serialize = "DrMario")]
     DrMario = 22,
     Roy = 23,
     Pichu = 24,
-    #[strum(serialize = "ganon", serialize = "ganondorf")]
+    #[strum(serialize = "ganon", serialize = "Ganondorf")]
     Ganondorf = 25,
     MasterHand = 26,
     WireframeMale = 27,
@@ -973,7 +973,7 @@ impl Character {
                 2 => C::BOW,
                 3 => C::HEADBAND,
                 4 => C::CROWN,
-                _ => panic!("Invalid costume value. Expected 0-4, got {costume_id}"),
+                _ => panic!("Invalid costume value for jigglypuff. Expected 0-4, got {costume_id}"),
             },
             Character::Samus => match costume_id {
                 0 => C::DEFAULT,

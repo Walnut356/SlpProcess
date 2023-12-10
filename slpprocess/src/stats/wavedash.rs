@@ -4,13 +4,13 @@ use ssbm_utils::{
     types::{Position, StickPos},
 };
 
-use crate::player::Frames;
+use crate::{player::Frames, utils::Direction};
 
 #[derive(Debug, Clone, Default)]
 pub struct Wavedashes {
     pub frame_index: Vec<i32>,
     pub angle: Vec<f32>,
-    pub direction: Vec<Orientation>,
+    pub direction: Vec<Direction>,
     pub start_position: Vec<Position>,
     pub waveland: Vec<bool>,
 }
@@ -92,15 +92,16 @@ pub fn find_wavedashes(frames: &Frames) -> DataFrame {
     wavedashes.into()
 }
 
-fn degrees_below_horizontal(stick: StickPos) -> (f32, Orientation) {
+fn degrees_below_horizontal(stick: StickPos) -> (f32, Direction) {
     let angle = stick.with_deadzone().as_angle().to_degrees();
 
     match angle {
-        _ if (90.0..270.0).contains(&angle) => (angle - 180.0, Orientation::LEFT),
-        _ if (270.0..360.0).contains(&angle) => (angle - 270.0, Orientation::RIGHT),
+        _ if (90.0..270.0).contains(&angle) => (angle - 180.0, Direction::LEFT),
+        _ if (270.1..360.0).contains(&angle) => (angle - 270.0, Direction::RIGHT),
         // to avoid negative 0
-        _ if angle == 0.0 => (angle, Orientation::RIGHT),
-        _ if (0.0..90.0).contains(&angle) => (angle * -1.0, Orientation::RIGHT),
+        _ if angle == 270.0 => (90.0, Direction::DOWN),
+        _ if angle == 0.0 => (angle, Direction::RIGHT),
+        _ if (0.0..90.0).contains(&angle) => (angle * -1.0, Direction::RIGHT),
         _ => panic!("How did you get here"),
     }
 }

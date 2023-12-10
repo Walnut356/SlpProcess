@@ -5,12 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
-            "type": "python",
+            "type": "lldb",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": true
+            "name": "Cargo debug",
+            "program": "G:\\Coding\\My Projects\\Slippi Stats\\SlpProcess\\target\\debug\\slpprocess.exe",
+            "cargo": {
+                "args": [
+                    "build",
+                ]
+            },
+            "args": []
         }
     ]
 }

@@ -2,13 +2,13 @@
 
 use std::time::Duration;
 
+use anyhow::{anyhow, Result};
 use bytes::{Buf, Bytes};
-use chrono::{DateTime, FixedOffset};
 use encoding_rs::SHIFT_JIS;
 use num_enum::{FromPrimitive, IntoPrimitive, TryFromPrimitive};
 use polars::prelude::*;
 use strum_macros::IntoStaticStr;
-use anyhow::{Result, anyhow};
+use time::OffsetDateTime;
 
 use crate::{
     player::{Player, UCFToggles},
@@ -95,18 +95,16 @@ pub struct GameStart {
     ///
     /// added v3.14.0
     pub tiebreak_number: Option<u32>,
-    /// Datetime the match was played on.
+    /// Datetime the match was played on. Defaults to the UNIX epoch time (Midnight, 1 January, 1970 (UTC))
     ///
-    /// added v0.1.0 (parsing may still fail due to metadata event bugs)
-    pub date: Option<DateTime<FixedOffset>>,
+    /// added v0.1.0
+    pub date: OffsetDateTime,
 }
 
 impl GameStart {
     // the awkward return type here is because this will only ever be constructed internally, and because it will help
     // a LOT down the line to have the players contained in the top level Game object rather than the GameStart event.
-    pub fn parse(mut raw: Bytes,  date: Option<DateTime<FixedOffset>>) -> Result<(Self, Version, [Player; 2],)> {
-
-
+    pub fn parse(mut raw: Bytes, date: OffsetDateTime) -> Result<(Self, Version, [Player; 2])> {
         let version = Version::new(raw.get_u8(), raw.get_u8(), raw.get_u8());
         raw.advance(9); // skip past revision number, game bitfields 1-4 and bomb rain
 
@@ -145,7 +143,9 @@ impl GameStart {
         }
 
         if p_count > 2 {
-            return Err(anyhow!("Invalid player countL {p_count}. Parser only tolerates 1v1 replays"));
+            return Err(anyhow!(
+                "Invalid player countL {p_count}. Parser only tolerates 1v1 replays"
+            ));
         }
 
         raw.advance(72); // skip past "players" 5 and 6
@@ -165,20 +165,20 @@ impl GameStart {
         let tiebreak_number = None;
 
         let mut result = GameStart {
-                    random_seed,
-                    is_teams,
-                    stage,
-                    timer: timer_length,
-                    is_pal,
-                    is_frozen_stadium,
-                    is_netplay,
-                    match_id,
-                    match_type,
-                    game_number,
-                    tiebreak_number,
-                    damage_ratio,
-                    date,
-                };
+            random_seed,
+            is_teams,
+            stage,
+            timer: timer_length,
+            is_pal,
+            is_frozen_stadium,
+            is_netplay,
+            match_id,
+            match_type,
+            game_number,
+            tiebreak_number,
+            damage_ratio,
+            date,
+        };
 
         if !raw.has_remaining() {
             // version < 1.0.0
@@ -203,11 +203,7 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return Ok((
-                result,
-                version,
-                players,
-            ));
+            return Ok((result, version, players));
         }
 
         for val in temp_ucf.iter_mut() {
@@ -242,11 +238,7 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return Ok((
-                result,
-                version,
-                players,
-            ));
+            return Ok((result, version, players));
         }
 
         raw.advance(64); // skip past in-game tags
@@ -274,11 +266,7 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return Ok(
-                (result,
-                version,
-                players),
-            );
+            return Ok((result, version, players));
         }
 
         result.is_pal = Some(raw.get_u8() != 0);
@@ -306,11 +294,7 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return Ok((
-                result,
-                version,
-                players,
-            ));
+            return Ok((result, version, players));
         }
 
         result.is_frozen_stadium = Some(raw.get_u8() != 0);
@@ -338,11 +322,7 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return Ok((
-                result,
-                version,
-                players,
-            ));
+            return Ok((result, version, players));
         }
 
         raw.advance(1); // skip minor scene
@@ -371,11 +351,7 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return Ok((
-                result,
-                version,
-                players,
-            ));
+            return Ok((result, version, players));
         }
 
         for val in display_names.iter_mut() {
@@ -421,11 +397,7 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return Ok((
-                result,
-                version,
-                players,
-            ));
+            return Ok((result, version, players));
         }
 
         raw.advance(29 * 4); // skip past slippi uid
@@ -463,11 +435,7 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return Ok((
-                result,
-                version,
-                players,
-            ));
+            return Ok((result, version, players));
         }
 
         raw.advance(1); // skip language option
@@ -495,11 +463,7 @@ impl GameStart {
                     count += 1;
                 }
             }
-            return Ok((
-                result,
-                version,
-                players,
-            ));
+            return Ok((result, version, players));
         }
 
         let mut match_id_bytes = vec![0; 51];
@@ -544,11 +508,7 @@ impl GameStart {
             }
         }
 
-        Ok((
-            result,
-            version,
-            players,
-        ))
+        Ok((result, version, players))
     }
 }
 

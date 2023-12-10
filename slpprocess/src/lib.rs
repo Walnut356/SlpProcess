@@ -21,7 +21,7 @@ use serde_json::json;
 pub use ssbm_utils::enums::Port;
 use stats::Stats;
 
-use rayon::{prelude::*, iter::FilterMap, vec::IntoIter};
+use rayon::{iter::FilterMap, prelude::*, vec::IntoIter};
 use std::{
     fs::{self, File},
     path::{Path, PathBuf},
@@ -169,7 +169,7 @@ pub mod prelude {
 #[cfg(test)]
 mod test {
     use crate::parse;
-    use ssbm_utils::enums::{Port, Character};
+    use ssbm_utils::enums::{Character, Port};
 
     #[test]
     fn test_ics() {

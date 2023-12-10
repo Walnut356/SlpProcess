@@ -6,6 +6,7 @@ use bytes::Bytes;
 use nohash_hasher::IntMap;
 use num_enum::{FromPrimitive, IntoPrimitive};
 use polars::prelude::*;
+use time::{OffsetDateTime, format_description::well_known::Iso8601};
 
 use std::fs::File;
 use std::io::{prelude::*, Cursor};
@@ -152,9 +153,9 @@ impl Game {
             duration = Duration::from_millis(millis);
         };
 
-        let mut date = None;
+        let mut date = OffsetDateTime::UNIX_EPOCH;
         if let serde_json::Value::String(start_at) = &metadata["startAt"] {
-            date = chrono::DateTime::parse_from_rfc3339(start_at.as_str()).ok();
+            date = OffsetDateTime::parse(start_at.as_str(), &Iso8601::DEFAULT).unwrap_or(OffsetDateTime::UNIX_EPOCH);
         }
 
         stream.set_position(return_pos);
@@ -242,6 +243,7 @@ impl Game {
                     frame_count,
                     ports,
                     ics,
+                    [players[0].character, players[1].character],
                 )
             },
             || {

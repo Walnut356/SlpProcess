@@ -19,6 +19,7 @@ use ssbm_utils::{
     types::{Position, StickPos, Velocity},
     vel,
 };
+use time::{format_description::well_known::Iso8601, OffsetDateTime};
 
 // for some reason "Run Tests" and "Debug" use different working folders. This is a dumb workaround
 // for a dumb problem. You might have to replace the backslash with a forward slash on linux.
@@ -49,7 +50,7 @@ pub fn test_metadata() {
         match_type: Some(MatchType::Direct),
         game_number: Some(2),
         tiebreak_number: Some(0),
-        date: chrono::DateTime::parse_from_rfc3339("2023-11-29T00:26:22+00:00").ok(),
+        date: OffsetDateTime::parse("2023-11-29T00:26:22+00:00", &Iso8601::DEFAULT).unwrap(),
     };
 
     assert_eq!(game.metadata, metadata);
@@ -130,6 +131,7 @@ pub fn test_frames() {
         p1_frames.get_frame(0),
         Frame(
             PreRow {
+                character: Character::Falco,
                 frame_index: -123,
                 random_seed: 32794,
                 action_state: 322,
@@ -177,6 +179,7 @@ pub fn test_frames() {
         p1_frames.get_frame(p1_frames.len() - 1),
         Frame(
             PreRow {
+                character: Character::Falco,
                 frame_index: 9685,
                 random_seed: 642809882,
                 action_state: 14,
@@ -230,6 +233,7 @@ pub fn test_frames() {
         p1_frames.get_frame(3887),
         Frame(
             PreRow {
+                character: Character::Falco,
                 frame_index: 3764,
                 random_seed: 254771226,
                 action_state: 88,
@@ -277,6 +281,7 @@ pub fn test_frames() {
         p1_frames.get_frame(2231),
         Frame(
             PreRow {
+                character: Character::Falco,
                 frame_index: 2108,
                 random_seed: 146243610,
                 action_state: 76,
@@ -324,6 +329,7 @@ pub fn test_frames() {
         p2_frames.get_frame(7974),
         Frame(
             PreRow {
+                character: Character::Falco,
                 frame_index: 7851,
                 random_seed: 522616858,
                 action_state: 345,
@@ -371,6 +377,7 @@ pub fn test_frames() {
         p2_frames.get_frame(9626),
         Frame(
             PreRow {
+                character: Character::Falco,
                 frame_index: 9503,
                 random_seed: 630882330,
                 action_state: 90,

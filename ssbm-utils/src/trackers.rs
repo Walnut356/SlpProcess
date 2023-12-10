@@ -42,7 +42,7 @@ impl StateTracker {
 
 /// Tracks tech/vcancel lockout behavior.
 ///
-/// ```no_run
+/// ```ignore
 /// let mut tracker = LockoutTracker::default();
 ///
 /// for i in 1..frames.len() {

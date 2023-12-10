@@ -7,7 +7,9 @@ use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 use super::ActionState as AS;
 
 /// Ports P1-P4. Can be converted to the 0-indexed u8 value via `as u8`
-#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, FromRepr, Default)]
+#[derive(
+    Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord, FromRepr, Default, EnumString, IntoStaticStr, Display
+)]
 #[repr(u8)]
 pub enum Port {
     #[default]
@@ -59,7 +61,9 @@ impl TryFrom<f32> for Orientation {
         } else if value == 1.0 {
             Ok(Self::RIGHT)
         } else {
-            Err(anyhow!("Cannot construct orientation from value {value}. Expected -1.0, 0.0, or 1.0"))
+            Err(anyhow!(
+                "Cannot construct orientation from value {value}. Expected -1.0, 0.0, or 1.0"
+            ))
         }
     }
 }

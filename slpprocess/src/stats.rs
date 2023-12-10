@@ -5,6 +5,7 @@ pub mod items;
 pub mod lcancel;
 pub mod wavedash;
 pub mod tech;
+pub mod recovery;
 
 use std::ops::Div;
 
@@ -54,7 +55,7 @@ impl Stats {
             StatType::Item => self.item.clone(),
             StatType::Wavedash => self.wd_summary(),
             StatType::LCancel => self.lc_summary(),
-            StatType::Tech => Some(DataFrame::default()),
+            StatType::Tech => self.tech_summary(),
             StatType::Defense => self.def_summary(),
         }
     }
@@ -125,9 +126,10 @@ impl Stats {
                         .filter(
                             col(clm::KillsSomeDI.into())
                                 .eq(lit(true))
-                                .and(col(clm::KillsAllDI.into()).eq(lit(false))),
+                                .and(col(clm::KillsAllDI.into()).eq(lit(false))
+                                    .and(col(clm::KillsWithDI.into()).eq(lit(false)))),
                         )
-                        .mean()
+                        .count()
                         .alias("LivableHitsLived"),
                     col(clm::KillsWithDI.into())
                         .filter(
@@ -151,6 +153,21 @@ impl Stats {
                 ])
                 .collect()
                 .ok();
+        }
+
+        None
+    }
+
+    fn tech_summary(&self) -> Option<DataFrame> {
+        use crate::columns::TechStats as clm;
+        if let Some(df) = &self.tech {
+            let lf = df.clone().lazy();
+
+            return lf.select(&[
+                col(clm::TowardsCenter.into()).mean(),
+                col(clm::TowardsOpnt.into()).mean(),
+
+            ]).collect().ok();
         }
 
         None
@@ -212,7 +229,7 @@ impl From<Vec<Arc<Stats>>> for Stats {
     }
 }
 
-#[derive(Debug, Copy, Clone, EnumString, IntoStaticStr, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, EnumString, IntoStaticStr, PartialEq, Eq, strum_macros::Display)]
 #[strum(ascii_case_insensitive)]
 pub enum StatType {
     Input,
