@@ -15,9 +15,7 @@ use slpprocess::parse_iter;
 use slpprocess::player::Player;
 use slpprocess::stats::Stats;
 use slpprocess::{get_combos, parse, stats::StatType, to_dolphin_queue, Game};
-use ssbm_utils::enums::ActionState;
-use ssbm_utils::types::Point;
-
+use ssbm_utils::prelude::*;
 // static REPLAY: &[u8; 165123] = include_bytes!(r"G:/temp\Game_20230627T174002.slp");
 
 macro_rules! timeit {
@@ -34,11 +32,9 @@ pub fn main() {
     std::env::set_var("POLARS_FMT_TABLE_CELL_LIST_LEN", "-1");
 
     // let replay = r"G:/temp";
-    // let replay = r"E:\Slippi Replays\Netplay\";
-    let replay = r"E:\Slippi Replays\Netplay\Game_20231128T184115.slp";
-    // let replay = r"./";
-    // let replay = r"G:/temp/Game_20230622T053447.slp";
-    // let replay = r"E:\Slippi Replays\Netplay\Game_20231018T005550.slp";
+    let replay = r"E:\Slippi Replays\Netplay\";
+    // crashes jiggs costume value of 5
+    let replay = "E:\\Slippi Replays\\Netplay\\Game_20231018T003539.slp";
 
     // TODO this replay has an item of ID 0x62
     // let replay = r"G:/temp/Game_20230713T212214.slp";
@@ -46,33 +42,24 @@ pub fn main() {
 
     // let replay = r"E:\Slippi Replays\Netplay\Game_20230607T011346.slp";
 
-    let game = parse(replay, false).pop().unwrap();
-    dbg!(game.player_by_code("NUT#356").unwrap().frames.pre.action_state[312 + 124]);
+    // print_summary(replay)
 
+    for i in 0..100 {
+    timeit!(
+        "Parse Games: "
+        let games = parse(replay, false)
+    );
+    dbg!(games[0].duration);
+    }
 }
 
-// fn print_summary(replay: &str) {
-//     let now = Instant::now();
-//     let games = parse(replay, false);
-//     let dur = now.elapsed();
+fn print_summary(replay: &str) {
+    let now = Instant::now();
+    let games = parse(replay, false);
+    let dur = now.elapsed();
 
-//     let mut schema = Schema::new();
-//     schema.with_column("TotalDamage".into(), DataType::Float32);
-//     schema.with_column("MostHitBy".into(), DataType::Utf8);
-//     schema.with_column("SDIPerHit".into(), DataType::Float32);
-//     let mut df = DataFrame::from(&schema);
-
-//     dbg!(dur);
-//     for game in games {
-//         let player = game.player_by_code("NUT#356");
-//         if let Ok(p) = player {
-//             if let Some(stats) = p.stats.get_summary(StatType::Defense) {
-//                 df.extend(&stats).unwrap();
-//             }
-//         }
-//     }
-//     println!("{}", df.column("SDIPerHit").unwrap().mean().unwrap());
-// }
+    println!("{}", games[0].players[1].stats.get_summary(StatType::Tech).unwrap());
+}
 
 fn print_stat(replay: &str) {
     use slpprocess::columns::DefenseStats as clm;

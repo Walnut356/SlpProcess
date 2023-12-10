@@ -1,4 +1,8 @@
+use std::io::Cursor;
+
+use bytes::{Bytes, Buf};
 use ssbm_utils::enums::StickRegion;
+use strum_macros::{IntoStaticStr, EnumString};
 use thiserror::Error;
 use polars::prelude::*;
 
@@ -26,4 +30,12 @@ pub(crate) fn as_vec_static_str<T: Into<&'static str>>(input: Vec<T>) -> Vec<&'s
 
 pub(crate) fn as_vec_arrow(input: Vec<StickRegion>) -> Vec<&'static str> {
     input.into_iter().map(|x| x.to_utf_arrow()).collect()
+}
+
+#[derive(Debug, Copy, Clone, EnumString, IntoStaticStr)]
+pub enum Direction {
+    LEFT,
+    RIGHT,
+    UP,
+    DOWN,
 }

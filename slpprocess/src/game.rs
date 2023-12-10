@@ -57,7 +57,10 @@ impl Game {
     /// Can panic if replay is severely malformed (Payload size doesn't match Payload Sizes listing,
     /// metadata event missing, etc.)
     pub fn new(path: &Path) -> Result<Self> {
-        ensure!(path.is_file() && path.extension().unwrap() == "slp", "Expected file with extension .slp, got path: {path:?}");
+        ensure!(
+            path.is_file() && path.extension().unwrap() == "slp",
+            "Expected file with extension .slp, got path: {path:?}"
+        );
         let file_data = Self::get_file_contents(path)?;
         let mut game = Game::parse(file_data, path)?;
         // let now = Instant::now();
@@ -104,9 +107,15 @@ impl Game {
     }
 
     pub fn summarize(&self) -> DataFrame {
+        // I fucking hate time libraries so much. All of them have ergonomics like this.
+        let date = self
+            .metadata
+            .date
+            .to_offset(time::UtcOffset::current_local_offset().unwrap())
+            .to_string();
         df!(
             "File" => &[self.path.file_stem().unwrap().to_str()],
-            "Datetime" => &[self.metadata.date.map(|x| x.naive_local().to_string())],
+            "Datetime" => &[date[0..date.len() - 12].to_owned()],
             "Duration" => &[format!("{}:{:02}", self.duration.as_secs() / 60, self.duration.as_secs() % 60)],
             // "MatchID" => &[self.metadata.match_id.clone()],
             "MatchType" => &[self.metadata.match_type.map(Into::<&str>::into)],
@@ -120,7 +129,6 @@ impl Game {
     fn get_stats(&mut self) {
         let version = self.version;
         let mut result: Vec<Arc<Player>> = Vec::new();
-
 
         let stage = Stage::from_id(self.metadata.stage);
 
