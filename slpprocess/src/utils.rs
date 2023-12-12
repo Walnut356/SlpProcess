@@ -39,3 +39,131 @@ pub enum Direction {
     UP,
     DOWN,
 }
+
+pub struct Stream(pub Cursor<Bytes>);
+
+impl Buf for Stream {
+    fn remaining(&self) -> usize {
+        let len = self.0.get_ref().len();
+        let pos = self.0.position();
+
+        if pos >= len as u64 {
+            return 0;
+        }
+
+        len - pos as usize
+    }
+
+    fn chunk(&self) -> &[u8] {
+        self.0.get_ref().chunk()
+    }
+
+    fn advance(&mut self, cnt: usize) {
+        let pos = (self.0.position() as usize)
+            .checked_add(cnt)
+            .expect("overflow");
+
+        assert!(pos <= self.0.get_ref().len());
+        self.0.set_position(pos as u64);
+    }
+
+    #[inline]
+    fn get_u8(&mut self) -> u8 {
+        self.0.get_mut().get_u8()
+    }
+
+    #[inline]
+    fn get_i8(&mut self) -> i8 {
+        self.0.get_mut().get_i8()
+    }
+
+    #[inline]
+    fn get_u16(&mut self) -> u16 {
+        self.0.get_mut().get_u16()
+    }
+
+    #[inline]
+    fn get_u16_le(&mut self) -> u16 {
+        self.0.get_mut().get_u16_le()
+    }
+
+    #[inline]
+    fn get_u16_ne(&mut self) -> u16 {
+        self.0.get_mut().get_u16_ne()
+    }
+
+    #[inline]
+    fn get_i16(&mut self) -> i16 {
+        self.0.get_mut().get_i16()
+    }
+
+    #[inline]
+    fn get_i16_le(&mut self) -> i16 {
+        self.0.get_mut().get_i16_le()
+    }
+
+    #[inline]
+    fn get_i16_ne(&mut self) -> i16 {
+        self.0.get_mut().get_i16_ne()
+    }
+
+    #[inline]
+    fn get_u32(&mut self) -> u32 {
+        self.0.get_mut().get_u32()
+    }
+
+    #[inline]
+    fn get_u32_le(&mut self) -> u32 {
+        self.0.get_mut().get_u32_le()
+    }
+
+    #[inline]
+    fn get_u32_ne(&mut self) -> u32 {
+        self.0.get_mut().get_u32_ne()
+    }
+
+    #[inline]
+    fn get_i32(&mut self) -> i32 {
+        self.0.get_mut().get_i32()
+    }
+
+    #[inline]
+    fn get_i32_le(&mut self) -> i32 {
+        self.0.get_mut().get_i32_le()
+    }
+
+    #[inline]
+    fn get_i32_ne(&mut self) -> i32 {
+        self.0.get_mut().get_i32_ne()
+    }
+
+    #[inline]
+    fn get_u64(&mut self) -> u64 {
+        self.0.get_mut().get_u64()
+    }
+
+    #[inline]
+    fn get_u64_le(&mut self) -> u64 {
+        self.0.get_mut().get_u64_le()
+    }
+
+    #[inline]
+    fn get_u64_ne(&mut self) -> u64 {
+        self.0.get_mut().get_u64_ne()
+    }
+
+    #[inline]
+    fn get_i64(&mut self) -> i64 {
+        self.0.get_mut().get_i64()
+    }
+
+    #[inline]
+    fn get_i64_le(&mut self) -> i64 {
+        self.0.get_mut().get_i64_le()
+    }
+
+    #[inline]
+    fn get_i64_ne(&mut self) -> i64 {
+        self.0.get_mut().get_i64_ne()
+    }
+}

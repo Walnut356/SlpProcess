@@ -1,6 +1,6 @@
 #![allow(clippy::uninit_vec)]
 
-use std::io::Cursor;
+use std::io::{stdout, Cursor};
 
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
@@ -474,9 +474,9 @@ impl std::fmt::Display for PostRow {
 }
 
 pub fn parse_postframes(
-    stream: Cursor<Bytes>,
+    file_data: Bytes,
     version: Version,
-    frames: &[u64],
+    frames: &[usize],
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
@@ -484,17 +484,24 @@ pub fn parse_postframes(
     /* splitting these out saves us a small amount of time in conditional logic, and allows for
     exact iterator chunk sizes. */
     if !ics[0] && !ics[1] {
-        unpack_frames(stream, frames, duration, ports, version)
+        unpack_frames(file_data, frames, duration, ports, version)
     } else {
-        unpack_frames_ics(stream, frames, duration, ports, ics, version)
+        unpack_frames_ics(
+            file_data,
+            frames,
+            duration,
+            ports,
+            ics,
+            version,
+        )
     }
 }
 
 /// Slightly more optimized version of the typical parsing code, due to invariants regarding frame
 /// event ordering and counts
 pub fn unpack_frames(
-    mut stream: Cursor<Bytes>,
-    frames: &[u64],
+    mut stream: Bytes,
+    frames: &[usize],
     duration: u64,
     ports: [Port; 2],
     version: Version,
@@ -502,12 +509,23 @@ pub fn unpack_frames(
     let offsets_iter = frames.chunks_exact(2).enumerate();
 
     let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
-    p_frames.insert(ports[0] as u8, (PostFrames::new(duration as usize, version), None));
-    p_frames.insert(ports[1] as u8, (PostFrames::new(duration as usize, version), None));
+    p_frames.insert(
+        ports[0] as u8,
+        (PostFrames::new(duration as usize, version), None),
+    );
+    p_frames.insert(
+        ports[1] as u8,
+        (PostFrames::new(duration as usize, version), None),
+    );
+
+    let file_length = stream.len();
 
     for (_, offsets) in offsets_iter {
-        for offset in offsets {
-            stream.set_position(*offset);
+        for &offset in offsets {
+            // frames should always be in the same order as they appeared in the file, thus we can
+            // always just move forward.
+            stream.advance(offset - (file_length - stream.len()));
+
             let frame_number = stream.get_i32();
             let i = (frame_number + 123) as usize;
             if i == duration as usize || i == (duration + 1) as usize {
@@ -616,8 +634,8 @@ pub fn unpack_frames(
 }
 
 pub fn unpack_frames_ics(
-    mut stream: Cursor<Bytes>,
-    offsets: &[u64],
+    mut stream: Bytes,
+    offsets: &[usize],
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
@@ -641,8 +659,12 @@ pub fn unpack_frames_ics(
         ),
     );
 
-    for offset in offsets.iter() {
-        stream.set_position(*offset);
+    let file_length = stream.len();
+
+    for &offset in offsets.iter() {
+        // frames should always be in the same order as they appeared in the file, thus we can
+            // always just move forward.
+        stream.advance(offset - (file_length - stream.len()));
         let frame_number = stream.get_i32();
         // since we can't chunk the frames, enumeration won't work. We can still get an
         // always-in-bounds index from the frame number though.

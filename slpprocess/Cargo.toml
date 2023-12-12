@@ -25,12 +25,12 @@ polars = { version = "0.35.2", features = [
     "list_count"
 ] }
 byteorder = "1.4.3"
-num_enum = "0.7.0"
 nohash-hasher = "0.2.0"
 rayon = "1.7.0"
 bytemuck = "1.13.1"
 anyhow = "1.0.72"
 bytes =  "1.4.0"
+
 encoding_rs = "0.8.32"
 serde = "1.0.188"
 serde_json = "1.0.104"

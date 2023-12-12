@@ -75,7 +75,7 @@ pub fn parse(path: &str, multithreaded: bool) -> Vec<Game> {
 
         return result;
     }
-    panic!("invalid file path")
+    panic!("invalid file path: {f_path:?}")
 }
 
 /// Returns a parallel iterator over all .slp files in a directory. Any files that error out during

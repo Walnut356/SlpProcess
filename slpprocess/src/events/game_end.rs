@@ -1,9 +1,9 @@
 #![allow(non_upper_case_globals)]
 
 use bytes::{Buf, Bytes};
-use num_enum::{IntoPrimitive, TryFromPrimitive};
+use strum_macros::FromRepr;
 
-#[derive(Debug, Clone, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, PartialEq, FromRepr)]
 #[repr(u8)]
 pub enum EndMethod {
     Unresolved,
@@ -21,7 +21,7 @@ pub struct GameEnd {
 }
 
 pub fn parse_gameend(mut raw: Bytes) -> GameEnd {
-    let end_method = EndMethod::try_from(raw.get_u8()).unwrap();
+    let end_method = EndMethod::from_repr(raw.get_u8()).unwrap();
     let mut lras_initiator = None;
     let mut placements = None;
 

@@ -1,15 +1,14 @@
 #![allow(non_upper_case_globals)]
 
 use anyhow::{anyhow, ensure, Result};
-use byteorder::{BigEndian, ReadBytesExt};
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
-use num_enum::{FromPrimitive, IntoPrimitive};
 use polars::prelude::*;
-use time::{OffsetDateTime, format_description::well_known::Iso8601};
+use strum_macros::FromRepr;
+use time::{format_description::well_known::Iso8601, OffsetDateTime};
 
-use std::fs::File;
-use std::io::{prelude::*, Cursor};
+use std::{fs::File, collections::HashMap};
+use std::io::prelude::*;
 use std::path::Path;
 use std::time::Duration;
 
@@ -36,7 +35,7 @@ impl AsFrames for Duration {
     }
 }
 
-#[derive(Debug, Clone, Copy, FromPrimitive, PartialEq, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, FromRepr, Default, Hash)]
 #[repr(u8)]
 enum EventType {
     EventPayloads = 0x35,
@@ -53,10 +52,10 @@ enum EventType {
     None = 0x00,
 }
 
-fn expect_bytes<R: Read>(stream: &mut R, expected: &[u8]) -> std::io::Result<()> {
-    let mut actual = vec![0; expected.len()];
-    stream.read_exact(&mut actual)?;
-    if expected == actual.as_slice() {
+fn expect_bytes(stream: &mut Bytes, expected: &[u8]) -> std::io::Result<()> {
+    let actual = stream.get(0..expected.len()).unwrap();
+    if expected == actual {
+        stream.advance(expected.len());
         Ok(())
     } else {
         Err(std::io::Error::new(
@@ -70,17 +69,16 @@ impl Game {
     pub(crate) fn get_file_contents(path: &Path) -> Result<Bytes> {
         let mut f = File::open(path)?;
         let file_length = f.metadata()?.len() as usize;
+        #[cfg(debug_assertions)]
+        dbg!(file_length);
         let mut file_data = vec![0; file_length];
         f.read_exact(&mut file_data).unwrap();
 
         Ok(Bytes::from(file_data))
     }
 
-    fn get_event_sizes<R>(file: &mut R) -> Result<IntMap<u8, u16>>
-    where
-        R: Read,
-    {
-        let code = EventType::from_primitive(file.read_u8().unwrap());
+    fn get_event_sizes(file: &mut Bytes) -> Result<HashMap<EventType, u16>> {
+        let code = EventType::from_repr(file.get_u8()).unwrap();
         ensure!(
             code == EventType::EventPayloads,
             ParseError::Value(
@@ -89,19 +87,19 @@ impl Game {
             )
         );
 
-        let payloads_size = file.read_u8().unwrap();
+        let payloads_size = file.get_u8();
 
         ensure!(
             (payloads_size - 1) % 3 == 0,
             anyhow!("EventPayloads length invalid")
         );
 
-        let mut event_map: IntMap<u8, u16> = IntMap::default();
+        let mut event_map = HashMap::default();
 
         for _ in (0..(payloads_size - 1)).step_by(3) {
-            let event = EventType::from(file.read_u8().unwrap());
-            let size = file.read_u16::<BigEndian>().unwrap();
-            event_map.insert(event.into(), size);
+            let event = EventType::from_repr(file.get_u8()).unwrap();
+            let size = file.get_u16();
+            event_map.insert(event, size);
         }
 
         Ok(event_map)
@@ -111,9 +109,20 @@ impl Game {
     /// memory for some other reason
     pub fn parse(file_data: Bytes, path: &Path) -> Result<Self> {
         // ---------------------------------------- setup --------------------------------------- //
-        // todo replace this with another bytes object? Bytes comes with an internal cursor
-        // that supports .advance()
-        let mut stream = Cursor::new(file_data);
+
+        /*
+        I used a Cursor over the bytes object internally for a while, but due to the way Bytes
+        and Buf are implemented, Cursor<Bytes> is much harder to optimize and requires extra derefs.
+        Using a raw bytes object, the entire `get_x` function can be reduced to a pointer cast, a
+        pointer add, and a bounds check. While cloning the Bytes object is more expensive than
+        setting the Cursor's position, it's still cheap and should be worth it considering how many
+        `get_x` functions are in the hot loops.
+        */
+
+        // We treat `file_data` as the "canonical" Bytes object, and any time we need to set the
+        // position, it needs to be cloned so that we retain at least 1 instance with the original's
+        // pointer offset.
+        let mut stream = file_data.slice(..);
 
         expect_bytes(
             &mut stream,
@@ -122,15 +131,13 @@ impl Game {
             ],
         )?;
 
-        let raw_length = stream.read_u32::<BigEndian>().unwrap() as u64 + 15;
+        let raw_length = stream.get_u32() as u64 + 15;
 
-        let return_pos = stream.position();
-
-        // quick detour to help save on re-allocations later
-        stream.set_position(raw_length);
+        // ----------------------------------- metadata block ----------------------------------- //
+        let mut temp_meta = file_data.slice(raw_length as usize..);
 
         expect_bytes(
-            &mut stream,
+            &mut temp_meta,
             // `metadata` key & type ("U\x08metadata{")
             &[
                 0x55, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x7b,
@@ -140,7 +147,7 @@ impl Game {
         let mut frame_count = 0;
 
         let mut duration: Duration = Duration::default();
-        let metadata = ubjson::to_map(&mut stream)?;
+        let metadata = ubjson::to_map(&mut temp_meta.reader())?;
         if let serde_json::Value::Number(lastframe) = &metadata["lastFrame"] {
             // duration, in frames, is translated to seconds. 123 is subtracted from the frame count
             // to match the duration to the in-game timer. The total frame count is easily
@@ -155,22 +162,23 @@ impl Game {
 
         let mut date = OffsetDateTime::UNIX_EPOCH;
         if let serde_json::Value::String(start_at) = &metadata["startAt"] {
-            date = OffsetDateTime::parse(start_at.as_str(), &Iso8601::DEFAULT).unwrap_or(OffsetDateTime::UNIX_EPOCH);
+            date = OffsetDateTime::parse(start_at.as_str(), &Iso8601::DEFAULT)
+                .unwrap_or(OffsetDateTime::UNIX_EPOCH);
         }
 
-        stream.set_position(return_pos);
-
-        let event_sizes: IntMap<u8, u16> = Self::get_event_sizes(&mut stream)?;
-
         // ------------------------------------- game start ------------------------------------- //
+        let event_sizes = Self::get_event_sizes(&mut stream)?;
 
-        assert_eq!(stream.read_u8().unwrap(), EventType::GameStart as u8);
+        assert_eq!(stream.get_u8(), EventType::GameStart as u8);
 
-        let raw_start = stream.get_ref().slice(
-            // wow this is exceptionally ugly! thanks rust =)
-            stream.position() as usize
-                ..(stream.position() + event_sizes[&EventType::GameStart.into()] as u64) as usize,
-        );
+        let raw_start = stream.slice(0..event_sizes[&EventType::GameStart] as usize);
+        stream.advance(event_sizes[&EventType::GameStart] as usize);
+
+        // .slice(
+        //     // wow this is exceptionally ugly! thanks rust =)
+        //     stream.position() as usize
+        //         ..(stream.position() + event_sizes[&EventType::GameStart.into()] as u64) as usize,
+        // );
 
         let (game_start, version, mut players) = GameStart::parse(raw_start, date)?;
 
@@ -181,45 +189,48 @@ impl Game {
             players[1].character == Character::IceClimbers,
         ];
 
-        stream.set_position(stream.position() + event_sizes[&EventType::GameStart.into()] as u64);
+        // stream.set_position(stream.position() + event_sizes[&EventType::GameStart.into()] as u64);
 
         let mut game_end_bytes: Option<Bytes> = None;
 
         // ----------------------------------- event dispatch ----------------------------------- //
 
+        // there is 100% a better way to do this but it's 3am and i'll think of it later
+        let ics_count = match ics {
+            [false, false] => 0,
+            [true, false] | [false, true] => 1,
+            [true, true] => 2,
+        };
+
         let mut event = EventType::None;
-        let mut pre_offsets = Vec::with_capacity((frame_count * 2) as usize);
-        let mut post_offsets = Vec::with_capacity((frame_count * 2) as usize);
+        // It's better to overallocate than to have to reallocate these vecs. The pre and post
+        // should be exact-sized, but the items will likely overallocate by a decent amount.
+        let mut pre_offsets = Vec::with_capacity((frame_count * (2 + ics_count)) as usize);
+        let mut post_offsets = Vec::with_capacity((frame_count * (2 + ics_count)) as usize);
         let mut item_offsets = Vec::with_capacity((frame_count * 2) as usize);
 
-        while stream.position() < raw_length && event != EventType::GameEnd {
-            let code = stream.read_u8().unwrap();
-            event = EventType::from(code);
-            // TODO remove this once everything works
+        let mut pos = file_data.len() - stream.len();
+
+        while pos < raw_length as usize && event != EventType::GameEnd {
+            let code = stream.get_u8();
+            event = EventType::from_repr(code).unwrap_or_default();
             /* EventType::None allows the parser to continue working on newer replays (with possible
-            new events). During testing all events are accounted for, so any EventType::Nones are
-            likely a misalignment of my slices */
-            assert!(event != EventType::None);
-
-            // TODO stop making Vec<Bytes> and just make Vec<usize> (i.e. Vec<offset>). Pass a
-            // single bytes copy into each handler function and just stream.set_position(offset)
-            // should be 4x less memory
-
-            let size = event_sizes[&code] as u64;
-            let pos = stream.position();
-            let raw_data = stream.get_ref();
+            new events). During testing all events must be accounted for, so any EventType::Nones
+            are likely a misalignment of my slices */
+            debug_assert!(event != EventType::None);
 
             match event {
-                EventType::PreFrame => pre_offsets.push(stream.position()),
-                EventType::PostFrame => post_offsets.push(stream.position()),
-                EventType::Item => item_offsets.push(stream.position()),
+                EventType::PreFrame => pre_offsets.push(pos + 1),
+                EventType::PostFrame => post_offsets.push(pos + 1),
+                EventType::Item => item_offsets.push(pos + 1),
                 EventType::GameEnd => {
-                    game_end_bytes = Some(raw_data.slice(pos as usize..(pos + size) as usize))
+                    let size = event_sizes[&event] as usize;
+                    game_end_bytes = Some(stream.slice(..size))
                 }
                 _ => (),
             }
-
-            stream.set_position(pos + size);
+            stream.advance(event_sizes[&event] as usize);
+            pos = file_data.len() - stream.len();
         }
 
         let mut game_end = None;
@@ -231,13 +242,13 @@ impl Game {
         let mut item_frames = None;
 
         if version.at_least(3, 0, 0) {
-            item_frames = Some(parse_itemframes(stream.clone(), version, &item_offsets));
+            item_frames = Some(parse_itemframes(file_data.clone(), event_sizes[&EventType::Item] as usize, version, &item_offsets));
         }
 
         let (mut pre_frames, mut post_frames) = rayon::join(
             || {
                 parse_preframes(
-                    stream.clone(),
+                    file_data.clone(),
                     version,
                     &pre_offsets,
                     frame_count,
@@ -248,7 +259,7 @@ impl Game {
             },
             || {
                 parse_postframes(
-                    stream.clone(),
+                    file_data.clone(),
                     version,
                     &post_offsets,
                     frame_count,

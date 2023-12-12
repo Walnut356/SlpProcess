@@ -274,9 +274,9 @@ impl std::fmt::Display for PreRow {
 }
 
 pub fn parse_preframes(
-    stream: Cursor<Bytes>,
+    file_data: Bytes,
     version: Version,
-    frames: &[u64],
+    frames: &[usize],
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
@@ -286,9 +286,9 @@ pub fn parse_preframes(
         /* splitting these out saves us a small amount of time in conditional logic, and allows for
         exact iterator chunk sizes. */
         if !ics[0] && !ics[1] {
-            unpack_frames(stream, frames, duration, ports, version, characters)
+            unpack_frames(file_data, frames, duration, ports, version, characters)
         } else {
-            unpack_frames_ics(stream, frames, duration, ports, ics, version, characters)
+            unpack_frames_ics(file_data, frames, duration, ports, ics, version, characters)
         }
     };
 
@@ -302,8 +302,8 @@ pub fn parse_preframes(
 }
 
 pub fn unpack_frames(
-    mut stream: Cursor<Bytes>,
-    frames: &[u64],
+    mut stream: Bytes,
+    frames: &[usize],
     duration: u64,
     ports: [Port; 2],
     version: Version,
@@ -325,9 +325,14 @@ pub fn unpack_frames(
         (PreFrames::new(duration as usize, version, characters[1]), None),
     );
 
+    let file_length = stream.len();
+
     for (_, offsets) in frames_iter {
-        for offset in offsets {
-            stream.set_position(*offset);
+        for &offset in offsets {
+            // frames should always be in the same order as they appeared in the file, thus we can
+            // always just move forward.
+            stream.advance(offset - (file_length - stream.len()));
+
             let frame_number = stream.get_i32();
             let i = (frame_number + 123) as usize;
             if i == duration as usize || i == (duration + 1) as usize {
@@ -379,8 +384,8 @@ pub fn unpack_frames(
 }
 
 pub fn unpack_frames_ics(
-    mut stream: Cursor<Bytes>,
-    offsets: &[u64],
+    mut stream: Bytes,
+    offsets: &[usize],
     duration: u64,
     ports: [Port; 2],
     ics: [bool; 2],
@@ -405,8 +410,12 @@ pub fn unpack_frames_ics(
         ),
     );
 
-    for offset in offsets.iter() {
-        stream.set_position(*offset);
+    let file_length = stream.len();
+
+    for &offset in offsets.iter() {
+        // frames should always be in the same order as they appeared in the file, thus we can
+        // always just move forward.
+        stream.advance(offset - (file_length - stream.len()));
 
         let frame_number = stream.get_i32();
         let i = (frame_number + 123) as usize;

@@ -5,9 +5,8 @@ use std::time::Duration;
 use anyhow::{anyhow, Result};
 use bytes::{Buf, Bytes};
 use encoding_rs::SHIFT_JIS;
-use num_enum::{FromPrimitive, IntoPrimitive, TryFromPrimitive};
 use polars::prelude::*;
-use strum_macros::IntoStaticStr;
+use strum_macros::{IntoStaticStr, FromRepr};
 use time::OffsetDateTime;
 
 use crate::{
@@ -16,7 +15,7 @@ use crate::{
 };
 use ssbm_utils::enums::{character::Character, stage::StageID};
 
-#[derive(Debug, Clone, Copy, PartialEq, FromPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, FromRepr, Default)]
 #[repr(u8)]
 pub enum Mode {
     VS = 2,
@@ -25,7 +24,7 @@ pub enum Mode {
     Unknown = 0,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, FromPrimitive, IntoPrimitive, IntoStaticStr)]
+#[derive(Debug, Clone, Copy, PartialEq, FromRepr, IntoStaticStr, Default)]
 #[repr(u8)]
 pub enum MatchType {
     // ascii character values for u, r, d
@@ -36,7 +35,7 @@ pub enum MatchType {
     Unknown = 0,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive)]
+#[derive(Debug, Clone, Copy, PartialEq, FromRepr)]
 #[repr(u8)]
 pub enum PlayerType {
     Human = 0,
@@ -45,7 +44,7 @@ pub enum PlayerType {
     Empty = 3,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, TryFromPrimitive, IntoPrimitive, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, FromRepr, Default)]
 #[repr(u8)]
 pub enum ControllerFix {
     Off = 0,
@@ -123,7 +122,7 @@ impl GameStart {
         let mut temp_players = Vec::new();
         for _ in 0..4 {
             let character = Character::try_from_css(raw.get_u8())?;
-            let p_type = PlayerType::try_from(raw.get_u8())?;
+            let p_type = PlayerType::from_repr(raw.get_u8()).ok_or_else(|| anyhow!("Invalid player type"))?;
             raw.advance(1);
             let costume = character.get_costume(raw.get_u8());
 
@@ -207,8 +206,8 @@ impl GameStart {
         }
 
         for val in temp_ucf.iter_mut() {
-            let dashback = ControllerFix::try_from(raw.get_u32() as u8).unwrap();
-            let shield_drop = ControllerFix::try_from(raw.get_u32() as u8).unwrap();
+            let dashback = ControllerFix::from_repr(raw.get_u32() as u8).unwrap();
+            let shield_drop = ControllerFix::from_repr(raw.get_u32() as u8).unwrap();
             *val = Some(UCFToggles {
                 dashback,
                 shield_drop,
@@ -478,9 +477,9 @@ impl GameStart {
 
         result.match_type = {
             if match_id_len > 5 {
-                Some(MatchType::from(
+                MatchType::from_repr(
                     result.match_id.as_ref().map(|x| x.as_bytes()[5]).unwrap(),
-                ))
+                )
             } else {
                 Some(MatchType::Unknown)
             }

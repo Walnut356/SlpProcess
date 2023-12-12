@@ -1,4 +1,5 @@
 use std::hint::black_box;
+use std::io::Read;
 use std::path::PathBuf;
 use std::time::Instant;
 use std::{
@@ -6,7 +7,7 @@ use std::{
     sync::{RwLock, RwLockReadGuard},
 };
 
-use bytes::Bytes;
+use bytes::{Bytes, Buf};
 use polars::datatypes::DataType::Struct;
 use polars::prelude::*;
 use rayon::prelude::*;
@@ -28,13 +29,30 @@ macro_rules! timeit {
 }
 
 pub fn main() {
-    rayon::ThreadPoolBuilder::default().stack_size(1048576 * 5).build_global().unwrap();
+    // rayon::ThreadPoolBuilder::default()
+    //     .stack_size(1048576 * 5)
+    //     .build_global()
+    //     .unwrap();
     std::env::set_var("POLARS_FMT_TABLE_CELL_LIST_LEN", "-1");
 
-    // let replay = r"G:/temp";
-    let replay = r"E:\Slippi Replays\Netplay\";
-    // crashes jiggs costume value of 5
-    let replay = "E:\\Slippi Replays\\Netplay\\Game_20231018T003539.slp";
+    let replay = r"G:/temp";
+    // let replay = r"E:\Slippi Replays\Netplay\";
+    // let replay = r"./test_replays/netplay_sample.slp";
+    // let mut f = File::open(replay).unwrap();
+    //     let file_length = f.metadata().unwrap().len() as usize;
+    //     dbg!(file_length);
+    //     let mut file_data = vec![0; file_length];
+    //     f.read_exact(&mut file_data).unwrap();
+
+    //     dbg!(&file_data[56268..56268 + 4]);
+    //     let mut b = Bytes::from(file_data);
+    //     let mut d = b.slice(..);
+
+    //     d.advance(56268);
+
+    //     dbg!(b.len() - d.len());
+    //     dbg!(d.get_i32());
+
 
     // TODO this replay has an item of ID 0x62
     // let replay = r"G:/temp/Game_20230713T212214.slp";
@@ -44,12 +62,12 @@ pub fn main() {
 
     // print_summary(replay)
 
-    for i in 0..100 {
-    timeit!(
-        "Parse Games: "
-        let games = parse(replay, false)
-    );
-    dbg!(games[0].duration);
+    loop {
+        timeit!(
+            "Parse Games: "
+            let games = parse(replay, false)
+        );
+        dbg!(games[0].duration);
     }
 }
 
@@ -58,7 +76,13 @@ fn print_summary(replay: &str) {
     let games = parse(replay, false);
     let dur = now.elapsed();
 
-    println!("{}", games[0].players[1].stats.get_summary(StatType::Tech).unwrap());
+    println!(
+        "{}",
+        games[0].players[1]
+            .stats
+            .get_summary(StatType::Tech)
+            .unwrap()
+    );
 }
 
 fn print_stat(replay: &str) {
