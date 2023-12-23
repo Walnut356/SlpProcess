@@ -38,7 +38,7 @@ pub enum Character {
     Luigi = 7,
     Mario = 8,
     Marth = 9,
-    #[strum(serialize = "mew2", serialize = "m2", serialize = "MewTwo")]
+    #[strum(serialize = "mew2", serialize = "m2", serialize = "Mewtwo")]
     Mewtwo = 10,
     Ness = 11,
     Peach = 12,

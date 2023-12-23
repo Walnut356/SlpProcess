@@ -8,7 +8,10 @@ use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 #[derive(Debug, Clone, Copy, EnumString, IntoStaticStr, Display, FromRepr, PartialEq, Eq)]
 #[repr(u16)]
 pub enum Item {
-    UNKNOWN = 0xFFFF,
+    // fake
+    UNKNOWN = u16::MAX,
+
+    // real
     CAPSULE = 0x00,
     BOX = 0x01,
     BARREL = 0x02,
@@ -276,6 +279,8 @@ pub enum Item {
 //     ]);
 // }
 
+#[derive(Debug, Clone, Copy, EnumString, IntoStaticStr, Display, FromRepr, PartialEq, Eq)]
+#[repr(u8)]
 pub enum TurnipFace {
     // TODO verify this
     SMILEY = 0,
@@ -288,6 +293,8 @@ pub enum TurnipFace {
     STITCH = 7,
 }
 
+#[derive(Debug, Clone, Copy, EnumString, IntoStaticStr, Display, FromRepr, PartialEq, Eq)]
+#[repr(u8)]
 pub enum MissileType {
     HOMING = 0,
     SUPER = 1,
