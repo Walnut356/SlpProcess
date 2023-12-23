@@ -5,8 +5,6 @@
 
 use std::cmp;
 
-
-
 pub fn shield_stun(damage: f32, analog: f32, is_yoshi: bool) -> u32 {
     if is_yoshi {
         return 0;

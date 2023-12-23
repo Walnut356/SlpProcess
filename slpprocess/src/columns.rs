@@ -164,7 +164,7 @@ pub enum DefenseStats {
     KillsWithDI,
     KillsNoDI,
     KillsAllDI,
-    KillsSomeDI
+    KillsSomeDI,
 }
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]

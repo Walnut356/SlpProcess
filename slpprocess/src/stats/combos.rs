@@ -16,7 +16,7 @@ use ssbm_utils::{
     types::Position,
 };
 
-use crate::player::Frames;
+use crate::frames::Frames;
 
 pub const COMBO_LENIENCY: u32 = 45;
 pub const PRE_COMBO_BUFFER_FRAMES: i32 = 60;

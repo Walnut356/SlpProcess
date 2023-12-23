@@ -1,6 +1,6 @@
 use polars::prelude::*;
 use ssbm_utils::{
-    checks::{is_in_defender_hitlag, is_teching, is_damaged, is_downed},
+    checks::{is_damaged, is_downed, is_in_defender_hitlag, is_teching},
     enums::{
         stage::{GroundID, Stage},
         Attack, TechType,
@@ -9,7 +9,7 @@ use ssbm_utils::{
     types::Position,
 };
 
-use crate::{player::Frames, utils::as_vec_static_str};
+use crate::{frames::Frames, utils::as_vec_static_str};
 
 pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> DataFrame {
     let pre = &plyr_frames.pre;
@@ -29,7 +29,8 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
         lockout.update(pre.engine_buttons[i], flags[i]);
 
         let curr_teching = is_teching(post.action_state[i]) || is_downed(post.action_state[i]);
-        let was_teching = is_teching(post.action_state[i - 1]) || is_downed(post.action_state[i - 1]);
+        let was_teching =
+            is_teching(post.action_state[i - 1]) || is_downed(post.action_state[i - 1]);
 
         // If we're not teching, but we were, close out the active event and add it to the table
         if !curr_teching {
@@ -51,10 +52,11 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
 
         // If we weren't teching (but were previously), start a tech event with the info we know
         if !was_teching {
-            let tech_type = TechType::from_state(post.action_state[i], post.orientation[i] as i8).unwrap();
+            let tech_type =
+                TechType::from_state(post.action_state[i], post.orientation[i] as i8).unwrap();
             // this weeds out regular wall jumps, which use the same action state was walljump techs
             if tech_type == TechType::WALL_JUMP_TECH && !is_damaged(post.action_state[i - 1]) {
-                continue
+                continue;
             }
 
             let most_recent_input = lockout.frames_since_input();
@@ -67,7 +69,9 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
                 stage.ground_from_id(last_ground[i]),
                 attacks[i].into(),
                 post.position[i].distance(opnt_frames.post.position[i]),
-                (-40..=0).contains(&most_recent_input).then_some(most_recent_input),
+                (-40..=0)
+                    .contains(&most_recent_input)
+                    .then_some(most_recent_input),
                 lockout.is_locked_out(),
                 lockout.input_during_hitlag(),
             ));
@@ -87,6 +91,7 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
         let tech_type = TechType::from_state(post.action_state[i], orientation).unwrap();
 
         let row = event.as_mut().unwrap();
+        row.tech_type = tech_type;
         let opnt_position = opnt_pos[i];
         row.opnt_distance = post.position[i].distance(opnt_position);
 
@@ -94,7 +99,7 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
             TechType::MISSED_TECH => {
                 row.missed_tech = true;
                 row.jab_reset = Some(false);
-            },
+            }
             TechType::JAB_RESET => row.jab_reset = Some(true),
             TechType::TECH_LEFT | TechType::MISSED_TECH_ROLL_LEFT => {
                 let rel_pos = opnt_position.x - post.position[i].x;
@@ -171,7 +176,7 @@ impl TechRow {
             opnt_distance,
             input_frame,
             lockout,
-            during_hitlag
+            during_hitlag,
         }
     }
 }

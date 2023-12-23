@@ -7,7 +7,7 @@ use std::f32::consts::{PI, TAU};
 
 use crate::{
     calc::on_hit::hitstun,
-    constants::{KB_DECAY, TUMBLE_THRESHOLD, DI_MAX_RADS},
+    constants::{DI_MAX_RADS, KB_DECAY, TUMBLE_THRESHOLD},
     enums::{character::*, stage::*},
     types::{Position, Radians, StickPos, Velocity},
 };
@@ -285,12 +285,11 @@ pub fn should_kill(
     false
 }
 
-
 #[cfg(test)]
 mod tests {
     use approx::assert_relative_eq;
 
-    use crate::{enums::Character, calc::knockback::*};
+    use crate::{calc::knockback::*, enums::Character};
 
     // TODO broke tests due to changing knockback travel to take x/y directly instead of KB + trajectory
     #[test]
@@ -334,4 +333,4 @@ mod tests {
         let modified = resolve_sakurai_angle(trajectory, kb, true);
         assert_eq!(modified, 36.44287);
     }
-    }
+}

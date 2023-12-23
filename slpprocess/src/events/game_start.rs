@@ -6,7 +6,7 @@ use anyhow::{anyhow, Result};
 use bytes::{Buf, Bytes};
 use encoding_rs::SHIFT_JIS;
 use polars::prelude::*;
-use strum_macros::{IntoStaticStr, FromRepr};
+use strum_macros::{FromRepr, IntoStaticStr};
 use time::OffsetDateTime;
 
 use crate::{
@@ -122,7 +122,8 @@ impl GameStart {
         let mut temp_players = Vec::new();
         for _ in 0..4 {
             let character = Character::try_from_css(raw.get_u8())?;
-            let p_type = PlayerType::from_repr(raw.get_u8()).ok_or_else(|| anyhow!("Invalid player type"))?;
+            let p_type = PlayerType::from_repr(raw.get_u8())
+                .ok_or_else(|| anyhow!("Invalid player type"))?;
             raw.advance(1);
             let costume = character.get_costume(raw.get_u8());
 
@@ -477,9 +478,7 @@ impl GameStart {
 
         result.match_type = {
             if match_id_len > 5 {
-                MatchType::from_repr(
-                    result.match_id.as_ref().map(|x| x.as_bytes()[5]).unwrap(),
-                )
+                MatchType::from_repr(result.match_id.as_ref().map(|x| x.as_bytes()[5]).unwrap())
             } else {
                 Some(MatchType::Unknown)
             }

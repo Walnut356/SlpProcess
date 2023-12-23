@@ -2,14 +2,17 @@ use crate::enums::StickRegion;
 use serde::{Deserialize, Serialize};
 use std::{
     f32::consts::TAU,
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Mul, Sub, SubAssign},
 };
 
 /// Constructor macro for Velocity structs. Accepts 2 values that can be `as f32` casted.
 #[macro_export]
 macro_rules! vel {
     ($x:expr, $y:expr) => {
-        Velocity { x: $x as f32, y: $y as f32}
+        Velocity {
+            x: $x as f32,
+            y: $y as f32,
+        }
     };
 }
 
@@ -17,7 +20,10 @@ macro_rules! vel {
 #[macro_export]
 macro_rules! pos {
     ($x:expr, $y:expr) => {
-        Position { x: $x as f32, y: $y as f32}
+        Position {
+            x: $x as f32,
+            y: $y as f32,
+        }
     };
 }
 
@@ -25,7 +31,10 @@ macro_rules! pos {
 #[macro_export]
 macro_rules! stick_pos {
     ($x:expr, $y:expr) => {
-        StickPos { x: $x as f32, y: $y as f32}
+        StickPos {
+            x: $x as f32,
+            y: $y as f32,
+        }
     };
 }
 
@@ -190,6 +199,27 @@ impl SubAssign<Velocity> for Velocity {
     }
 }
 
+impl Mul<f32> for Velocity {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self {
+            x: self.x * rhs,
+            y: self.y * rhs,
+        }
+    }
+}
+
+impl Mul<u32> for Velocity {
+    type Output = Self;
+
+    fn mul(self, rhs: u32) -> Self::Output {
+        Self {
+            x: self.x * rhs as f32,
+            y: self.y * rhs as f32,
+        }
+    }
+}
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Position {

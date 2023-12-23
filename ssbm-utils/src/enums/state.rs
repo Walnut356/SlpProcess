@@ -6,9 +6,7 @@ use crate::enums::Character;
 
 /// Wrapper enum for ActionState, CharacterState, and any possibly unknown values. Mainly useful via
 /// `State::from_state_and_char`
-#[derive(
-    Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Display,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Display)]
 #[repr(u16)]
 pub enum State {
     Universal(ActionState),
@@ -22,8 +20,7 @@ impl State {
             Self::Universal(ActionState::from_repr(state).unwrap())
         } else if let Some(c) = character {
             Self::Unique(CharacterState::from_char_and_state(c, state))
-        }
-        else {
+        } else {
             Self::Unknown(state)
         }
     }
@@ -54,8 +51,6 @@ impl From<State> for u16 {
         }
     }
 }
-
-
 
 /// Individual Action State IDs. See ActionRange for state ranges.
 ///
@@ -791,7 +786,6 @@ impl PartialOrd<ActionState> for ActionRange {
         self.partial_cmp(AsRef::<u16>::as_ref(other))
     }
 }
-
 
 // TODO character-specific action states
 

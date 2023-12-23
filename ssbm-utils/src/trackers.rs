@@ -3,8 +3,8 @@
 //! and state transitions
 
 use crate::{
-    checks::{just_pressed_any, is_in_hitlag},
-    enums::{ActionState,  EngineInput},
+    checks::{is_in_hitlag, just_pressed_any},
+    enums::{ActionState, EngineInput},
 };
 
 #[derive(Debug)]
@@ -69,7 +69,11 @@ impl LockoutTracker {
     /// Updates the state of the tracker with new frame information. Requires frame data to be
     /// passed in order
     pub fn update(&mut self, engine_inputs: u32, flags: u64) {
-        let just_input = just_pressed_any(EngineInput::R | EngineInput::L, engine_inputs, self.prev_inputs);
+        let just_input = just_pressed_any(
+            EngineInput::R | EngineInput::L,
+            engine_inputs,
+            self.prev_inputs,
+        );
         let in_hitlag = is_in_hitlag(flags);
         let just_out_hl = !in_hitlag && is_in_hitlag(self.prev_flags);
 
@@ -100,7 +104,6 @@ impl LockoutTracker {
             }
             self.lockout_window = 40;
         }
-
 
         self.lockout_window -= 1;
         self.tech_window -= 1;

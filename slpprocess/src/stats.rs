@@ -3,9 +3,9 @@ pub mod defense;
 pub mod inputs;
 pub mod items;
 pub mod lcancel;
-pub mod wavedash;
-pub mod tech;
 pub mod recovery;
+pub mod tech;
+pub mod wavedash;
 
 use std::ops::Div;
 
@@ -88,9 +88,10 @@ impl Stats {
         if let Some(df) = &self.l_cancel {
             let lf = df.clone().lazy();
 
-            return lf.select(&[
-                col(clm::LCancelled.into()).mean().alias("LCancelPercent"),
-            ]).collect().ok();
+            return lf
+                .select(&[col(clm::LCancelled.into()).mean().alias("LCancelPercent")])
+                .collect()
+                .ok();
         }
 
         None
@@ -124,10 +125,11 @@ impl Stats {
                         .alias("SDIPerHit"),
                     col(clm::KillsWithDI.into())
                         .filter(
-                            col(clm::KillsSomeDI.into())
-                                .eq(lit(true))
-                                .and(col(clm::KillsAllDI.into()).eq(lit(false))
-                                    .and(col(clm::KillsWithDI.into()).eq(lit(false)))),
+                            col(clm::KillsSomeDI.into()).eq(lit(true)).and(
+                                col(clm::KillsAllDI.into())
+                                    .eq(lit(false))
+                                    .and(col(clm::KillsWithDI.into()).eq(lit(false))),
+                            ),
                         )
                         .count()
                         .alias("LivableHitsLived"),
@@ -163,11 +165,39 @@ impl Stats {
         if let Some(df) = &self.tech {
             let lf = df.clone().lazy();
 
-            return lf.select(&[
-                col(clm::TowardsCenter.into()).mean(),
-                col(clm::TowardsOpnt.into()).mean(),
-
-            ]).collect().ok();
+            return lf
+                .select(&[
+                    col(clm::TowardsCenter.into()).mean(),
+                    col(clm::TowardsOpnt.into()).mean(),
+                    col(clm::MissedTech.into()).mean(),
+                    col(clm::Punished.into()).mean(),
+                    col(clm::TechType.into())
+                        .filter(
+                            col(clm::TechType.into())
+                                .eq(lit("MISSED_TECH_ROLL_LEFT"))
+                                .or(col(clm::TechType.into()).eq(lit("ROLL_LEFT"))),
+                        )
+                        .count()
+                        .alias("RollsLeft"),
+                    col(clm::TechType.into())
+                        .filter(
+                            col(clm::TechType.into())
+                                .eq(lit("MISSED_TECH_ROLL_RIGHT"))
+                                .or(col(clm::TechType.into()).eq(lit("ROLL_RIGHT"))),
+                        )
+                        .count()
+                        .alias("RollsRight"),
+                    col(clm::TechType.into())
+                        .filter(
+                            col(clm::TechType.into())
+                                .eq(lit("MISSED_TECH_GET_UP"))
+                                .or(col(clm::TechType.into()).eq(lit("TECH_IN_PLACE"))),
+                        )
+                        .count()
+                        .alias("InPlace"),
+                ])
+                .collect()
+                .ok();
         }
 
         None

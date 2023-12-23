@@ -29,8 +29,10 @@ nohash-hasher = "0.2.0"
 rayon = "1.7.0"
 bytemuck = "1.13.1"
 anyhow = "1.0.72"
-bytes =  "1.4.0"
+# bytes =  "1.4.0"
 
+# slightly optimized fork of bytes with less dead code and possibly better performance characteristics for contiguous memory.
+bytes = { git = "https://github.com/Walnut356/bytes.git", branch = "bytes_get"}
 encoding_rs = "0.8.32"
 serde = "1.0.188"
 serde_json = "1.0.104"

@@ -1,10 +1,10 @@
 use std::io::Cursor;
 
-use bytes::{Bytes, Buf};
-use ssbm_utils::enums::StickRegion;
-use strum_macros::{IntoStaticStr, EnumString};
-use thiserror::Error;
+use bytes::{Buf, Bytes};
 use polars::prelude::*;
+use ssbm_utils::enums::StickRegion;
+use strum_macros::{EnumString, IntoStaticStr};
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ParseError {

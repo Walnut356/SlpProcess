@@ -1,13 +1,11 @@
 #![allow(clippy::uninit_vec)]
 
-use std::io::Cursor;
-
 use crate::{events::game_start::Version, Port};
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
 use ssbm_utils::{
-    enums::{Character, State, Orientation, EngineInput, ControllerInput},
+    enums::{Character, ControllerInput, EngineInput, Orientation, State},
     types::{Position, StickPos},
 };
 
@@ -318,11 +316,17 @@ pub fn unpack_frames(
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
     p_frames.insert(
         ports[0] as u8,
-        (PreFrames::new(duration as usize, version, characters[0]), None),
+        (
+            PreFrames::new(duration as usize, version, characters[0]),
+            None,
+        ),
     );
     p_frames.insert(
         ports[1] as u8,
-        (PreFrames::new(duration as usize, version, characters[1]), None),
+        (
+            PreFrames::new(duration as usize, version, characters[1]),
+            None,
+        ),
     );
 
     let file_length = stream.len();

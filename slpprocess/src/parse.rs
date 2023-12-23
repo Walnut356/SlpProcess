@@ -2,22 +2,22 @@
 
 use anyhow::{anyhow, ensure, Result};
 use bytes::{Buf, Bytes};
-use nohash_hasher::IntMap;
 use polars::prelude::*;
 use strum_macros::FromRepr;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
 
-use std::{fs::File, collections::HashMap};
 use std::io::prelude::*;
 use std::path::Path;
 use std::time::Duration;
+use std::{collections::HashMap, fs::File};
 
+use crate::game::GameStub;
 use crate::{
     events::{
         game_end::parse_gameend, game_start::GameStart, item_frames::parse_itemframes,
         post_frame::parse_postframes, pre_frame::parse_preframes,
     },
-    player::Frames,
+    frames::Frames,
     ubjson,
     utils::ParseError,
     Game,
@@ -69,8 +69,8 @@ impl Game {
     pub(crate) fn get_file_contents(path: &Path) -> Result<Bytes> {
         let mut f = File::open(path)?;
         let file_length = f.metadata()?.len() as usize;
-        #[cfg(debug_assertions)]
-        dbg!(file_length);
+        // #[cfg(debug_assertions)]
+        // dbg!(file_length);
         let mut file_data = vec![0; file_length];
         f.read_exact(&mut file_data).unwrap();
 
@@ -204,9 +204,10 @@ impl Game {
 
         let mut event = EventType::None;
         // It's better to overallocate than to have to reallocate these vecs. The pre and post
-        // should be exact-sized, but the items will likely overallocate by a decent amount.
-        let mut pre_offsets = Vec::with_capacity((frame_count * (2 + ics_count)) as usize);
-        let mut post_offsets = Vec::with_capacity((frame_count * (2 + ics_count)) as usize);
+        // should be oversize by a little bit when factoring in rollback'd frames, but the items
+        // will likely overallocate by a decent amount.
+        let mut pre_offsets = Vec::with_capacity((frame_count * (3 + ics_count)) as usize);
+        let mut post_offsets = Vec::with_capacity((frame_count * (3 + ics_count)) as usize);
         let mut item_offsets = Vec::with_capacity((frame_count * 2) as usize);
 
         let mut pos = file_data.len() - stream.len();
@@ -242,9 +243,16 @@ impl Game {
         let mut item_frames = None;
 
         if version.at_least(3, 0, 0) {
-            item_frames = Some(parse_itemframes(file_data.clone(), event_sizes[&EventType::Item] as usize, version, &item_offsets));
+            item_frames = Some(parse_itemframes(
+                file_data.clone(),
+                event_sizes[&EventType::Item] as usize,
+                version,
+                &item_offsets,
+            ));
         }
 
+        let frames_rollbacked =
+            (pre_offsets.len() / (2 + ics_count) as usize) - frame_count as usize;
         let (mut pre_frames, mut post_frames) = rayon::join(
             || {
                 parse_preframes(
@@ -292,6 +300,77 @@ impl Game {
             version,
             item_frames: item_frames.map(Arc::new),
             path: Arc::new(path.to_owned()),
+            frames_rollbacked,
+        })
+    }
+
+    pub fn stub(path: &Path) -> Result<GameStub> {
+        // TODO yeah yeah eventually i should extract this into a function instead of duplicating.
+        // I'll get around to it eventually,it's gonna take a bit of fiddling to make sure all the
+        // bytes objects are created/updated correctly and I just don't want to deal with it atm.
+        let file_data = Self::get_file_contents(path)?;
+
+        let mut stream = file_data.slice(..);
+
+        expect_bytes(
+            &mut stream,
+            &[
+                0x7b, 0x55, 0x03, 0x72, 0x61, 0x77, 0x5b, 0x24, 0x55, 0x23, 0x6c,
+            ],
+        )?;
+
+        let raw_length = stream.get_u32() as u64 + 15;
+
+        let mut metadata_block = file_data.slice(raw_length as usize..);
+
+        expect_bytes(
+            &mut metadata_block,
+            // `metadata` key & type ("U\x08metadata{")
+            &[
+                0x55, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x7b,
+            ],
+        )?;
+
+        let mut duration: Duration = Duration::default();
+        let metadata = ubjson::to_map(&mut metadata_block.reader())?;
+        if let serde_json::Value::Number(lastframe) = &metadata["lastFrame"] {
+            // duration, in frames, is translated to seconds. 123 is subtracted from the frame count
+            // to match the duration to the in-game timer. The total frame count is easily
+            // found from player.frames.len()
+            let last = lastframe.as_u64().unwrap();
+            let millis = ((last.max(0) as f32 / 60.0) * 1000.0) as u64;
+
+            // i shouldn't have to do any checks on this conversion
+            duration = Duration::from_millis(millis);
+        };
+
+        let mut date = OffsetDateTime::UNIX_EPOCH;
+        if let serde_json::Value::String(start_at) = &metadata["startAt"] {
+            date = OffsetDateTime::parse(start_at.as_str(), &Iso8601::DEFAULT)
+                .unwrap_or(OffsetDateTime::UNIX_EPOCH);
+        }
+
+        // ------------------------------------- game start ------------------------------------- //
+        let event_sizes = Self::get_event_sizes(&mut stream)?;
+
+        assert_eq!(stream.get_u8(), EventType::GameStart as u8);
+
+        let raw_start = stream.slice(0..event_sizes[&EventType::GameStart] as usize);
+        stream.advance(event_sizes[&EventType::GameStart] as usize);
+
+        let (game_start, version, players) = GameStart::parse(raw_start, date)?;
+
+        Ok(GameStub {
+            metadata: game_start,
+            duration,
+            version,
+            players: players
+                .into_iter()
+                .map(|x| x.into())
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
+            path: Arc::new(path.to_path_buf()),
         })
     }
 }

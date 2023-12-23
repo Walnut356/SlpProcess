@@ -8,6 +8,7 @@ pub mod events {
     pub mod pre_frame;
 }
 pub mod columns;
+pub mod frames;
 pub mod game;
 pub mod parse;
 pub mod player;
@@ -17,6 +18,7 @@ pub mod utils;
 
 pub use crate::game::Game;
 use crate::stats::combos::Combos;
+use game::GameStub;
 use serde_json::json;
 pub use ssbm_utils::enums::Port;
 use stats::Stats;
@@ -106,6 +108,57 @@ pub fn parse_iter(path: &str) -> FilterMap<IntoIter<PathBuf>, impl Fn(PathBuf) -
         return result;
     }
     panic!("invalid file path")
+}
+
+pub fn parse_stubs(path: &str, multithreaded: bool) -> Vec<GameStub> {
+    if path.is_empty() {
+        return Vec::new();
+    }
+
+    let f_path = Path::new(path);
+    if f_path.is_file() {
+        return vec![Game::stub(f_path).unwrap()];
+    }
+    if f_path.is_dir() {
+        let files: Vec<PathBuf> = fs::read_dir(f_path)
+            .unwrap()
+            .filter_map(|file| {
+                if let Ok(entry) = file {
+                    let path = entry.path();
+                    if path.is_file() && path.extension().unwrap() == "slp" {
+                        Some(path)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let mut result: Vec<GameStub> = if multithreaded {
+            files
+                .par_iter()
+                .filter_map(|path| Game::stub(path.as_path()).ok())
+                .collect()
+        } else {
+            files
+                .iter()
+                .filter_map(|path| {
+                    #[cfg(debug_assertions)]
+                    dbg!(path);
+
+                    Game::stub(path.as_path()).ok()
+                })
+                .collect()
+        };
+
+        // sort newest -> oldest by date
+        result.sort();
+
+        return result;
+    }
+    panic!("invalid file path: {f_path:?}")
 }
 
 /// Returns a single stats object containing the stats from all individual games.

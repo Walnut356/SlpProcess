@@ -1,13 +1,10 @@
 use std::sync::Arc;
 
-use ssbm_utils::enums::{Character, Port, character::Costume};
+use ssbm_utils::enums::{character::Costume, Character, Port};
 
 use crate::{
-    events::{
-        game_start::ControllerFix,
-        post_frame::{PostFrames, PostRow},
-        pre_frame::{PreFrames, PreRow},
-    },
+    events::game_start::ControllerFix,
+    frames::Frames,
     stats::{combos::Combos, Stats},
 };
 
@@ -48,46 +45,29 @@ pub struct UCFToggles {
     pub shield_drop: ControllerFix,
 }
 
-/// Container for Pre-frame and Post-frame containers.
-///
-/// Note that frames are stored in columnar format, meaning data access is as follows:
-/// `player.frames.post.acion_state[index]`
-///
-/// `.get_frame(index)` functions exist for `Frames`, `PreFrames`, and `PostFrames` objects, but
-/// these will generally be much slower than iterating through only the columns you need.
-#[derive(Debug, Default, Clone)]
-pub struct Frames {
-    pub pre: Arc<PreFrames>,
-    pub post: Arc<PostFrames>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlayerStub {
+    /// In-game character, can be translated to in-game or character select screen raw value via
+    /// `.as_internal()` and `try_as_css()`
+    pub character: Character,
+    /// Character's interal costume value
+    pub costume: Costume,
+    /// Player's port number P1-P4. Can be cast into 0-indexed u8 port number via `as u8`
+    pub port: Port,
+    /// Player's connect code (if netplay) in the form "CODE#123"
+    pub connect_code: Option<String>,
+    /// Player's display name (if netplay). Has a max length of 15 characters (or 30 bytes)
+    pub display_name: Option<String>,
 }
 
-impl Frames {
-    pub fn len(&self) -> usize {
-        self.pre.frame_index.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() > 0
-    }
-
-    /// Gets both the full pre-frame and post-frame for a given frame index (0-indexed). This is very
-    /// slow compared to iterating through only the columns you need.
-    pub fn get_frame(&self, index: usize) -> Frame {
-        Frame(self.pre.get_frame(index), self.post.get_frame(index))
-    }
-}
-
-#[derive(Default, PartialEq)]
-pub struct Frame(pub PreRow, pub PostRow);
-
-impl core::fmt::Debug for Frame {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Frame(\n\t{:#?}\n\t{:#?})", self.0, self.1)
-        // f.debug_tuple("Frame").field(&self.0).field(&self.1).finish()
-    }
-}
-impl std::fmt::Display for Frame {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:#?}")
+impl From<Player> for PlayerStub {
+    fn from(value: Player) -> Self {
+        Self {
+            character: value.character,
+            costume: value.costume,
+            port: value.port,
+            connect_code: value.connect_code,
+            display_name: value.display_name,
+        }
     }
 }

@@ -14,7 +14,7 @@ use crate::{
         game_start::{GameStart, Version},
         item_frames::ItemFrames,
     },
-    player::Player,
+    player::{Player, PlayerStub},
     stats::{
         combos::find_combos, defense::find_defense, inputs::find_inputs, items::find_items,
         lcancel::find_lcancels, tech::find_techs, wavedash::find_wavedashes, Stats,
@@ -49,6 +49,9 @@ pub struct Game {
     ///
     /// Used internally for generating Dolphin Playback Queues.
     pub path: Arc<PathBuf>,
+    /// Difference between the total number of frames present in the game, and the final framecount
+    /// of the game. Useful for checking how laggy a match was.
+    pub frames_rollbacked: usize,
 }
 
 impl Game {
@@ -108,22 +111,49 @@ impl Game {
 
     pub fn summarize(&self) -> DataFrame {
         // I fucking hate time libraries so much. All of them have ergonomics like this.
-        let date = self
-            .metadata
-            .date
-            .to_offset(time::UtcOffset::current_local_offset().unwrap())
-            .to_string();
-        df!(
-            "File" => &[self.path.file_stem().unwrap().to_str()],
-            "Datetime" => &[date[0..date.len() - 12].to_owned()],
-            "Duration" => &[format!("{}:{:02}", self.duration.as_secs() / 60, self.duration.as_secs() % 60)],
-            // "MatchID" => &[self.metadata.match_id.clone()],
-            "MatchType" => &[self.metadata.match_type.map(Into::<&str>::into)],
-            "Game" => &[self.metadata.game_number],
-            "Tiebreak" => &[self.metadata.tiebreak_number],
-            "Stage" => &[Into::<&str>::into(self.metadata.stage)],
+        let date = self.metadata.date;
+        // .to_offset(time::UtcOffset::current_local_offset().unwrap());
+        let offset = time::UtcOffset::current_local_offset().unwrap();
 
-        ).unwrap()
+        let v_s = vec![
+            // changing the offset doesn't actually change the underlying value so we have to do it manually =)
+            Series::new(
+                "Datetime",
+                &[AnyValue::Datetime(
+                    // manually coerce offset into seconds and seconds into milliseconds
+                    (date.unix_timestamp() + (offset.whole_hours() as i64 * 3600)) * 1000,
+                    TimeUnit::Milliseconds,
+                    &None,
+                )],
+            ),
+            Series::new(
+                "Duration",
+                &[AnyValue::Duration(
+                    self.duration.as_millis() as i64,
+                    TimeUnit::Milliseconds,
+                )],
+            ),
+            Series::new(
+                "MatchType",
+                &[self.metadata.match_type.map(Into::<&str>::into)],
+            ),
+            Series::new("Game", &[self.metadata.game_number]),
+            Series::new("Tiebreak", &[self.metadata.tiebreak_number]),
+            Series::new("Stage", &[Into::<&str>::into(self.metadata.stage)]),
+        ];
+
+        DataFrame::new(v_s).unwrap()
+        // let df = DataFrame::(
+        //     "File" => &[self.path.file_stem().unwrap().to_str()],
+        //     "Datetime" => &[date.unix_timestamp()],
+        //     "Duration" => &[self.duration.as_millis() as u64],
+        //     // "MatchID" => &[self.metadata.match_id.clone()],
+        //     "MatchType" => &[self.metadata.match_type.map(Into::<&str>::into)],
+        //     "Game" => &[self.metadata.game_number],
+        //     "Tiebreak" => &[self.metadata.tiebreak_number],
+        //     "Stage" => &[Into::<&str>::into(self.metadata.stage)],
+
+        // ).unwrap();
     }
 
     fn get_stats(&mut self) {
@@ -289,5 +319,50 @@ impl Game {
                 }
             }
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GameStub {
+    pub metadata: GameStart,
+    pub duration: Duration,
+    pub version: Version,
+    pub players: [PlayerStub; 2],
+    pub path: Arc<PathBuf>,
+}
+
+impl From<GameStub> for Game {
+    fn from(value: GameStub) -> Self {
+        // should be fine to unwrap. If you can get a stub, the game parsing shouldn't panic
+        Self::new(&value.path).unwrap()
+    }
+}
+
+impl From<&GameStub> for Game {
+    fn from(value: &GameStub) -> Self {
+        Self::new(&value.path).unwrap()
+    }
+}
+
+impl PartialEq for GameStub {
+    fn eq(&self, other: &Self) -> bool {
+        self.metadata.date.unix_timestamp_nanos() == other.metadata.date.unix_timestamp_nanos()
+    }
+}
+
+impl PartialOrd for GameStub {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Eq for GameStub {}
+
+impl Ord for GameStub {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.metadata
+            .date
+            .unix_timestamp_nanos()
+            .cmp(&other.metadata.date.unix_timestamp_nanos())
     }
 }

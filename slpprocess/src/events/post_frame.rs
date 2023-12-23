@@ -1,7 +1,5 @@
 #![allow(clippy::uninit_vec)]
 
-use std::io::{stdout, Cursor};
-
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
@@ -486,14 +484,7 @@ pub fn parse_postframes(
     if !ics[0] && !ics[1] {
         unpack_frames(file_data, frames, duration, ports, version)
     } else {
-        unpack_frames_ics(
-            file_data,
-            frames,
-            duration,
-            ports,
-            ics,
-            version,
-        )
+        unpack_frames_ics(file_data, frames, duration, ports, ics, version)
     }
 }
 
@@ -663,7 +654,7 @@ pub fn unpack_frames_ics(
 
     for &offset in offsets.iter() {
         // frames should always be in the same order as they appeared in the file, thus we can
-            // always just move forward.
+        // always just move forward.
         stream.advance(offset - (file_length - stream.len()));
         let frame_number = stream.get_i32();
         // since we can't chunk the frames, enumeration won't work. We can still get an

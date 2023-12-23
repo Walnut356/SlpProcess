@@ -1,7 +1,5 @@
 #![allow(clippy::uninit_vec)]
 
-use std::io::Cursor;
-
 use bytes::{Buf, Bytes};
 use polars::prelude::*;
 use ssbm_utils::types::{Position, Velocity};
@@ -191,9 +189,13 @@ impl From<ItemFrames> for DataFrame {
     }
 }
 
-pub fn parse_itemframes(mut file_data: Bytes, event_length: usize, version: Version, offsets: &[usize]) -> ItemFrames {
+pub fn parse_itemframes(
+    file_data: Bytes,
+    event_length: usize,
+    version: Version,
+    offsets: &[usize],
+) -> ItemFrames {
     let mut working = ItemFrames::new(offsets.len(), version);
-
 
     for (i, &offset) in offsets.iter().enumerate() {
         let mut stream = file_data.slice(offset..offset + event_length);

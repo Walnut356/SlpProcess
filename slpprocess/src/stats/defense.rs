@@ -11,13 +11,13 @@ use ssbm_utils::{
         get_damage_taken, is_electric_attack, is_in_hitlag, is_thrown, is_vcancel_state,
         just_pressed_any, just_took_damage,
     },
-    constants::{ASDI_DIST, KB_DECAY},
+    constants::ASDI_DIST,
     enums::{Attack, Character, EngineInput, State, StickRegion},
     types::{Degrees, Position, StickPos, Velocity},
 };
 
 use crate::{
-    player::Frames,
+    frames::Frames,
     utils::{as_vec_arrow, as_vec_static_str},
 };
 
@@ -152,13 +152,11 @@ pub(crate) fn find_defense(
                 asdi_dist.x = cstick.x * ASDI_DIST;
                 asdi_dist.y = cstick.y * ASDI_DIST;
                 cstick.as_stickregion()
-
             } else {
                 asdi_dist.x = effective_stick.x * ASDI_DIST;
                 asdi_dist.y = effective_stick.y * ASDI_DIST;
                 effective_stick.as_stickregion()
             };
-
 
             // let kb = post.knockback.as_ref().unwrap()[i];
             // let with_decay = kb - Velocity::new(KB_DECAY * kb.x, KB_DECAY * kb.y);

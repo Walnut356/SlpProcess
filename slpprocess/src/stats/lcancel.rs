@@ -4,7 +4,7 @@ use ssbm_utils::checks::{is_fastfalling, is_in_hitlag, just_input_lcancel};
 use ssbm_utils::enums::{stage::Stage, ActionState, Attack, LCancel};
 use std::ops::Deref;
 
-use crate::{columns::*, player::Frames};
+use crate::{columns::*, frames::Frames};
 use polars::prelude::*;
 
 pub fn find_lcancels(frames: &Frames, stage: &Stage) -> DataFrame {

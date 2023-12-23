@@ -1,10 +1,10 @@
 use polars::prelude::*;
 use ssbm_utils::{
-    enums::{ActionState, Orientation},
+    enums::ActionState,
     types::{Position, StickPos},
 };
 
-use crate::{player::Frames, utils::Direction};
+use crate::{frames::Frames, utils::Direction};
 
 #[derive(Debug, Clone, Default)]
 pub struct Wavedashes {
@@ -60,10 +60,8 @@ pub fn find_wavedashes(frames: &Frames) -> DataFrame {
 
     let mut wavedashes = Wavedashes::default();
 
-
     // start 20 frames "late" to prevent index errors
-
-    for i in 20..button_frames.len() {
+    for i in 20..frames.len() {
         let state = state_frames[i];
         let prev_state = state_frames[i - 1];
 

@@ -1,6 +1,7 @@
 use std::{
+    iter::zip,
     path::{Path, PathBuf},
-    time::Duration, iter::zip,
+    time::Duration,
 };
 
 use slpprocess::{
@@ -10,11 +11,12 @@ use slpprocess::{
         post_frame::PostRow,
         pre_frame::PreRow,
     },
-    player::{UCFToggles, Frame},
+    frames::Frame,
+    player::UCFToggles,
     Game, Port,
 };
 use ssbm_utils::{
-    enums::{character::Costume, Character, Flags, StageID, EngineInput, ControllerInput},
+    enums::{character::Costume, Character, ControllerInput, EngineInput, Flags, StageID},
     pos, stick_pos,
     types::{Position, StickPos, Velocity},
     vel,
@@ -118,7 +120,10 @@ pub fn test_frames() {
     let p2_frames = &game.players[1].frames;
 
     let mut index = -123;
-    for (&i_1, &i_2) in zip(p1_frames.pre.frame_index.iter(), p1_frames.post.frame_index.iter()) {
+    for (&i_1, &i_2) in zip(
+        p1_frames.pre.frame_index.iter(),
+        p1_frames.post.frame_index.iter(),
+    ) {
         assert_eq!(index, i_1);
         assert_eq!(index, i_2);
         index += 1;
@@ -309,7 +314,10 @@ pub fn test_frames() {
                 last_hit_by: 1,
                 stocks: 3,
                 state_frame: Some(1.0),
-                flags: Some((Flags::BIT_1_3 | Flags::DEFENDER_HITLAG | Flags::HITLAG | Flags::HITSTUN).into()),
+                flags: Some(
+                    (Flags::BIT_1_3 | Flags::DEFENDER_HITLAG | Flags::HITLAG | Flags::HITSTUN)
+                        .into()
+                ),
                 misc_as: Some(18.0),
                 is_grounded: Some(false),
                 last_ground_id: Some(3),
@@ -373,7 +381,7 @@ pub fn test_frames() {
         )
     );
 
-        assert_eq!(
+    assert_eq!(
         p2_frames.get_frame(9626),
         Frame(
             PreRow {

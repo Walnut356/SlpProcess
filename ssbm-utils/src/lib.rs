@@ -5,9 +5,8 @@
 //!
 //!
 
-
-pub mod types;
 pub mod trackers;
+pub mod types;
 pub mod calc {
     pub mod on_hit;
     pub use on_hit::*;
@@ -88,7 +87,7 @@ pub mod constants {
 }
 
 pub mod prelude {
+    pub use crate::calc::*;
     pub use crate::constants::*;
     pub use crate::enums::*;
-    pub use crate::calc::*;
 }

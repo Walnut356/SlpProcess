@@ -46,11 +46,11 @@ mod test {
     #![allow(unused_imports)]
     use approx::*;
 
+    use crate::calc::general::*;
     use crate::{
         constants::{TRIGGER_MIN, Z_ANALOG},
         enums::{character::Character, stage::Stage},
     };
-    use crate::calc::general::*;
 
     #[test]
     fn test_fh_jump_arc() {

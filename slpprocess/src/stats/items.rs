@@ -1,7 +1,6 @@
-use nohash_hasher::IntMap;
 use polars::prelude::*;
-use ssbm_utils::enums::{Item, Port};
-use std::collections::HashSet;
+use ssbm_utils::enums::{Item, MissileType, Port, TurnipFace};
+use std::collections::{HashMap, HashSet};
 
 use crate::events::item_frames::ItemFrames;
 
@@ -12,7 +11,7 @@ pub fn find_items(port: Port, item_frames: &ItemFrames) -> DataFrame {
     let turnips = item_frames.turnip_type.as_ref().unwrap();
     let owners = item_frames.owner.as_ref().unwrap();
 
-    let mut item_counter: IntMap<u16, u32> = IntMap::default();
+    let mut item_counter: HashMap<(u16, u8), u32> = HashMap::default();
     let mut unique: HashSet<u32> = HashSet::default();
 
     // compiler pls no bounds check
@@ -29,23 +28,34 @@ pub fn find_items(port: Port, item_frames: &ItemFrames) -> DataFrame {
         let id = ids[i];
 
         if unique.insert(spawn_ids[i]) {
-            if let Some(x) = item_counter.get_mut(&id) {
+            let t = match Item::from_repr(id).unwrap_or(Item::UNKNOWN) {
+                Item::PEACH_TURNIP => turnips[i],
+                Item::SAMUS_MISSILE => missiles[i],
+                _ => 0,
+            };
+
+            if let Some(x) = item_counter.get_mut(&(id, t)) {
                 *x += 1;
             } else {
-                item_counter.insert(id, 1);
+                item_counter.insert((id, t), 1);
             };
         }
     }
 
     let mut keys: Vec<&str> = vec![];
     let mut vals: Vec<u32> = vec![];
-    for (key, val) in item_counter {
-        let temp = Item::from_repr(key).unwrap_or(Item::UNKNOWN).into();
+    for ((item, itype), count) in item_counter {
+        let item = Item::from_repr(item).unwrap_or(Item::UNKNOWN);
         // if temp == Item::UNKNOWN.to_string() {
         //     dbg!(key);
         // }
+        let temp: &str = match item {
+            Item::PEACH_TURNIP => TurnipFace::from_repr(itype).unwrap().into(),
+            Item::SAMUS_MISSILE => MissileType::from_repr(itype).unwrap().into(),
+            _ => item.into(),
+        };
         keys.push(temp);
-        vals.push(val);
+        vals.push(count);
     }
 
     DataFrame::new(vec![Series::new("Item", keys), Series::new("Count", vals)]).unwrap()
