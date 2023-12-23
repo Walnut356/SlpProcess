@@ -1581,6 +1581,7 @@ pub enum CharacterState {
     TRANSFORM_AIR_ENDING,
 
     // Yoshi
+    SHIELD_ENTRY,
     SHIELD_HOLD,
     SHIELD_RELEASE,
     SHIELD_DAMAGE,
@@ -2269,6 +2270,7 @@ impl CharacterState {
                 _ => panic!("Invalid state value for {character}. Value must be in range 341-358 inclusive. Got: {state}")
             },
             Character::Yoshi => match state {
+                341 => SHIELD_ENTRY,
                 342 => SHIELD_HOLD,
                 343 => SHIELD_RELEASE,
                 344 => SHIELD_DAMAGE,
