@@ -267,9 +267,16 @@ pub fn should_kill(
 ) -> bool {
     let stage = Stage::try_from(stage_id).unwrap();
 
+    // cheap "worst case scenario"
+    // If you don't die even if you don't have gravity or knockback decay, you won't die no matter what,
+    // so don't bother doing the KB travel calculations.
+    if stage.is_past_blastzone(position + (kb * hitstun(kb_from_initial(kb)))) {
+        return false;
+    }
+
     let travel = knockback_travel(kb, position, gravity, max_fall_speed);
     // TODO check if passing through platform
-    for pos in travel {
+    for pos in travel.into_iter().rev() {
         if stage.is_past_blastzone(pos) {
             return true;
         }
