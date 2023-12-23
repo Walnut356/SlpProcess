@@ -24,6 +24,7 @@ pub trait BitFlags: Into<Self::Other> + Copy {
         Into::<Self::Other>::into(self) & other == other
     }
 
+    #[inline]
     fn contained_by(self, other: Self::Other) -> bool {
         let temp = Into::<Self::Other>::into(self);
         temp & other == temp
@@ -82,6 +83,7 @@ impl From<u32> for EngineInput {
 }
 
 impl From<EngineInput> for u32 {
+    #[inline]
     fn from(val: EngineInput) -> u32 {
         use EngineInput::*;
         match val {
@@ -121,6 +123,7 @@ impl BitFlags for EngineInput {
 impl BitOr for EngineInput {
     type Output = Self;
 
+    #[inline]
     fn bitor(self, rhs: Self) -> Self::Output {
         EngineInput::Raw(*self | *rhs)
     }
@@ -129,6 +132,7 @@ impl BitOr for EngineInput {
 impl Deref for EngineInput {
     type Target = u32;
 
+    #[inline]
     fn deref(&self) -> &u32 {
         use EngineInput as EI;
         // The commented out code below shows an initial attempt that had the compiler
@@ -174,6 +178,7 @@ impl Deref for EngineInput {
 
 impl EngineInput {
     // might need it at some point
+    #[inline]
     fn _to_raw(&mut self) {
         *self = Self::Raw(u32::from(*self));
     }
@@ -313,6 +318,7 @@ impl From<u16> for ControllerInput {
 }
 
 impl From<ControllerInput> for u16 {
+    #[inline]
     fn from(val: ControllerInput) -> Self {
         use ControllerInput as CI;
         match val {
@@ -343,6 +349,7 @@ impl BitFlags for ControllerInput {
 impl BitOr for ControllerInput {
     type Output = Self;
 
+    #[inline]
     fn bitor(self, rhs: Self) -> Self::Output {
         ControllerInput::Raw(*self | *rhs)
     }
@@ -501,6 +508,7 @@ impl Display for ControllerInput {
 // ------------------------------------------- Flags ------------------------------------------- //
 
 impl From<u64> for Flags {
+    #[inline]
     fn from(val: u64) -> Self {
         assert_eq!(
             val & 0xFFFF_FF00_0000_0000,
@@ -512,6 +520,7 @@ impl From<u64> for Flags {
 }
 
 impl From<Flags> for u64 {
+    #[inline]
     fn from(val: Flags) -> Self {
         use Flags::*;
         match val {
@@ -568,6 +577,7 @@ impl BitFlags for Flags {
 impl BitOr for Flags {
     type Output = Self;
 
+    #[inline]
     fn bitor(self, rhs: Self) -> Self::Output {
         Flags::Raw(*self | *rhs)
     }
@@ -576,6 +586,7 @@ impl BitOr for Flags {
 impl Deref for Flags {
     type Target = u64;
 
+    #[inline]
     fn deref(&self) -> &u64 {
         match self {
             Flags::Raw(x) => x,
