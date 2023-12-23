@@ -1,3 +1,5 @@
+#[allow(unused_imports)]
+
 use std::hint::black_box;
 use std::io::Read;
 use std::path::PathBuf;
@@ -6,14 +8,17 @@ use std::{
     fs::File,
     sync::{RwLock, RwLockReadGuard},
 };
+use std::iter::zip;
 
 use bytes::{Bytes, Buf};
 use polars::datatypes::DataType::Struct;
 use polars::prelude::*;
 use rayon::prelude::*;
 use serde_json;
-use slpprocess::parse_iter;
-use slpprocess::player::Player;
+use slpprocess::events::game_start::{GameStart, MatchType};
+use slpprocess::game::GameStub;
+use slpprocess::{parse_iter, parse_stubs};
+use slpprocess::player::{Player, PlayerStub};
 use slpprocess::stats::Stats;
 use slpprocess::{get_combos, parse, stats::StatType, to_dolphin_queue, Game};
 use ssbm_utils::prelude::*;
@@ -35,8 +40,12 @@ pub fn main() {
     //     .unwrap();
     std::env::set_var("POLARS_FMT_TABLE_CELL_LIST_LEN", "-1");
 
-    let replay = r"G:/temp";
-    // let replay = r"E:\Slippi Replays\Netplay\";
+    // let replay = r"G:/temp";
+
+    // let replay = r"E:\Slippi Replays\Netplay\Game_20231222T004632.slp";
+    let replay = r"E:\Slippi Replays\Netplay\";
+    // crashes on yoshi action state id 341
+    // let replay = r"E:\Slippi Replays\Netplay\Game_20231213T003213.slp";
     // let replay = r"./test_replays/netplay_sample.slp";
     // let mut f = File::open(replay).unwrap();
     //     let file_length = f.metadata().unwrap().len() as usize;
@@ -52,6 +61,26 @@ pub fn main() {
 
     //     dbg!(b.len() - d.len());
     //     dbg!(d.get_i32());
+    let mut game = parse(replay, true).into_iter().filter_map(|x| x.metadata.is_netplay.is_some_and(|y| y).then_some(x)).collect::<Vec<_>>();
+    let totals = game.iter().map(|x| x.total_frames as usize);
+    let rollbacks = game.iter().map(|x| x.frames_rollbacked);
+
+    // dbg!(rollbacks.sum::<usize>() / game.len());
+    let avg_rlbk = zip(totals, rollbacks).map(|x| x.1 as f32/ (x.0 as f32+ x.1 as f32)).collect::<Vec<f32>>();
+    dbg!(avg_rlbk.iter().sum::<f32>() / game.len() as f32);
+    let mut min = 100000.0;
+    let mut max = 0.0;
+    for val in avg_rlbk {
+        if val < min {
+            min = val;
+        }
+        if val > max {
+            max = val;
+        }
+    }
+
+    dbg!(max);
+    dbg!(min);
 
 
     // TODO this replay has an item of ID 0x62
@@ -62,13 +91,13 @@ pub fn main() {
 
     // print_summary(replay)
 
-    loop {
-        timeit!(
-            "Parse Games: "
-            let games = parse(replay, false)
-        );
-        dbg!(games[0].duration);
-    }
+    // loop {
+    //     timeit!(
+    //         "Parse Games: "
+    //         let games = parse_stubs(replay, false)
+    //     );
+    //     dbg!(games[0].duration);
+    // }
 }
 
 fn print_summary(replay: &str) {
