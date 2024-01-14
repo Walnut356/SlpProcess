@@ -30,7 +30,7 @@ use crate::{columns::InputStats, frames::Frames};
 //     d_right: u32,
 // }
 
-pub fn find_inputs(frames: &Frames, duration: u64) -> DataFrame {
+pub fn find_inputs(frames: &Frames, duration: usize) -> DataFrame {
     let en_btn = &frames.pre.engine_buttons;
     let ctrl_btn = &frames.pre.controller_buttons;
 

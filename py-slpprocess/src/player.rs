@@ -107,7 +107,7 @@ impl PyPlayer {
 }
 
 #[derive(Clone, Debug)]
-#[pyclass]
+#[pyclass(name = "Stats", frozen)]
 pub struct PyStats {
     stats: Arc<Stats>,
 }
@@ -138,5 +138,9 @@ impl PyStats {
             .defense
             .as_ref()
             .map(|df| PyDataFrame(df.clone())))
+    }
+    #[getter]
+    fn get_tech(&self) -> PyResult<Option<PyDataFrame>> {
+        Ok(self.stats.tech.as_ref().map(|df| PyDataFrame(df.clone())))
     }
 }

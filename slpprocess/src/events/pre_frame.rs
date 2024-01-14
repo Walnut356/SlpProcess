@@ -249,7 +249,7 @@ impl std::fmt::Display for PreRow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "PreFrame {{\n\tframe_index: {},\n\trandom_seed: {},\n\taction_state: {}({}),\n\tposition: Pos({},{}),\n\torientation: {},\n\tjoystick: StickPos({},{}),\n\tcstick: StickPos({},{}),\n\tengine_trigger: {},\n\tengine_buttons: {},\n\tcontroller_buttons: {},\n\tcontroller_trigger: (L: {}, R: {}),\n\tpercent: {:?}\n}}",
+            "PreFrame {{\n\tframe_index: {},\n\trandom_seed: {},\n\taction_state: {}({}),\n\tposition: Pos({},{}),\n\torientation: {},\n\tjoystick: StickPos({},{}),\n\tcstick: StickPos({},{}),\n\tengine_trigger: {},\n\tengine_buttons: {:?},\n\tcontroller_buttons: {:?},\n\tcontroller_trigger: (L: {}, R: {}),\n\tpercent: {:?}\n}}",
             self.frame_index,
             self.random_seed,
             State::from_state_and_char(self.action_state, Some(self.character),),
@@ -275,7 +275,7 @@ pub fn parse_preframes(
     file_data: Bytes,
     version: Version,
     frames: &[usize],
-    duration: u64,
+    duration: usize,
     ports: [Port; 2],
     ics: [bool; 2],
     characters: [Character; 2],
@@ -302,7 +302,7 @@ pub fn parse_preframes(
 pub fn unpack_frames(
     mut stream: Bytes,
     frames: &[usize],
-    duration: u64,
+    duration: usize,
     ports: [Port; 2],
     version: Version,
     characters: [Character; 2],
@@ -390,13 +390,13 @@ pub fn unpack_frames(
 pub fn unpack_frames_ics(
     mut stream: Bytes,
     offsets: &[usize],
-    duration: u64,
+    duration: usize,
     ports: [Port; 2],
     ics: [bool; 2],
     version: Version,
     characters: [Character; 2],
 ) -> IntMap<u8, (PreFrames, Option<PreFrames>)> {
-    let len = duration as usize;
+    let len = duration;
 
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
     p_frames.insert(

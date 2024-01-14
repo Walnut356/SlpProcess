@@ -6,8 +6,11 @@ use anyhow::{anyhow, ensure, Result};
 use itertools::Itertools;
 
 use polars::prelude::*;
+use ssbm_utils::enums::StageID;
 use ssbm_utils::enums::{stage::Stage, Port};
+use time::OffsetDateTime;
 
+use crate::events::game_start::MatchType;
 use crate::{
     events::{
         game_end::{EndMethod, GameEnd},
@@ -21,6 +24,79 @@ use crate::{
     },
 };
 
+pub trait GameMetadata {
+    fn metadata(&self) -> &GameStart;
+
+    fn date(&self) -> OffsetDateTime;
+
+    fn duration(&self) -> Duration;
+
+    fn version(&self) -> Version;
+
+    fn path(&self) -> Arc<PathBuf>;
+
+    #[inline]
+    fn random_seed(&self) -> u32 {
+        self.metadata().random_seed
+    }
+
+    #[inline]
+    fn is_teams(&self) -> bool {
+        self.metadata().teams
+    }
+
+    #[inline]
+    fn stage(&self) -> StageID {
+        self.metadata().stage
+    }
+
+    #[inline]
+    fn timer(&self) -> Duration {
+        self.metadata().timer
+    }
+
+    #[inline]
+    fn damage_ratio(&self) -> f32 {
+        self.metadata().damage_ratio
+    }
+
+    #[inline]
+    fn pal(&self) -> Option<bool> {
+        self.metadata().pal
+    }
+
+    #[inline]
+    fn frozen_stadium(&self) -> Option<bool> {
+        self.metadata().frozen_stadium
+    }
+
+    #[inline]
+    fn netplay(&self) -> Option<bool> {
+        self.metadata().netplay
+    }
+
+    #[inline]
+    fn match_id(&self) -> Arc<String> {
+        self.metadata().match_id.clone()
+    }
+
+    #[inline]
+    fn match_type(&self) -> MatchType {
+        self.metadata().match_type
+    }
+
+    #[inline]
+    fn game_number(&self) -> Option<u32> {
+        self.metadata().game_number
+    }
+
+    #[inline]
+    fn tiebreak_number(&self) -> Option<u32> {
+        self.metadata().tiebreak_number
+    }
+}
+
+#[derive(Clone)]
 pub struct Game {
     /// Slippi-spec GameStart event. Contains various data about the match itself
     /// including stage, match id, etc.
@@ -34,7 +110,7 @@ pub struct Game {
     /// count, see `.total_frames`
     pub duration: Duration,
     /// A flat number equal to the total number of frames in the replay.
-    pub total_frames: u64,
+    pub total_frames: usize,
     /// Replay SemVer number in the form `major`, `minor`, `revision`
     pub version: Version,
     /// Contains exactly 2 Players in threadsafe containers (`.load()` to access). Players are in
@@ -49,9 +125,30 @@ pub struct Game {
     ///
     /// Used internally for generating Dolphin Playback Queues.
     pub path: Arc<PathBuf>,
+    /// Datetime the match was played on. Defaults to the UNIX epoch time (Midnight, 1 January, 1970 (UTC))
+    ///
+    /// added v0.1.0
+    pub date: OffsetDateTime,
     /// Difference between the total number of frames present in the game, and the final framecount
     /// of the game. Useful for checking how laggy a match was.
     pub frames_rollbacked: usize,
+}
+
+impl Default for Game {
+    fn default() -> Self {
+        Self {
+            metadata: Default::default(),
+            end: Default::default(),
+            duration: Default::default(),
+            total_frames: Default::default(),
+            version: Default::default(),
+            players: Default::default(),
+            item_frames: Default::default(),
+            path: Default::default(),
+            date: OffsetDateTime::UNIX_EPOCH,
+            frames_rollbacked: Default::default(),
+        }
+    }
 }
 
 impl Game {
@@ -109,9 +206,33 @@ impl Game {
         ))
     }
 
+    /// Replaces the `frames` object of each player with `Default::default()`. Used to save memory
+    /// when frames are not going to be analyzed further. Since frames are in an Arc, this only guarantees
+    /// freeing memory if there are no other outstanding references.
+    pub fn drop_frames(&mut self) {
+        let mut result = Vec::new();
+        for player in &self.players {
+            result.push(Arc::new(Player {
+                character: player.character,
+                costume: player.costume,
+                port: player.port,
+                connect_code: player.connect_code.clone(),
+                display_name: player.display_name.clone(),
+                is_winner: self.get_winner().map(|x| x == player.port),
+                ucf: player.ucf,
+                stats: player.stats.clone(),
+                combos: player.combos.clone(),
+                frames: Default::default(),
+                nana_frames: player.nana_frames.clone(),
+            }));
+        }
+
+        self.players = result.try_into().unwrap();
+    }
+
     pub fn summarize(&self) -> DataFrame {
         // I fucking hate time libraries so much. All of them have ergonomics like this.
-        let date = self.metadata.date;
+        let date = self.date;
         // .to_offset(time::UtcOffset::current_local_offset().unwrap());
         let offset = time::UtcOffset::current_local_offset().unwrap();
 
@@ -133,10 +254,7 @@ impl Game {
                     TimeUnit::Milliseconds,
                 )],
             ),
-            Series::new(
-                "MatchType",
-                &[self.metadata.match_type.map(Into::<&str>::into)],
-            ),
+            Series::new("MatchType", &[Into::<&str>::into(self.metadata.match_type)]),
             Series::new("Game", &[self.metadata.game_number]),
             Series::new("Tiebreak", &[self.metadata.tiebreak_number]),
             Series::new("Stage", &[Into::<&str>::into(self.metadata.stage)]),
@@ -322,6 +440,55 @@ impl Game {
     }
 }
 
+impl GameMetadata for Game {
+    #[inline]
+    fn metadata(&self) -> &GameStart {
+        &self.metadata
+    }
+
+    #[inline]
+    fn date(&self) -> OffsetDateTime {
+        self.date
+    }
+
+    #[inline]
+    fn duration(&self) -> Duration {
+        self.duration
+    }
+
+    #[inline]
+    fn version(&self) -> Version {
+        self.version
+    }
+
+    #[inline]
+    fn path(&self) -> Arc<PathBuf> {
+        self.path.clone()
+    }
+}
+
+impl PartialEq for Game {
+    fn eq(&self, other: &Self) -> bool {
+        self.date.unix_timestamp_nanos() == other.date.unix_timestamp_nanos()
+    }
+}
+
+impl PartialOrd for Game {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Eq for Game {}
+
+impl Ord for Game {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.date
+            .unix_timestamp_nanos()
+            .cmp(&other.date.unix_timestamp_nanos())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct GameStub {
     pub metadata: GameStart,
@@ -329,6 +496,32 @@ pub struct GameStub {
     pub version: Version,
     pub players: [PlayerStub; 2],
     pub path: Arc<PathBuf>,
+    pub date: OffsetDateTime,
+}
+
+impl GameMetadata for GameStub {
+    #[inline]
+    fn metadata(&self) -> &GameStart {
+        &self.metadata
+    }
+    #[inline]
+    fn date(&self) -> OffsetDateTime {
+        self.date
+    }
+    #[inline]
+    fn duration(&self) -> Duration {
+        self.duration
+    }
+
+    #[inline]
+    fn version(&self) -> Version {
+        self.version
+    }
+
+    #[inline]
+    fn path(&self) -> Arc<PathBuf> {
+        self.path.clone()
+    }
 }
 
 impl From<GameStub> for Game {
@@ -346,7 +539,7 @@ impl From<&GameStub> for Game {
 
 impl PartialEq for GameStub {
     fn eq(&self, other: &Self) -> bool {
-        self.metadata.date.unix_timestamp_nanos() == other.metadata.date.unix_timestamp_nanos()
+        self.date.unix_timestamp_nanos() == other.date.unix_timestamp_nanos()
     }
 }
 
@@ -360,9 +553,8 @@ impl Eq for GameStub {}
 
 impl Ord for GameStub {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.metadata
-            .date
+        self.date
             .unix_timestamp_nanos()
-            .cmp(&other.metadata.date.unix_timestamp_nanos())
+            .cmp(&other.date.unix_timestamp_nanos())
     }
 }

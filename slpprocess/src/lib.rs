@@ -16,9 +16,9 @@ pub mod stats;
 pub(crate) mod ubjson;
 pub mod utils;
 
-pub use crate::game::Game;
+pub use crate::game::{Game, GameStub, GameMetadata};
+
 use crate::stats::combos::Combos;
-use game::GameStub;
 use serde_json::json;
 pub use ssbm_utils::enums::Port;
 use stats::Stats;
@@ -31,7 +31,7 @@ use std::{
 };
 
 /// Accepts a string file path to a single replay, or a directory containing replays. Returns a vector containing the
-/// resultant game object(s).
+/// resultant game object(s). Sorted by newest -> oldest
 ///
 /// Replays that error out during parsing for any reason are skipped.
 ///
@@ -58,30 +58,46 @@ pub fn parse(path: &str, multithreaded: bool) -> Vec<Game> {
             })
             .collect();
 
-        let result: Vec<Game> = if multithreaded {
+        let mut result: Vec<Game> = if multithreaded {
             files
                 .par_iter()
-                .filter_map(|path| Game::new(path.as_path()).ok())
+                .filter_map(|path| match Game::new(path.as_path()) {
+                    Ok(game) => Some(game),
+                    Err(err) => {
+                        #[cfg(debug_assertions)]
+                        {
+                            dbg!(path);
+                            dbg!(err);
+                        }
+                        None
+                    }
+                })
                 .collect()
         } else {
             files
                 .iter()
-                .filter_map(|path| {
-                    #[cfg(debug_assertions)]
-                    dbg!(path);
-
-                    Game::new(path.as_path()).ok()
+                .filter_map(|path| match Game::new(path.as_path()) {
+                    Ok(game) => Some(game),
+                    Err(err) => {
+                        #[cfg(debug_assertions)]
+                        {
+                            dbg!(path);
+                            dbg!(err);
+                        }
+                        None
+                    }
                 })
                 .collect()
         };
 
+        result.sort();
         return result;
     }
     panic!("invalid file path: {f_path:?}")
 }
 
 /// Returns a parallel iterator over all .slp files in a directory. Any files that error out during
-/// processing are ignored
+/// processing are ignored. No ordering is guaranteed
 pub fn parse_iter(path: &str) -> FilterMap<IntoIter<PathBuf>, impl Fn(PathBuf) -> Option<Game>> {
     let f_path = Path::new(path);
     if f_path.is_dir() {
@@ -101,9 +117,20 @@ pub fn parse_iter(path: &str) -> FilterMap<IntoIter<PathBuf>, impl Fn(PathBuf) -
             })
             .collect::<Vec<_>>();
 
-        let result = files
-            .into_par_iter()
-            .filter_map(move |path| Game::new(path.as_path()).ok());
+        let result =
+            files
+                .into_par_iter()
+                .filter_map(move |path| match Game::new(path.as_path()) {
+                    Ok(game) => Some(game),
+                    Err(err) => {
+                        #[cfg(debug_assertions)]
+                        {
+                            dbg!(path);
+                            dbg!(err);
+                        }
+                        None
+                    }
+                });
 
         return result;
     }
@@ -120,6 +147,7 @@ pub fn parse_stubs(path: &str, multithreaded: bool) -> Vec<GameStub> {
         return vec![Game::stub(f_path).unwrap()];
     }
     if f_path.is_dir() {
+        let eef = fs::read_dir(f_path).unwrap();
         let files: Vec<PathBuf> = fs::read_dir(f_path)
             .unwrap()
             .filter_map(|file| {
@@ -139,16 +167,31 @@ pub fn parse_stubs(path: &str, multithreaded: bool) -> Vec<GameStub> {
         let mut result: Vec<GameStub> = if multithreaded {
             files
                 .par_iter()
-                .filter_map(|path| Game::stub(path.as_path()).ok())
+                .filter_map(|path| match Game::stub(path.as_path()) {
+                    Ok(game) => Some(game),
+                    Err(err) => {
+                        #[cfg(debug_assertions)]
+                        {
+                            dbg!(path);
+                            dbg!(err);
+                        }
+                        None
+                    }
+                })
                 .collect()
         } else {
             files
                 .iter()
-                .filter_map(|path| {
-                    #[cfg(debug_assertions)]
-                    dbg!(path);
-
-                    Game::stub(path.as_path()).ok()
+                .filter_map(|path| match Game::stub(path.as_path()) {
+                    Ok(game) => Some(game),
+                    Err(err) => {
+                        #[cfg(debug_assertions)]
+                        {
+                            dbg!(path);
+                            dbg!(err);
+                        }
+                        None
+                    }
                 })
                 .collect()
         };
@@ -160,6 +203,14 @@ pub fn parse_stubs(path: &str, multithreaded: bool) -> Vec<GameStub> {
     }
     panic!("invalid file path: {f_path:?}")
 }
+
+/// Accepts a string file path to a single replay, or a directory containing replays. Returns a HashMap containing the
+/// resultant game object(s). The hashmap keys are the match id, so any replays older than 3.14.0 will be filtered out. Iterating over the keys will return them in order
+///
+/// Replays that error out during parsing for any reason are skipped
+// pub fn parse_sets(path: &str, multithreaded: bool) -> BTreeMap<_, Game> {
+
+// }
 
 /// Returns a single stats object containing the stats from all individual games.
 pub fn get_stats(games: &[Game], connect_code: &str) -> Stats {

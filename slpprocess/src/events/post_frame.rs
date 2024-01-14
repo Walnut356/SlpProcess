@@ -475,7 +475,7 @@ pub fn parse_postframes(
     file_data: Bytes,
     version: Version,
     frames: &[usize],
-    duration: u64,
+    duration: usize,
     ports: [Port; 2],
     ics: [bool; 2],
 ) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
@@ -493,7 +493,7 @@ pub fn parse_postframes(
 pub fn unpack_frames(
     mut stream: Bytes,
     frames: &[usize],
-    duration: u64,
+    duration: usize,
     ports: [Port; 2],
     version: Version,
 ) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
@@ -627,12 +627,12 @@ pub fn unpack_frames(
 pub fn unpack_frames_ics(
     mut stream: Bytes,
     offsets: &[usize],
-    duration: u64,
+    duration: usize,
     ports: [Port; 2],
     ics: [bool; 2],
     version: Version,
 ) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
-    let len = duration as usize;
+    let len = duration;
 
     let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
     p_frames.insert(
@@ -690,8 +690,7 @@ pub fn unpack_frames_ics(
             *working.last_hit_by.get_unchecked_mut(i) = stream.get_u8();
             *working.stocks.get_unchecked_mut(i) = stream.get_u8();
 
-            // version 2.0.0
-            if !stream.has_remaining() {
+            if !version.at_least(2, 0, 0) {
                 continue;
             } else {
                 *working.state_frame.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
@@ -718,15 +717,13 @@ pub fn unpack_frames_ics(
                 *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
             }
 
-            // version 2.1.0
-            if !stream.has_remaining() {
+            if !version.at_least(2, 1, 0) {
                 continue;
             } else {
                 *working.hurtbox_state.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
             }
 
-            // version 3.5.0
-            if !stream.has_remaining() {
+            if !version.at_least(3, 5, 0) {
                 continue;
             } else {
                 let air_vel_x = stream.get_f32();
@@ -742,8 +739,7 @@ pub fn unpack_frames_ics(
                     .get_unchecked_mut(i) = Velocity::new(stream.get_f32(), vel_y);
             }
 
-            // version < 3.8.0
-            if !stream.has_remaining() {
+            if !version.at_least(3, 8, 0) {
                 continue;
             } else {
                 *working
@@ -753,8 +749,7 @@ pub fn unpack_frames_ics(
                     .get_unchecked_mut(i) = stream.get_f32();
             }
 
-            // version < 3.11.0
-            if !stream.has_remaining() {
+            if !version.at_least(3, 11, 0) {
                 continue;
             } else {
                 *working

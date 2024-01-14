@@ -22,7 +22,7 @@ use strum_macros::{Display, EnumString, IntoStaticStr};
 /// assert_eq!(char_4, Character::Jigglypuff);
 /// assert_eq!(char_5, Character::Jigglypuff);
 /// ```
-#[derive(Debug, Clone, Default, Copy, PartialEq, EnumString, Display, IntoStaticStr)]
+#[derive(Debug, Clone, Default, Copy, PartialEq, Eq, Hash, EnumString, Display, IntoStaticStr, PartialOrd, Ord)]
 #[strum(ascii_case_insensitive)]
 pub enum Character {
     #[strum(serialize = "falcon", serialize = "CaptainFalcon")]
@@ -817,7 +817,7 @@ impl<'a> Attributes<'a> {
     };
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Default, EnumString, Display, IntoStaticStr)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, EnumString, Display, IntoStaticStr, Eq, Hash)]
 #[allow(non_camel_case_types)]
 pub enum Costume {
     #[default]

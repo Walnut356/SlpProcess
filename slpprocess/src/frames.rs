@@ -36,6 +36,10 @@ impl Frames {
     pub fn get_frame(&self, index: usize) -> Frame {
         Frame(self.pre.get_frame(index), self.post.get_frame(index))
     }
+
+    pub fn get_last_frame(&self) -> Frame {
+        Frame(self.pre.get_frame(self.len() - 1), self.post.get_frame(self.len() - 1))
+    }
 }
 
 #[derive(Default, PartialEq)]

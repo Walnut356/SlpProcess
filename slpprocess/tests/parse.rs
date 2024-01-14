@@ -1,6 +1,7 @@
 use std::{
     iter::zip,
     path::{Path, PathBuf},
+    sync::Arc,
     time::Duration,
 };
 
@@ -41,18 +42,18 @@ pub fn test_metadata() {
 
     let metadata = GameStart {
         random_seed: 32794,
-        is_teams: false,
+        teams: false,
         stage: StageID::YOSHIS_STORY,
         timer: Duration::from_secs(8 * 60),
         damage_ratio: 1.0,
-        is_pal: Some(false),
-        is_frozen_stadium: Some(false),
-        is_netplay: Some(true),
-        match_id: Some("mode.direct-2023-11-29T00:26:03.31-0".to_owned()),
-        match_type: Some(MatchType::Direct),
+        pal: Some(false),
+        frozen_stadium: Some(false),
+        netplay: Some(true),
+        match_id: Arc::new("mode.direct-2023-11-29T00:26:03.31-0".to_owned()),
+        match_type: MatchType::Direct,
         game_number: Some(2),
         tiebreak_number: Some(0),
-        date: OffsetDateTime::parse("2023-11-29T00:26:22+00:00", &Iso8601::DEFAULT).unwrap(),
+        // date: OffsetDateTime::parse("2023-11-29T00:26:22+00:00", &Iso8601::DEFAULT).unwrap(),
     };
 
     assert_eq!(game.metadata, metadata);

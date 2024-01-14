@@ -1,12 +1,13 @@
 #![allow(non_upper_case_globals)]
 
 use anyhow::{anyhow, ensure, Result};
+use byteorder::{BigEndian, ReadBytesExt};
 use bytes::{Buf, Bytes};
 use polars::prelude::*;
 use strum_macros::FromRepr;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
 
-use std::io::prelude::*;
+use std::io::{prelude::*, BufReader, SeekFrom};
 use std::path::Path;
 use std::time::Duration;
 use std::{collections::HashMap, fs::File};
@@ -144,7 +145,7 @@ impl Game {
             ],
         )?;
 
-        let mut frame_count = 0;
+        let mut frame_count: usize = 0;
 
         let mut duration: Duration = Duration::default();
         let metadata = ubjson::to_map(&mut temp_meta.reader())?;
@@ -152,8 +153,8 @@ impl Game {
             // duration, in frames, is translated to seconds. 123 is subtracted from the frame count
             // to match the duration to the in-game timer. The total frame count is easily
             // found from player.frames.len()
-            let last = lastframe.as_u64().unwrap();
-            frame_count = last + 124;
+            let last = lastframe.as_i64().unwrap();
+            frame_count = (last + 124) as usize;
             let millis = ((last.max(0) as f32 / 60.0) * 1000.0) as u64;
 
             // i shouldn't have to do any checks on this conversion
@@ -180,7 +181,7 @@ impl Game {
         //         ..(stream.position() + event_sizes[&EventType::GameStart.into()] as u64) as usize,
         // );
 
-        let (game_start, version, mut players) = GameStart::parse(raw_start, date)?;
+        let (game_start, version, mut players) = GameStart::parse(raw_start)?;
 
         // i could map but this gives me arrays instead of slices without into
         let ports = [players[0].port, players[1].port];
@@ -252,7 +253,7 @@ impl Game {
         }
 
         let frames_rollbacked =
-            (pre_offsets.len() / (2 + ics_count) as usize) - frame_count as usize;
+            (pre_offsets.len() / (2 + ics_count) as usize).saturating_sub(frame_count as usize);
         let (mut pre_frames, mut post_frames) = rayon::join(
             || {
                 parse_preframes(
@@ -301,6 +302,7 @@ impl Game {
             item_frames: item_frames.map(Arc::new),
             path: Arc::new(path.to_owned()),
             frames_rollbacked,
+            date,
         })
     }
 
@@ -308,28 +310,56 @@ impl Game {
         // TODO yeah yeah eventually i should extract this into a function instead of duplicating.
         // I'll get around to it eventually,it's gonna take a bit of fiddling to make sure all the
         // bytes objects are created/updated correctly and I just don't want to deal with it atm.
-        let file_data = Self::get_file_contents(path)?;
+        let mut stream = BufReader::new(File::open(path)?);
 
-        let mut stream = file_data.slice(..);
+        let mut buf = [0; 11];
+        stream.read_exact(&mut buf).unwrap();
+        assert_eq!(
+            buf,
+            [0x7b, 0x55, 0x03, 0x72, 0x61, 0x77, 0x5b, 0x24, 0x55, 0x23, 0x6c,],
+        );
 
-        expect_bytes(
-            &mut stream,
-            &[
-                0x7b, 0x55, 0x03, 0x72, 0x61, 0x77, 0x5b, 0x24, 0x55, 0x23, 0x6c,
-            ],
-        )?;
+        let raw_length = stream.read_u32::<BigEndian>().unwrap() as u64 + 15;
 
-        let raw_length = stream.get_u32() as u64 + 15;
+        let header_offset = stream.stream_position().unwrap();
+        // ------------------------------------- game start ------------------------------------- //
+        assert_eq!(stream.read_u8().unwrap(), 0x35);
+        let payloads_size = stream.read_u8().unwrap();
 
-        let mut metadata_block = file_data.slice(raw_length as usize..);
+        let mut start_len = 0;
+        for _ in (0..(payloads_size - 1)).step_by(3) {
+            let event = EventType::from_repr(stream.read_u8().unwrap()).unwrap();
+            if event == EventType::GameStart {
+                start_len = stream.read_u16::<BigEndian>().unwrap();
+                break;
+            }
+        }
 
-        expect_bytes(
-            &mut metadata_block,
+        stream
+            .seek(SeekFrom::Start(header_offset + payloads_size as u64 + 1))
+            .unwrap();
+
+        assert_eq!(stream.read_u8().unwrap(), EventType::GameStart as u8);
+
+        let mut buf = vec![0; start_len.into()];
+        stream.read_exact(&mut buf).unwrap();
+
+        let raw_start = Bytes::from(buf);
+
+        let (game_start, version, players) = GameStart::parse(raw_start)?;
+
+        stream.seek(SeekFrom::Start(raw_length)).unwrap();
+
+        let mut metadata_header = [0; 11];
+        stream.read_exact(&mut metadata_header).unwrap();
+        assert_eq!(
+            metadata_header,
             // `metadata` key & type ("U\x08metadata{")
-            &[
-                0x55, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x7b,
-            ],
-        )?;
+            [0x55, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x7b,],
+        );
+
+        let mut metadata_block = Vec::new();
+        stream.read_to_end(&mut metadata_block).unwrap();
 
         let mut duration: Duration = Duration::default();
         let metadata = ubjson::to_map(&mut metadata_block.reader())?;
@@ -337,7 +367,7 @@ impl Game {
             // duration, in frames, is translated to seconds. 123 is subtracted from the frame count
             // to match the duration to the in-game timer. The total frame count is easily
             // found from player.frames.len()
-            let last = lastframe.as_u64().unwrap();
+            let last = lastframe.as_i64().unwrap();
             let millis = ((last.max(0) as f32 / 60.0) * 1000.0) as u64;
 
             // i shouldn't have to do any checks on this conversion
@@ -350,16 +380,6 @@ impl Game {
                 .unwrap_or(OffsetDateTime::UNIX_EPOCH);
         }
 
-        // ------------------------------------- game start ------------------------------------- //
-        let event_sizes = Self::get_event_sizes(&mut stream)?;
-
-        assert_eq!(stream.get_u8(), EventType::GameStart as u8);
-
-        let raw_start = stream.slice(0..event_sizes[&EventType::GameStart] as usize);
-        stream.advance(event_sizes[&EventType::GameStart] as usize);
-
-        let (game_start, version, players) = GameStart::parse(raw_start, date)?;
-
         Ok(GameStub {
             metadata: game_start,
             duration,
@@ -371,6 +391,7 @@ impl Game {
                 .try_into()
                 .unwrap(),
             path: Arc::new(path.to_path_buf()),
+            date,
         })
     }
 }

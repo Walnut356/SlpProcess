@@ -47,7 +47,7 @@ impl PyGame {
     }
     #[getter]
     pub fn get_is_teams(&self) -> PyResult<bool> {
-        Ok(self.game.metadata.is_teams)
+        Ok(self.game.metadata.teams)
     }
     #[getter]
     pub fn get_stage(&self) -> PyResult<u16> {
@@ -63,23 +63,23 @@ impl PyGame {
     }
     #[getter]
     pub fn get_is_pal(&self) -> PyResult<Option<bool>> {
-        Ok(self.game.metadata.is_pal)
+        Ok(self.game.metadata.pal)
     }
     #[getter]
     pub fn get_is_frozen_stadium(&self) -> PyResult<Option<bool>> {
-        Ok(self.game.metadata.is_frozen_stadium)
+        Ok(self.game.metadata.frozen_stadium)
     }
     #[getter]
     pub fn get_is_netplay(&self) -> PyResult<Option<bool>> {
-        Ok(self.game.metadata.is_netplay)
+        Ok(self.game.metadata.netplay)
     }
     #[getter]
-    pub fn get_match_id(&self) -> PyResult<Option<String>> {
-        Ok(self.game.metadata.match_id.clone())
+    pub fn get_match_id(&self) -> PyResult<String> {
+        Ok(self.game.metadata.match_id.to_string())
     }
     #[getter]
-    pub fn get_match_type(&self) -> PyResult<Option<u8>> {
-        Ok(self.game.metadata.match_type.map(|x| x as u8))
+    pub fn get_match_type(&self) -> PyResult<u8> {
+        Ok(self.game.metadata.match_type as u8)
     }
     #[getter]
     pub fn get_game_number(&self) -> PyResult<Option<u32>> {

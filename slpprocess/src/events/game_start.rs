@@ -6,7 +6,7 @@ use anyhow::{anyhow, Result};
 use bytes::{Buf, Bytes};
 use encoding_rs::SHIFT_JIS;
 use polars::prelude::*;
-use strum_macros::{FromRepr, IntoStaticStr};
+use strum_macros::{Display, FromRepr, IntoStaticStr};
 use time::OffsetDateTime;
 
 use crate::{
@@ -24,7 +24,7 @@ pub enum Mode {
     Unknown = 0,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, FromRepr, IntoStaticStr, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, FromRepr, IntoStaticStr, Default, Display)]
 #[repr(u8)]
 pub enum MatchType {
     // ascii character values for u, r, d
@@ -53,12 +53,12 @@ pub enum ControllerFix {
     Dween = 2,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct GameStart {
     /// Random seed at the start of the match
     pub random_seed: u32,
     /// True if teams mode is active, regardless of the number of players in the match
-    pub is_teams: bool,
+    pub teams: bool,
     /// Simple stage ID. For stage data (blast zones, ledge locations, etc.), cast into `Stage`
     pub stage: StageID,
     /// The timer setting for the match, will usually be 8 minutes (480s)
@@ -68,24 +68,24 @@ pub struct GameStart {
     /// True if PAL
     ///
     /// added v1.5.0
-    pub is_pal: Option<bool>,
+    pub pal: Option<bool>,
     /// True if stadium is frozen
     ///
     /// added v2.0.0
-    pub is_frozen_stadium: Option<bool>,
+    pub frozen_stadium: Option<bool>,
     /// True if played on slippi netplay
     ///
     /// added v3.7.0
-    pub is_netplay: Option<bool>,
+    pub netplay: Option<bool>,
     /// Match id, usually very similar to the default file name
     ///
     /// added v3.14.0
-    pub match_id: Option<String>,
+    pub match_id: Arc<String>,
     /// Unranked, Ranked, Direct, or Unknown. Note that Doubles is not an option because this parser
     /// handles 1v1 replays only
     ///
     /// added v3.14.0
-    pub match_type: Option<MatchType>,
+    pub match_type: MatchType,
     /// For the given match ID, this is Xth game played. Starts at 1
     ///
     /// added v3.14.0
@@ -94,16 +94,12 @@ pub struct GameStart {
     ///
     /// added v3.14.0
     pub tiebreak_number: Option<u32>,
-    /// Datetime the match was played on. Defaults to the UNIX epoch time (Midnight, 1 January, 1970 (UTC))
-    ///
-    /// added v0.1.0
-    pub date: OffsetDateTime,
 }
 
 impl GameStart {
     // the awkward return type here is because this will only ever be constructed internally, and because it will help
     // a LOT down the line to have the players contained in the top level Game object rather than the GameStart event.
-    pub fn parse(mut raw: Bytes, date: OffsetDateTime) -> Result<(Self, Version, [Player; 2])> {
+    pub fn parse(mut raw: Bytes) -> Result<(Self, Version, [Player; 2])> {
         let version = Version::new(raw.get_u8(), raw.get_u8(), raw.get_u8());
         raw.advance(9); // skip past revision number, game bitfields 1-4 and bomb rain
 
@@ -159,25 +155,24 @@ impl GameStart {
         let is_netplay = None;
         let mut display_names = [None, None, None, None];
         let mut connect_codes = [None, None, None, None];
-        let match_id = None;
-        let match_type = None;
+        let match_id = Arc::new("".to_string());
+        let match_type = MatchType::Unknown;
         let game_number = None;
         let tiebreak_number = None;
 
         let mut result = GameStart {
             random_seed,
-            is_teams,
+            teams: is_teams,
             stage,
             timer: timer_length,
-            is_pal,
-            is_frozen_stadium,
-            is_netplay,
+            pal: is_pal,
+            frozen_stadium: is_frozen_stadium,
+            netplay: is_netplay,
             match_id,
             match_type,
             game_number,
             tiebreak_number,
             damage_ratio,
-            date,
         };
 
         if !raw.has_remaining() {
@@ -269,7 +264,7 @@ impl GameStart {
             return Ok((result, version, players));
         }
 
-        result.is_pal = Some(raw.get_u8() != 0);
+        result.pal = Some(raw.get_u8() != 0);
 
         if !raw.has_remaining() {
             // version < 2.0.0
@@ -297,7 +292,7 @@ impl GameStart {
             return Ok((result, version, players));
         }
 
-        result.is_frozen_stadium = Some(raw.get_u8() != 0);
+        result.frozen_stadium = Some(raw.get_u8() != 0);
 
         if !raw.has_remaining() {
             // version < 3.7.0
@@ -326,7 +321,7 @@ impl GameStart {
         }
 
         raw.advance(1); // skip minor scene
-        result.is_netplay = Some(raw.get_u8() == 8);
+        result.netplay = Some(raw.get_u8() == 8);
 
         if !raw.has_remaining() {
             // version < 3.9.0
@@ -471,16 +466,16 @@ impl GameStart {
         let end = match_id_bytes.iter().position(|&x| x == 0).unwrap_or(50);
         match_id_bytes.truncate(end);
         let match_id_len = match_id_bytes.len();
-        result.match_id = Some(String::from_utf8(match_id_bytes).unwrap());
+        result.match_id = Arc::new(String::from_utf8(match_id_bytes).unwrap());
 
         result.game_number = Some(raw.get_u32());
         result.tiebreak_number = Some(raw.get_u32());
 
         result.match_type = {
             if match_id_len > 5 {
-                MatchType::from_repr(result.match_id.as_ref().map(|x| x.as_bytes()[5]).unwrap())
+                MatchType::from_repr(result.match_id.as_bytes()[5]).unwrap_or_default()
             } else {
-                Some(MatchType::Unknown)
+                MatchType::Unknown
             }
         };
 
