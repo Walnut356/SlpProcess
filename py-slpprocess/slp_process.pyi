@@ -113,9 +113,22 @@ class Frames:
     pre: PreFrames
     post: PostFrames
 
+class Stats:
+    @property
+    def input(self) -> DataFrame: ...
+    @property
+    def l_cancel(self) -> DataFrame: ...
+    @property
+    def item(self) -> DataFrame: ...
+    @property
+    def defense(self) -> DataFrame: ...
+    # @property
+    # def
+
 class Player:
     frames: Frames
     nana_frames: Frames | None
+    stats: Stats
     @property
     def character(self) -> int: ...
     @property
