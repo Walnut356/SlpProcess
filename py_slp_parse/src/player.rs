@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use pyo3::prelude::*;
 use pyo3_polars::PyDataFrame;
-use slpprocess::prelude::*;
+use slp_parse::prelude::*;
 
 use crate::frames::{PyFrames, PyPost, PyPre};
 

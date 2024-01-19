@@ -8,7 +8,7 @@ use crate::{
 };
 
 use pyo3::prelude::*;
-use slpprocess::Game;
+use slp_parse::Game;
 
 #[pyclass(name = "Game", frozen)]
 pub struct PyGame {

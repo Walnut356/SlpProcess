@@ -1,5 +1,5 @@
 [package]
-name = "slpprocess"
+name = "slp_parse"
 authors = ["Walnut356"]
 version = "0.1.0"
 edition = "2021"
@@ -11,7 +11,7 @@ description = "A Slippi replay file parser for stats"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-polars = { version = "0.35.2", features = [
+polars = { version = "0.36.2", features = [
     "lazy",
     "dtype-u16",
     "dtype-u8",
@@ -40,12 +40,12 @@ thiserror = "1.0.44"
 strum = "0.25.0"
 strum_macros = "0.25.2"
 itertools = "0.12.0"
-ssbm_utils = { path = "../ssbm-utils" }
+ssbm_utils = { path = "../ssbm_utils" }
 derive-new = "0.6.0"
 time = {version = "0.3.30", features = ["serde", "parsing", "local-offset"]}
 
 [profile.release.package."polars"]
-version = "0.35.2"
+version = "0.36.2"
 features = [
     "lazy",
     "dtype-u16",

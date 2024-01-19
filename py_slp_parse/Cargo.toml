@@ -1,19 +1,19 @@
 [package]
-name = "py-slpprocess"
+name = "py_slp_parse"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "slp_process"
+name = "py_slp_parse"
 crate-type = ["cdylib"]
 
 [dependencies]
 # polars = { version = "0.34.2", features = ["dtype-struct", "lazy"] }
 pyo3 = { version = "0.20.0", features = ["extension-module"] }
-pyo3-polars = { git = "https://github.com/pola-rs/pyo3-polars.git", rev = "04df15847f269cd43cb1bc0af925bf5dec076769" }
-slpprocess = { path = "../slpprocess" }
+pyo3-polars = "0.10.0"
+slp_parse = { path = "../slp_parse" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-ssbm_utils = { path = "../ssbm-utils" }
+ssbm_utils = { path = "../ssbm_utils" }

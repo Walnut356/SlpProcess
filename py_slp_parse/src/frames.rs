@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use pyo3::prelude::*;
-use slpprocess::events::{item_frames::ItemFrames, post_frame::PostFrames, pre_frame::PreFrames};
+use slp_parse::events::{item_frames::ItemFrames, post_frame::PostFrames, pre_frame::PreFrames};
 
 #[derive(Clone, Debug)]
 #[pyclass(name = "Frames", frozen)]

@@ -3,7 +3,7 @@ requires = ["maturin>=1,<2"]
 build-backend = "maturin"
 
 [project]
-name = "slp_process"
+name = "py_slp_parse"
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Rust",

@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use slpprocess::{
+use slp_parse::{
     events::{
         game_end::{EndMethod, GameEnd},
         game_start::{ControllerFix, GameStart, MatchType, Version},

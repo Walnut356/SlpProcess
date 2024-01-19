@@ -109,12 +109,12 @@ impl Stats {
                     col(clm::LastHitBy.into())
                         .mode()
                         .implode()
-                        .cast(DataType::List(Box::new(DataType::Utf8)))
+                        .cast(DataType::List(Box::new(DataType::String)))
                         .alias("MostHitBy"),
                     col(clm::StateBeforeHit.into())
                         .mode()
                         .implode()
-                        .cast(DataType::List(Box::new(DataType::Utf8)))
+                        .cast(DataType::List(Box::new(DataType::String)))
                         .alias("StateMostPunished"),
                     col(clm::SDIInputs.into())
                         .list()

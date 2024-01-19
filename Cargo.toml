@@ -1,5 +1,5 @@
 [workspace]
-members = ["./slpprocess", "./ssbm-utils", "./py-slpprocess"]
+members = ["./slp_parse", "./ssbm_utils", "./py_slp_parse", "./slp_db"]
 resolver = "2"
 
 [profile.release-with-debug]

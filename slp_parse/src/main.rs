@@ -14,12 +14,12 @@ use bytes::{Buf, Bytes};
 use polars::prelude::*;
 use rayon::prelude::*;
 use serde_json;
-use slpprocess::events::{game_start::{GameStart, MatchType}, game_end::EndMethod};
-use slpprocess::game::GameStub;
-use slpprocess::player::{Player, PlayerStub};
-use slpprocess::stats::Stats;
-use slpprocess::{get_combos, parse, stats::StatType, to_dolphin_queue, Game};
-use slpprocess::{parse_iter, parse_stubs};
+use slp_parse::events::{game_start::{GameStart, MatchType}, game_end::EndMethod};
+use slp_parse::game::GameStub;
+use slp_parse::player::{Player, PlayerStub};
+use slp_parse::stats::Stats;
+use slp_parse::{get_combos, parse, stats::StatType, to_dolphin_queue, Game};
+use slp_parse::{parse_iter, parse_stubs};
 use ssbm_utils::prelude::*;
 // static REPLAY: &[u8; 165123] = include_bytes!(r"G:/temp\Game_20230627T174002.slp");
 
@@ -134,7 +134,7 @@ fn print_summary(replay: &str) {
 }
 
 fn print_stat(replay: &str) {
-    use slpprocess::columns::DefenseStats as clm;
+    use slp_parse::columns::DefenseStats as clm;
     timeit!("create par_iter" let mut games = parse(replay, false));
 
     timeit!(
