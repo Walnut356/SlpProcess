@@ -1,6 +1,6 @@
 # SlpProcess
 
-Mostly complete Rust backend for slippi parsing, meant to succeed my python [SlippiStats](https://github.com/Walnut356/SlippiStats) library. Focuses specifically on stats and easy transfer to python.
+Mostly complete Rust backend for slippi replay file parsing, meant to succeed my python [SlippiStats](https://github.com/Walnut356/SlippiStats) library. Focuses specifically on stats and easy transfer to python.
 
 ## slp_parse
 
