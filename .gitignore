@@ -16,3 +16,5 @@ Cargo.lock
 .cargo/
 
 .idea/*
+
+test_db/
