@@ -24,9 +24,10 @@ pub struct ItemFrames {
     pub spawn_id: Box<[u32]>,
     pub missile_type: Option<Box<[u8]>>,
     pub turnip_type: Option<Box<[u8]>>,
-    pub is_launched: Option<Box<[bool]>>,
+    pub launched: Option<Box<[bool]>>,
     pub charge_power: Option<Box<[u8]>>,
     pub owner: Option<Box<[i8]>>,
+    pub instance_id: Option<Box<[u16]>>,
 }
 
 impl ItemFrames {
@@ -97,7 +98,7 @@ impl ItemFrames {
                     None
                 }
             },
-            is_launched: unsafe {
+            launched: unsafe {
                 if version.at_least(3, 2, 0) {
                     let mut temp = Vec::with_capacity(len);
                     temp.set_len(len);
@@ -124,6 +125,15 @@ impl ItemFrames {
                     None
                 }
             },
+            instance_id: unsafe {
+                if version.at_least(3, 6, 0) {
+                    let mut temp = Vec::with_capacity(len);
+                    temp.set_len(len);
+                    Some(temp.into_boxed_slice())
+                } else {
+                    None
+                }
+            },
         }
     }
 
@@ -140,10 +150,10 @@ impl From<ItemFrames> for DataFrame {
 
         use crate::columns::ItemFrame as col;
         let mut vec_series = vec![
-            Series::new("frame number", val.frame_index),
-            Series::new("item id", val.item_id),
-            Series::new("state", val.state),
-            Series::new("facing", val.orientation),
+            Series::new(col::FrameIndex.into(), val.frame_index),
+            Series::new(col::ItemID.into(), val.item_id),
+            Series::new(col::State.into(), val.state),
+            Series::new(col::Orientation.into(), val.orientation),
             StructChunked::new(
                 col::Velocity.into(),
                 &[
@@ -162,27 +172,45 @@ impl From<ItemFrames> for DataFrame {
             )
             .unwrap()
             .into_series(),
-            Series::new("damage taken", val.damage_taken),
-            Series::new("expiration timer", val.expiration_timer),
-            Series::new("spawn id", val.spawn_id),
+            Series::new(col::DamageTaken.into(), val.damage_taken),
+            Series::new(col::ExpirationTimer.into(), val.expiration_timer),
+            Series::new(col::SpawnID.into(), val.spawn_id),
         ];
 
         if val.version.at_least(3, 2, 0) {
-            vec_series.push(Series::new("missile type", val.missile_type.unwrap()));
-            vec_series.push(Series::new("turnip type", val.turnip_type.unwrap()));
-            vec_series.push(Series::new("is launched", val.is_launched.unwrap()));
-            vec_series.push(Series::new("charge power", val.charge_power.unwrap()));
+            vec_series.push(Series::new(
+                col::MissileType.into(),
+                val.missile_type.unwrap(),
+            ));
+            vec_series.push(Series::new(
+                col::TurnipType.into(),
+                val.turnip_type.unwrap(),
+            ));
+            vec_series.push(Series::new(col::Launched.into(), val.launched.unwrap()));
+            vec_series.push(Series::new(
+                col::ChargePower.into(),
+                val.charge_power.unwrap(),
+            ));
         } else {
-            vec_series.push(Series::new_null("missile type", len));
-            vec_series.push(Series::new_null("turnip type", len));
-            vec_series.push(Series::new_null("is launched", len));
-            vec_series.push(Series::new_null("charge power", len));
+            vec_series.push(Series::new_null(col::MissileType.into(), len));
+            vec_series.push(Series::new_null(col::TurnipType.into(), len));
+            vec_series.push(Series::new_null(col::Launched.into(), len));
+            vec_series.push(Series::new_null(col::ChargePower.into(), len));
         }
 
         if val.version.at_least(3, 6, 0) {
-            vec_series.push(Series::new("owner", val.owner.unwrap()));
+            vec_series.push(Series::new(col::Owner.into(), val.owner.unwrap()));
         } else {
-            vec_series.push(Series::new_null("owner", len));
+            vec_series.push(Series::new_null(col::Owner.into(), len));
+        }
+
+        if val.version.at_least(3, 16, 0) {
+            vec_series.push(Series::new(
+                col::InstanceID.into(),
+                val.instance_id.unwrap(),
+            ));
+        } else {
+            vec_series.push(Series::new_null(col::InstanceID.into(), len));
         }
 
         DataFrame::new(vec_series).unwrap()
@@ -190,15 +218,16 @@ impl From<ItemFrames> for DataFrame {
 }
 
 pub fn parse_itemframes(
-    file_data: Bytes,
-    event_length: usize,
+    mut stream: Bytes,
     version: Version,
     offsets: &[usize],
 ) -> ItemFrames {
     let mut working = ItemFrames::new(offsets.len(), version);
 
+    let file_length = stream.len();
+
     for (i, &offset) in offsets.iter().enumerate() {
-        let mut stream = file_data.slice(offset..offset + event_length);
+        stream.advance(offset - (file_length - stream.len()));
         unsafe {
             *working.frame_index.get_unchecked_mut(i) = stream.get_i32();
             *working.item_id.get_unchecked_mut(i) = stream.get_u16();
@@ -212,20 +241,23 @@ pub fn parse_itemframes(
             *working.expiration_timer.get_unchecked_mut(i) = stream.get_f32();
             *working.spawn_id.get_unchecked_mut(i) = stream.get_u32();
 
-            if !stream.has_remaining() {
-                // version < 3.2.0
+            if !version.at_least(3, 2, 0) {
                 continue;
             }
             *working.missile_type.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
             *working.turnip_type.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
-            *working.is_launched.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8() != 0;
+            *working.launched.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8() != 0;
             *working.charge_power.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
 
-            if !stream.has_remaining() {
-                // version < 3.6.0
+            if !version.at_least(3, 6, 0) {
                 continue;
             }
             *working.owner.as_mut().unwrap().get_unchecked_mut(i) = stream.get_i8();
+
+            if !version.at_least(3, 16, 0) {
+                continue;
+            }
+            *working.instance_id.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u16();
         }
     }
 

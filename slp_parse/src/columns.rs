@@ -115,11 +115,13 @@ pub enum ItemFrame {
     /// `u8` | >= v3.2.0
     TurnipType,
     /// `bool` | >= v3.2.0
-    IsLaunched,
+    Launched,
     /// `u8` | >= v3.2.0
     ChargePower,
     /// `i8` | >= v3.6.0
     Owner,
+    /// `u16` | >= v3.16.0
+    InstanceID,
 }
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]

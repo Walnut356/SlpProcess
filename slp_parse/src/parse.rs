@@ -205,11 +205,10 @@ impl Game {
 
         let mut event = EventType::None;
         // It's better to overallocate than to have to reallocate these vecs. The pre and post
-        // should be oversize by a little bit when factoring in rollback'd frames, but the items
-        // will likely overallocate by a decent amount.
-        let mut pre_offsets = Vec::with_capacity((frame_count * (3 + ics_count)) as usize);
-        let mut post_offsets = Vec::with_capacity((frame_count * (3 + ics_count)) as usize);
-        let mut item_offsets = Vec::with_capacity((frame_count * 2) as usize);
+        // should be oversize by a little bit when factoring in rollback'd frames.
+        let mut pre_offsets = Vec::with_capacity(frame_count * (3 + ics_count));
+        let mut post_offsets = Vec::with_capacity(frame_count * (3 + ics_count));
+        let mut item_offsets = Vec::new();
 
         let mut pos = file_data.len() - stream.len();
 
@@ -246,14 +245,13 @@ impl Game {
         if version.at_least(3, 0, 0) {
             item_frames = Some(parse_itemframes(
                 file_data.clone(),
-                event_sizes[&EventType::Item] as usize,
                 version,
                 &item_offsets,
             ));
         }
 
         let frames_rollbacked =
-            (pre_offsets.len() / (2 + ics_count) as usize).saturating_sub(frame_count as usize);
+            (pre_offsets.len() / (2 + ics_count)).saturating_sub(frame_count);
         let (mut pre_frames, mut post_frames) = rayon::join(
             || {
                 parse_preframes(
