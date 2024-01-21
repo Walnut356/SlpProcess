@@ -156,7 +156,9 @@ impl PreFrames {
             controller_buttons: self.controller_buttons[index],
             controller_l: self.controller_l[index],
             controller_r: self.controller_r[index],
+            raw_stick_x: self.raw_stick_x.as_ref().map(|x| x[index]),
             percent: self.percent.as_ref().map(|x| x[index]),
+            raw_stick_y: self.raw_stick_y.as_ref().map(|x| x[index]),
         }
     }
 
@@ -290,32 +292,14 @@ pub struct PreRow {
     pub controller_buttons: u16,
     pub controller_l: f32,
     pub controller_r: f32,
+    pub raw_stick_x: Option<f32>,
     pub percent: Option<f32>,
+    pub raw_stick_y: Option<f32>,
 }
 
 impl std::fmt::Display for PreRow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "PreFrame {{\n\tframe_index: {},\n\trandom_seed: {},\n\taction_state: {}({}),\n\tposition: Pos({},{}),\n\torientation: {},\n\tjoystick: StickPos({},{}),\n\tcstick: StickPos({},{}),\n\tengine_trigger: {},\n\tengine_buttons: {:?},\n\tcontroller_buttons: {:?},\n\tcontroller_trigger: (L: {}, R: {}),\n\tpercent: {:?}\n}}",
-            self.frame_index,
-            self.random_seed,
-            State::from_state_and_char(self.action_state, Some(self.character),),
-            self.action_state,
-            self.position.x,
-            self.position.y,
-            Into::<&'static str>::into(Orientation::try_from(self.orientation).unwrap()),
-            self.joystick.x,
-            self.joystick.y,
-            self.cstick.x,
-            self.cstick.y,
-            self.engine_trigger,
-            EngineInput::Raw(self.engine_buttons),
-            ControllerInput::Raw(self.controller_buttons),
-            self.controller_l,
-            self.controller_r,
-            self.percent,
-        )
+        write!(f, "{self:#?}")
     }
 }
 

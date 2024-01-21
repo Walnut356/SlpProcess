@@ -38,6 +38,8 @@ pub struct PostFrames {
     pub ground_velocity: Option<Box<[Velocity]>>,
     pub hitlag_remaining: Option<Box<[f32]>>,
     pub animation_index: Option<Box<[u32]>>,
+    pub instance_hit_by: Option<Box<[u16]>>,
+    pub instance_id: Option<Box<[u16]>>,
 }
 
 impl PostFrames {
@@ -100,70 +102,140 @@ impl PostFrames {
                 temp.set_len(duration);
                 temp.into_boxed_slice()
             },
-            state_frame: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            state_frame: if version.at_least(0, 2, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
-            flags: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            flags: if version.at_least(2, 0, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
-            misc_as: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            misc_as: if version.at_least(2, 0, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
-            is_grounded: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            is_grounded: if version.at_least(2, 0, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
-            last_ground_id: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            last_ground_id: if version.at_least(2, 0, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
-            jumps_remaining: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            jumps_remaining: if version.at_least(2, 0, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
-            l_cancel: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            l_cancel: if version.at_least(2, 0, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
-            hurtbox_state: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            hurtbox_state: if version.at_least(2, 1, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
-            air_velocity: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            air_velocity: if version.at_least(3, 5, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
-            knockback: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            knockback: if version.at_least(3, 5, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
-            ground_velocity: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            ground_velocity: if version.at_least(3, 5, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
-            hitlag_remaining: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            hitlag_remaining: if version.at_least(3, 8, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
-            animation_index: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            animation_index: if version.at_least(3, 11, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
+            },
+            instance_hit_by: if version.at_least(3, 16, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
+            },
+            instance_id: if version.at_least(3, 16, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
         }
     }
@@ -201,6 +273,8 @@ impl PostFrames {
             ground_velocity: self.ground_velocity.as_ref().map(|x| x[index]),
             hitlag_remaining: self.hitlag_remaining.as_ref().map(|x| x[index]),
             animation_index: self.animation_index.as_ref().map(|x| x[index]),
+            instance_hit_by: self.instance_hit_by.as_ref().map(|x| x[index]),
+            instance_id: self.instance_id.as_ref().map(|x| x[index]),
         }
     }
 
@@ -244,19 +318,81 @@ impl PostFrames {
             stocks: vec![0; duration].into_boxed_slice(),
 
             // finally, freedom
-            state_frame: Some(vec![0.0; duration].into_boxed_slice()),
-            flags: Some(vec![0; duration].into_boxed_slice()),
-            misc_as: Some(vec![0.0; duration].into_boxed_slice()),
-            is_grounded: Some(vec![true; duration].into_boxed_slice()),
-            last_ground_id: Some(vec![0; duration].into_boxed_slice()),
-            jumps_remaining: Some(vec![0; duration].into_boxed_slice()),
-            l_cancel: Some(vec![0; duration].into_boxed_slice()),
-            hurtbox_state: Some(vec![0; duration].into_boxed_slice()),
-            air_velocity: Some(vec![Velocity::default(); duration].into_boxed_slice()),
-            knockback: Some(vec![Velocity::default(); duration].into_boxed_slice()),
-            ground_velocity: Some(vec![Velocity::default(); duration].into_boxed_slice()),
-            hitlag_remaining: Some(vec![0.0; duration].into_boxed_slice()),
-            animation_index: Some(vec![0; duration].into_boxed_slice()),
+            state_frame: if version.at_least(0, 2, 0) {
+                Some(vec![0.0; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            flags: if version.at_least(2, 0, 0) {
+                Some(vec![0; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            misc_as: if version.at_least(2, 0, 0) {
+                Some(vec![0.0; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            is_grounded: if version.at_least(2, 0, 0) {
+                Some(vec![true; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            last_ground_id: if version.at_least(2, 0, 0) {
+                Some(vec![0; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            jumps_remaining: if version.at_least(2, 0, 0) {
+                Some(vec![0; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            l_cancel: if version.at_least(2, 0, 0) {
+                Some(vec![0; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            hurtbox_state: if version.at_least(2, 1, 0) {
+                Some(vec![0; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            air_velocity: if version.at_least(3, 5, 0) {
+                Some(vec![Velocity::default(); duration].into_boxed_slice())
+            } else {
+                None
+            },
+            knockback: if version.at_least(3, 5, 0) {
+                Some(vec![Velocity::default(); duration].into_boxed_slice())
+            } else {
+                None
+            },
+            ground_velocity: if version.at_least(3, 5, 0) {
+                Some(vec![Velocity::default(); duration].into_boxed_slice())
+            } else {
+                None
+            },
+            hitlag_remaining: if version.at_least(3, 8, 0) {
+                Some(vec![0.0; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            animation_index: if version.at_least(3, 11, 0) {
+                Some(vec![0; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            instance_hit_by: if version.at_least(3, 16, 0) {
+                Some(vec![0; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            instance_id: if version.at_least(3, 16, 0) {
+                Some(vec![0; duration].into_boxed_slice())
+            } else {
+                None
+            },
         }
     }
 }
@@ -433,6 +569,20 @@ impl From<PostFrames> for DataFrame {
             vec_series.push(Series::new_null(col::AnimationIndex.into(), len));
         }
 
+        if val.version.at_least(3, 16, 0) {
+            vec_series.push(Series::new(
+                col::InstanceHitBy.into(),
+                val.instance_hit_by.unwrap(),
+            ));
+            vec_series.push(Series::new(
+                col::InstanceID.into(),
+                val.instance_id.unwrap(),
+            ));
+        } else {
+            vec_series.push(Series::new_null(col::InstanceHitBy.into(), len));
+            vec_series.push(Series::new_null(col::InstanceID.into(), len));
+        }
+
         DataFrame::new(vec_series).unwrap()
     }
 }
@@ -463,6 +613,8 @@ pub struct PostRow {
     pub ground_velocity: Option<Velocity>,
     pub hitlag_remaining: Option<f32>,
     pub animation_index: Option<u32>,
+    pub instance_hit_by: Option<u16>,
+    pub instance_id: Option<u16>,
 }
 
 impl std::fmt::Display for PostRow {
@@ -500,14 +652,8 @@ pub fn unpack_frames(
     let offsets_iter = frames.chunks_exact(2).enumerate();
 
     let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
-    p_frames.insert(
-        ports[0] as u8,
-        (PostFrames::new(duration as usize, version), None),
-    );
-    p_frames.insert(
-        ports[1] as u8,
-        (PostFrames::new(duration as usize, version), None),
-    );
+    p_frames.insert(ports[0] as u8, (PostFrames::new(duration, version), None));
+    p_frames.insert(ports[1] as u8, (PostFrames::new(duration, version), None));
 
     let file_length = stream.len();
 
@@ -519,7 +665,7 @@ pub fn unpack_frames(
 
             let frame_number = stream.get_i32();
             let i = (frame_number + 123) as usize;
-            if i == duration as usize || i == (duration + 1) as usize {
+            if i == duration || i == (duration + 1) {
                 #[cfg(debug_assertions)]
                 println!("Skipping frame {i} due to game-end rollback");
 
@@ -548,76 +694,77 @@ pub fn unpack_frames(
 
                 if !version.at_least(2, 0, 0) {
                     continue;
-                } else {
-                    *working.state_frame.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
-                    let flags_1 = stream.get_u8() as u64;
-                    let flags_2 = stream.get_u8() as u64;
-                    let flags_3 = stream.get_u8() as u64;
-                    let flags_4 = stream.get_u8() as u64;
-                    let flags_5 = stream.get_u8() as u64;
-                    let flags: u64 = flags_1
-                        | (flags_2 << 8)
-                        | (flags_3 << 16)
-                        | (flags_4 << 24)
-                        | (flags_5 << 32);
-                    *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
-                    *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
-                    *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) =
-                        stream.get_u8() == 0;
-                    *working
-                        .last_ground_id
-                        .as_mut()
-                        .unwrap()
-                        .get_unchecked_mut(i) = stream.get_u16();
-                    *working
-                        .jumps_remaining
-                        .as_mut()
-                        .unwrap()
-                        .get_unchecked_mut(i) = stream.get_u8();
-                    *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
                 }
+                *working.state_frame.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+                let flags_1 = stream.get_u8() as u64;
+                let flags_2 = stream.get_u8() as u64;
+                let flags_3 = stream.get_u8() as u64;
+                let flags_4 = stream.get_u8() as u64;
+                let flags_5 = stream.get_u8() as u64;
+                let flags: u64 =
+                    flags_1 | (flags_2 << 8) | (flags_3 << 16) | (flags_4 << 24) | (flags_5 << 32);
+                *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
+                *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+                *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8() == 0;
+                *working
+                    .last_ground_id
+                    .as_mut()
+                    .unwrap()
+                    .get_unchecked_mut(i) = stream.get_u16();
+                *working
+                    .jumps_remaining
+                    .as_mut()
+                    .unwrap()
+                    .get_unchecked_mut(i) = stream.get_u8();
+                *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
 
                 if !version.at_least(2, 1, 0) {
                     continue;
-                } else {
-                    *working.hurtbox_state.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
                 }
+                *working.hurtbox_state.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
 
                 if !version.at_least(3, 5, 0) {
                     continue;
-                } else {
-                    let air_vel_x = stream.get_f32();
-                    let vel_y = stream.get_f32();
-                    *working.air_velocity.as_mut().unwrap().get_unchecked_mut(i) =
-                        Velocity::new(air_vel_x, vel_y);
-                    *working.knockback.as_mut().unwrap().get_unchecked_mut(i) =
-                        Velocity::new(stream.get_f32(), stream.get_f32());
-                    *working
-                        .ground_velocity
-                        .as_mut()
-                        .unwrap()
-                        .get_unchecked_mut(i) = Velocity::new(stream.get_f32(), vel_y);
                 }
+                let air_vel_x = stream.get_f32();
+                let vel_y = stream.get_f32();
+                *working.air_velocity.as_mut().unwrap().get_unchecked_mut(i) =
+                    Velocity::new(air_vel_x, vel_y);
+                *working.knockback.as_mut().unwrap().get_unchecked_mut(i) =
+                    Velocity::new(stream.get_f32(), stream.get_f32());
+                *working
+                    .ground_velocity
+                    .as_mut()
+                    .unwrap()
+                    .get_unchecked_mut(i) = Velocity::new(stream.get_f32(), vel_y);
 
                 if !version.at_least(3, 8, 0) {
                     continue;
-                } else {
-                    *working
-                        .hitlag_remaining
-                        .as_mut()
-                        .unwrap()
-                        .get_unchecked_mut(i) = stream.get_f32();
                 }
+                *working
+                    .hitlag_remaining
+                    .as_mut()
+                    .unwrap()
+                    .get_unchecked_mut(i) = stream.get_f32();
 
                 if !version.at_least(3, 11, 0) {
                     continue;
-                } else {
-                    *working
-                        .animation_index
-                        .as_mut()
-                        .unwrap()
-                        .get_unchecked_mut(i) = stream.get_u32();
                 }
+                *working
+                    .animation_index
+                    .as_mut()
+                    .unwrap()
+                    .get_unchecked_mut(i) = stream.get_u32();
+
+                if !version.at_least(3, 16, 0) {
+                    continue;
+                }
+                *working
+                    .instance_hit_by
+                    .as_mut()
+                    .unwrap()
+                    .get_unchecked_mut(i) = stream.get_u16();
+                *working.instance_id.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u16();
             }
         }
     }
@@ -692,72 +839,77 @@ pub fn unpack_frames_ics(
 
             if !version.at_least(2, 0, 0) {
                 continue;
-            } else {
-                *working.state_frame.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
-                let flags_1 = stream.get_u8() as u64;
-                let flags_2 = stream.get_u8() as u64;
-                let flags_3 = stream.get_u8() as u64;
-                let flags_4 = stream.get_u8() as u64;
-                let flags_5 = stream.get_u8() as u64;
-                let flags: u64 =
-                    flags_1 & (flags_2 << 8) & (flags_3 << 16) & (flags_4 << 24) & (flags_5 << 32);
-                *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
-                *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
-                *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8() == 0;
-                *working
-                    .last_ground_id
-                    .as_mut()
-                    .unwrap()
-                    .get_unchecked_mut(i) = stream.get_u16();
-                *working
-                    .jumps_remaining
-                    .as_mut()
-                    .unwrap()
-                    .get_unchecked_mut(i) = stream.get_u8();
-                *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
             }
+            *working.state_frame.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+            let flags_1 = stream.get_u8() as u64;
+            let flags_2 = stream.get_u8() as u64;
+            let flags_3 = stream.get_u8() as u64;
+            let flags_4 = stream.get_u8() as u64;
+            let flags_5 = stream.get_u8() as u64;
+            let flags: u64 =
+                flags_1 & (flags_2 << 8) & (flags_3 << 16) & (flags_4 << 24) & (flags_5 << 32);
+            *working.flags.as_mut().unwrap().get_unchecked_mut(i) = flags;
+            *working.misc_as.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+            *working.is_grounded.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8() == 0;
+            *working
+                .last_ground_id
+                .as_mut()
+                .unwrap()
+                .get_unchecked_mut(i) = stream.get_u16();
+            *working
+                .jumps_remaining
+                .as_mut()
+                .unwrap()
+                .get_unchecked_mut(i) = stream.get_u8();
+            *working.l_cancel.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
 
             if !version.at_least(2, 1, 0) {
                 continue;
-            } else {
-                *working.hurtbox_state.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
             }
+            *working.hurtbox_state.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u8();
 
             if !version.at_least(3, 5, 0) {
                 continue;
-            } else {
-                let air_vel_x = stream.get_f32();
-                let vel_y = stream.get_f32();
-                *working.air_velocity.as_mut().unwrap().get_unchecked_mut(i) =
-                    Velocity::new(air_vel_x, vel_y);
-                *working.knockback.as_mut().unwrap().get_unchecked_mut(i) =
-                    Velocity::new(stream.get_f32(), stream.get_f32());
-                *working
-                    .ground_velocity
-                    .as_mut()
-                    .unwrap()
-                    .get_unchecked_mut(i) = Velocity::new(stream.get_f32(), vel_y);
             }
+            let air_vel_x = stream.get_f32();
+            let vel_y = stream.get_f32();
+            *working.air_velocity.as_mut().unwrap().get_unchecked_mut(i) =
+                Velocity::new(air_vel_x, vel_y);
+            *working.knockback.as_mut().unwrap().get_unchecked_mut(i) =
+                Velocity::new(stream.get_f32(), stream.get_f32());
+            *working
+                .ground_velocity
+                .as_mut()
+                .unwrap()
+                .get_unchecked_mut(i) = Velocity::new(stream.get_f32(), vel_y);
 
             if !version.at_least(3, 8, 0) {
                 continue;
-            } else {
-                *working
-                    .hitlag_remaining
-                    .as_mut()
-                    .unwrap()
-                    .get_unchecked_mut(i) = stream.get_f32();
             }
+            *working
+                .hitlag_remaining
+                .as_mut()
+                .unwrap()
+                .get_unchecked_mut(i) = stream.get_f32();
 
             if !version.at_least(3, 11, 0) {
                 continue;
-            } else {
-                *working
-                    .animation_index
-                    .as_mut()
-                    .unwrap()
-                    .get_unchecked_mut(i) = stream.get_u32();
             }
+            *working
+                .animation_index
+                .as_mut()
+                .unwrap()
+                .get_unchecked_mut(i) = stream.get_u32();
+
+            if !version.at_least(3, 16, 0) {
+                continue;
+            }
+            *working
+                .instance_hit_by
+                .as_mut()
+                .unwrap()
+                .get_unchecked_mut(i) = stream.get_u16();
+            *working.instance_id.as_mut().unwrap().get_unchecked_mut(i) = stream.get_u16();
         }
     }
 

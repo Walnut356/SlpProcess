@@ -84,6 +84,10 @@ pub enum PostFrame {
     HitlagRemaining,
     /// `u32` | >= v3.11.0
     AnimationIndex,
+    /// `u16` | >= v3.16.0
+    InstanceHitBy,
+    /// `u16` | >= v3.16.0
+    InstanceID
 }
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
