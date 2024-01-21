@@ -559,6 +559,7 @@ pub struct Version {
 }
 
 impl Version {
+    #[inline]
     pub fn new(major: u8, minor: u8, build: u8) -> Self {
         Self {
             major,
@@ -586,6 +587,7 @@ impl Version {
 
 impl Default for Version {
     /// Returns Version{0, 1, 0}, the first slippi release version
+    #[inline]
     fn default() -> Self {
         Self {
             major: 0,

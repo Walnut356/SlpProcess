@@ -22,7 +22,6 @@ use ssbm_utils::{
     types::{Position, StickPos, Velocity},
     vel,
 };
-use time::{format_description::well_known::Iso8601, OffsetDateTime};
 
 // for some reason "Run Tests" and "Debug" use different working folders. This is a dumb workaround
 // for a dumb problem. You might have to replace the backslash with a forward slash on linux.
@@ -150,7 +149,9 @@ pub fn test_frames() {
                 controller_buttons: 0,
                 controller_l: 0.0,
                 controller_r: 0.0,
+                raw_stick_x: Some(0),
                 percent: Some(0.0),
+                raw_stick_y: Some(0),
             },
             PostRow {
                 frame_index: -123,
@@ -176,7 +177,9 @@ pub fn test_frames() {
                 knockback: Some(vel!(0.00, 0.00)),
                 ground_velocity: Some(vel!(0.00, 0.00)),
                 hitlag_remaining: Some(0.0),
-                animation_index: Some(u32::MAX)
+                animation_index: Some(u32::MAX),
+                instance_hit_by: Some(0),
+                instance_id: Some(1),
             }
         )
     );
@@ -201,7 +204,9 @@ pub fn test_frames() {
                 controller_buttons: 0,
                 controller_l: 0.007142857,
                 controller_r: 0.0,
-                percent: Some(21.22)
+                raw_stick_x: Some(0),
+                percent: Some(21.22),
+                raw_stick_y: Some(0),
             },
             PostRow {
                 frame_index: 9685,
@@ -230,7 +235,9 @@ pub fn test_frames() {
                 knockback: Some(vel!(0.0, 0.0)),
                 ground_velocity: Some(vel!(0.0, 0.0)),
                 hitlag_remaining: Some(0.0),
-                animation_index: Some(2)
+                animation_index: Some(2),
+                instance_hit_by: Some(2028),
+                instance_id: Some(2100),
             }
         )
     );
@@ -252,7 +259,9 @@ pub fn test_frames() {
                 controller_buttons: 0,
                 controller_l: 0.021428572,
                 controller_r: 0.0,
-                percent: Some(128.81566)
+                raw_stick_x: Some(0),
+                percent: Some(128.81566),
+                raw_stick_y: Some(0),
             },
             PostRow {
                 frame_index: 3764,
@@ -278,7 +287,9 @@ pub fn test_frames() {
                 knockback: Some(vel!(1.564166, 1.0918791)),
                 ground_velocity: Some(vel!(0.00, -3.10)),
                 hitlag_remaining: Some(0.0),
-                animation_index: Some(178)
+                animation_index: Some(178),
+                instance_hit_by: Some(831),
+                instance_id: Some(832),
             }
         )
     );
@@ -300,7 +311,9 @@ pub fn test_frames() {
                 controller_buttons: ControllerInput::R.into(),
                 controller_l: 0.0,
                 controller_r: 0.0,
-                percent: Some(33.395657)
+                raw_stick_x: Some(0),
+                percent: Some(33.395657),
+                raw_stick_y: Some(0),
             },
             PostRow {
                 frame_index: 2108,
@@ -329,7 +342,9 @@ pub fn test_frames() {
                 knockback: Some(vel!(-0.99772424, 0.9634912)),
                 ground_velocity: Some(vel!(0.0, 0.0)),
                 hitlag_remaining: Some(5.0),
-                animation_index: Some(166)
+                animation_index: Some(166),
+                instance_hit_by: Some(502),
+                instance_id: Some(503),
             }
         )
     );
@@ -351,7 +366,9 @@ pub fn test_frames() {
                 controller_buttons: ControllerInput::B.into(),
                 controller_l: 0.0,
                 controller_r: 0.0,
-                percent: Some(70.29)
+                raw_stick_x: Some(0),
+                percent: Some(70.29),
+                raw_stick_y: Some(0),
             },
             PostRow {
                 frame_index: 7851,
@@ -377,7 +394,9 @@ pub fn test_frames() {
                 knockback: Some(vel!(0.0, 0.0)),
                 ground_velocity: Some(vel!(0.0, 0.37000012)),
                 hitlag_remaining: Some(0.0),
-                animation_index: Some(299)
+                animation_index: Some(299),
+                instance_hit_by: Some(1602),
+                instance_id: Some(1707),
             }
         )
     );
@@ -399,7 +418,9 @@ pub fn test_frames() {
                 controller_buttons: ControllerInput::None.into(),
                 controller_l: 0.0,
                 controller_r: 0.7285714,
-                percent: Some(67.91)
+                raw_stick_x: Some(-98),
+                percent: Some(67.91),
+                raw_stick_y: Some(0),
             },
             PostRow {
                 frame_index: 9503,
@@ -425,7 +446,9 @@ pub fn test_frames() {
                 knockback: Some(vel!(0.43712196, 2.17552)),
                 ground_velocity: Some(vel!(0.0, -3.10)),
                 hitlag_remaining: Some(0.0),
-                animation_index: Some(180)
+                animation_index: Some(180),
+                instance_hit_by: Some(2069),
+                instance_id: Some(2070),
             }
         )
     );

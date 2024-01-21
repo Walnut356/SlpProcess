@@ -29,9 +29,9 @@ pub struct PreFrames {
     pub controller_buttons: Box<[u16]>,
     pub controller_l: Box<[f32]>,
     pub controller_r: Box<[f32]>,
-    pub raw_stick_x: Option<Box<[f32]>>,
+    pub raw_stick_x: Option<Box<[i8]>>,
     pub percent: Option<Box<[f32]>>,
-    pub raw_stick_y: Option<Box<[f32]>>,
+    pub raw_stick_y: Option<Box<[i8]>>,
 }
 
 impl PreFrames {
@@ -195,7 +195,7 @@ impl PreFrames {
             controller_l: vec![0.0; duration].into_boxed_slice(),
             controller_r: vec![0.0; duration].into_boxed_slice(),
             raw_stick_x: if version.at_least(1, 2, 0) {
-                Some(vec![0.0; duration].into_boxed_slice())
+                Some(vec![0; duration].into_boxed_slice())
             } else {
                 None
             },
@@ -205,7 +205,7 @@ impl PreFrames {
                 None
             },
             raw_stick_y: if version.at_least(3, 15, 0) {
-                Some(vec![0.0; duration].into_boxed_slice())
+                Some(vec![0; duration].into_boxed_slice())
             } else {
                 None
             },
@@ -292,9 +292,9 @@ pub struct PreRow {
     pub controller_buttons: u16,
     pub controller_l: f32,
     pub controller_r: f32,
-    pub raw_stick_x: Option<f32>,
+    pub raw_stick_x: Option<i8>,
     pub percent: Option<f32>,
-    pub raw_stick_y: Option<f32>,
+    pub raw_stick_y: Option<i8>,
 }
 
 impl std::fmt::Display for PreRow {
@@ -399,7 +399,7 @@ pub fn unpack_frames(
                     continue;
                 }
 
-                *working.raw_stick_x.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+                *working.raw_stick_x.as_mut().unwrap().get_unchecked_mut(i) = stream.get_i8();
 
                 if !version.at_least(1, 4, 0) {
                     continue;
@@ -411,7 +411,7 @@ pub fn unpack_frames(
                     continue;
                 }
 
-                *working.raw_stick_y.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+                *working.raw_stick_y.as_mut().unwrap().get_unchecked_mut(i) = stream.get_i8();
             }
         }
     }
@@ -492,7 +492,7 @@ pub fn unpack_frames_ics(
                 continue;
             }
 
-            *working.raw_stick_x.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+            *working.raw_stick_x.as_mut().unwrap().get_unchecked_mut(i) = stream.get_i8();
 
             if !version.at_least(1, 4, 0) {
                 continue;
@@ -504,7 +504,7 @@ pub fn unpack_frames_ics(
                 continue;
             }
 
-            *working.raw_stick_y.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+            *working.raw_stick_y.as_mut().unwrap().get_unchecked_mut(i) = stream.get_i8();
         }
     }
 

@@ -244,7 +244,7 @@ impl PyItem {
     }
     #[getter]
     fn get_is_launched(&self) -> PyResult<Option<Vec<bool>>> {
-        Ok(self.frames.is_launched.as_ref().map(|x| x.to_vec()))
+        Ok(self.frames.launched.as_ref().map(|x| x.to_vec()))
     }
     #[getter]
     fn get_charge_power(&self) -> PyResult<Option<Vec<u8>>> {
