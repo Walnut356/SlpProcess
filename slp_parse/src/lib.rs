@@ -264,7 +264,7 @@ pub fn to_dolphin_queue(target_path: PathBuf, combo_list: &[Arc<Combos>]) {
 }
 
 pub mod prelude {
-    pub use crate::{game::Game, player::Player, stats::Stats};
+    pub use crate::{game::{Game, GameStub}, player::Player, stats::Stats};
     pub use crate::{get_combos, get_stats, parse, to_dolphin_queue};
 
     pub use ssbm_utils::enums::BitFlags;

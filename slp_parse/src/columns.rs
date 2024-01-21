@@ -26,8 +26,12 @@ pub enum PreFrame {
     ControllerL,
     /// `f32` | All versions
     ControllerR,
+    /// `f32` | >= v1.2.0
+    RawStickX,
     /// `f32` | >= v1.4.0
     Percent,
+    /// `f32` | >= v3.15.0
+    RawStickY,
 }
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]

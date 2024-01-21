@@ -29,7 +29,9 @@ pub struct PreFrames {
     pub controller_buttons: Box<[u16]>,
     pub controller_l: Box<[f32]>,
     pub controller_r: Box<[f32]>,
+    pub raw_stick_x: Option<Box<[f32]>>,
     pub percent: Option<Box<[f32]>>,
+    pub raw_stick_y: Option<Box<[f32]>>,
 }
 
 impl PreFrames {
@@ -101,10 +103,32 @@ impl PreFrames {
                 temp.set_len(duration);
                 temp.into_boxed_slice()
             },
-            percent: unsafe {
-                let mut temp = Vec::with_capacity(duration);
-                temp.set_len(duration);
-                Some(temp.into_boxed_slice())
+            raw_stick_x: if version.at_least(1, 2, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
+            },
+            percent: if version.at_least(1, 4, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
+            },
+            raw_stick_y: if version.at_least(3, 15, 0) {
+                unsafe {
+                    let mut temp = Vec::with_capacity(duration);
+                    temp.set_len(duration);
+                    Some(temp.into_boxed_slice())
+                }
+            } else {
+                None
             },
         }
     }
@@ -139,7 +163,7 @@ impl PreFrames {
     /// When nana is dead, she is considered `inactive`, which is the variable checked by slippi to
     /// determine what characters to record frames for. As a result, we cannot rely on the same
     /// invariants as `new()` (that provide extra optimization room). Because nana can have less
-    /// frames than pop, we can't get away with skipping 0-initialization, since we don't know if
+    /// frames than popo, we can't get away with skipping 0-initialization, since we don't know if
     /// the whole array will be overwritten. There's also a few awkward points such as needing to
     /// initialize the frame counter to the correct values since we won't have an event with which
     /// to populate them for any frames where nana is dead.
@@ -168,7 +192,21 @@ impl PreFrames {
             controller_buttons: vec![0; duration].into_boxed_slice(),
             controller_l: vec![0.0; duration].into_boxed_slice(),
             controller_r: vec![0.0; duration].into_boxed_slice(),
-            percent: Some(vec![0.0; duration].into_boxed_slice()),
+            raw_stick_x: if version.at_least(1, 2, 0) {
+                Some(vec![0.0; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            percent: if version.at_least(1, 4, 0) {
+                Some(vec![0.0; duration].into_boxed_slice())
+            } else {
+                None
+            },
+            raw_stick_y: if version.at_least(3, 15, 0) {
+                Some(vec![0.0; duration].into_boxed_slice())
+            } else {
+                None
+            },
         }
     }
 }
@@ -217,10 +255,20 @@ impl From<PreFrames> for DataFrame {
             Series::new(col::ControllerL.into(), val.controller_l),
             Series::new(col::ControllerR.into(), val.controller_r),
         ];
+        if val.version.at_least(1, 2, 0) {
+            vec_series.push(Series::new(col::RawStickX.into(), val.raw_stick_x.unwrap()));
+        } else {
+            vec_series.push(Series::new_null(col::RawStickX.into(), len));
+        }
         if val.version.at_least(1, 4, 0) {
             vec_series.push(Series::new(col::Percent.into(), val.percent.unwrap()));
         } else {
             vec_series.push(Series::new_null(col::Percent.into(), len));
+        }
+        if val.version.at_least(3, 15, 0) {
+            vec_series.push(Series::new(col::RawStickY.into(), val.raw_stick_y.unwrap()));
+        } else {
+            vec_series.push(Series::new_null(col::RawStickY.into(), len));
         }
 
         DataFrame::new(vec_series).unwrap()
@@ -316,17 +364,11 @@ pub fn unpack_frames(
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
     p_frames.insert(
         ports[0] as u8,
-        (
-            PreFrames::new(duration as usize, version, characters[0]),
-            None,
-        ),
+        (PreFrames::new(duration, version, characters[0]), None),
     );
     p_frames.insert(
         ports[1] as u8,
-        (
-            PreFrames::new(duration as usize, version, characters[1]),
-            None,
-        ),
+        (PreFrames::new(duration, version, characters[1]), None),
     );
 
     let file_length = stream.len();
@@ -339,7 +381,7 @@ pub fn unpack_frames(
 
             let frame_number = stream.get_i32();
             let i = (frame_number + 123) as usize;
-            if i == duration as usize || i == (duration + 1) as usize {
+            if i == duration || i == (duration + 1) {
                 #[cfg(debug_assertions)]
                 println!("Skipping frame {i} due to game-end rollback");
 
@@ -369,17 +411,23 @@ pub fn unpack_frames(
                 *working.controller_l.get_unchecked_mut(i) = stream.get_f32();
                 *working.controller_r.get_unchecked_mut(i) = stream.get_f32();
 
-                // Unnecessary since we're not recording Raw X for now
-                // if !version.at_least(1, 2, 0) {
-                //     continue;
-                // }
+                if !version.at_least(1, 2, 0) {
+                    continue;
+                }
+
+                *working.raw_stick_x.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
 
                 if !version.at_least(1, 4, 0) {
                     continue;
                 }
 
-                stream.advance(1);
                 *working.percent.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+
+                if !version.at_least(3, 15, 0) {
+                    continue;
+                }
+
+                *working.raw_stick_y.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
             }
         }
     }
@@ -456,12 +504,23 @@ pub fn unpack_frames_ics(
             *working.controller_l.get_unchecked_mut(i) = stream.get_f32();
             *working.controller_r.get_unchecked_mut(i) = stream.get_f32();
 
+            if !version.at_least(1, 2, 0) {
+                continue;
+            }
+
+            *working.raw_stick_x.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+
             if !version.at_least(1, 4, 0) {
                 continue;
             }
 
-            stream.advance(1);
             *working.percent.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
+
+            if !version.at_least(3, 15, 0) {
+                continue;
+            }
+
+            *working.raw_stick_y.as_mut().unwrap().get_unchecked_mut(i) = stream.get_f32();
         }
     }
 

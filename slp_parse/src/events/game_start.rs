@@ -577,6 +577,11 @@ impl Version {
                 build,
             }
     }
+
+    #[inline]
+    pub fn as_u32(&self) -> u32 {
+        u32::from_be_bytes([self.major, self.minor, self.build, 0])
+    }
 }
 
 impl Default for Version {
