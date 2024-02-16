@@ -1,11 +1,12 @@
 #![allow(clippy::uninit_vec)]
 
 use crate::{events::game_start::Version, Port};
+use anyhow::{anyhow, Result};
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
 use ssbm_utils::{
-    enums::{Character, ControllerInput, EngineInput, Orientation, State},
+    enums::Character,
     types::{Position, StickPos},
 };
 
@@ -311,7 +312,7 @@ pub fn parse_preframes(
     ports: [Port; 2],
     ics: [bool; 2],
     characters: [Character; 2],
-) -> IntMap<u8, (PreFrames, Option<PreFrames>)> {
+) -> Result<IntMap<u8, (PreFrames, Option<PreFrames>)>> {
     let p_frames = {
         /* splitting these out saves us a small amount of time in conditional logic, and allows for
         exact iterator chunk sizes. */
@@ -320,7 +321,7 @@ pub fn parse_preframes(
         } else {
             unpack_frames_ics(file_data, frames, duration, ports, ics, version, characters)
         }
-    };
+    }?;
 
     let mut result = IntMap::default();
 
@@ -328,7 +329,7 @@ pub fn parse_preframes(
         result.insert(port, (player_frames, nana_frames));
     }
 
-    result
+    Ok(result)
 }
 
 pub fn unpack_frames(
@@ -338,11 +339,10 @@ pub fn unpack_frames(
     ports: [Port; 2],
     version: Version,
     characters: [Character; 2],
-) -> IntMap<u8, (PreFrames, Option<PreFrames>)> {
+) -> Result<IntMap<u8, (PreFrames, Option<PreFrames>)>> {
     /* TODO defining it like this *should* eliminate bounds checks, but i need to inspect the
     assembly to be sure. It's gonna start looking real gross if it's having trouble seeing through
     the constructor though */
-
     let frames_iter = frames.chunks_exact(2).enumerate();
 
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
@@ -358,6 +358,7 @@ pub fn unpack_frames(
     let file_length = stream.len();
 
     for (_, offsets) in frames_iter {
+        // TODO add the 2 player optimizations back in
         for &offset in offsets {
             // frames should always be in the same order as they appeared in the file, thus we can
             // always just move forward.
@@ -379,7 +380,7 @@ pub fn unpack_frames(
             // i has to be 0..frames_iter.len(), and that length was used to construct all of the
             // vecs that make up the PreFrames objects.
             unsafe {
-                working.frame_index[i] = frame_number;
+                *working.frame_index.get_mut(i).ok_or(anyhow!("Too many frames. Attempted to access frame at index {i}, max frame number is {duration}"))? = frame_number;
                 *working.random_seed.get_unchecked_mut(i) = stream.get_u32();
                 *working.action_state.get_unchecked_mut(i) = stream.get_u16();
                 *working.position.get_unchecked_mut(i) =
@@ -416,7 +417,7 @@ pub fn unpack_frames(
         }
     }
 
-    p_frames
+    Ok(p_frames)
 }
 
 pub fn unpack_frames_ics(
@@ -427,7 +428,7 @@ pub fn unpack_frames_ics(
     ics: [bool; 2],
     version: Version,
     characters: [Character; 2],
-) -> IntMap<u8, (PreFrames, Option<PreFrames>)> {
+) -> Result<IntMap<u8, (PreFrames, Option<PreFrames>)>> {
     let len = duration;
 
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
@@ -472,7 +473,8 @@ pub fn unpack_frames_ics(
         };
 
         unsafe {
-            working.frame_index[i] = frame_number;
+            *working.frame_index.get_mut(i).ok_or(anyhow!("Too many frames. Attempted to access frame at index {i}, max frame number is {duration}"))? = frame_number;
+
             *working.random_seed.get_unchecked_mut(i) = stream.get_u32();
             *working.action_state.get_unchecked_mut(i) = stream.get_u16();
             *working.position.get_unchecked_mut(i) =
@@ -508,5 +510,5 @@ pub fn unpack_frames_ics(
         }
     }
 
-    p_frames
+    Ok(p_frames)
 }

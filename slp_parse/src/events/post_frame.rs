@@ -4,6 +4,7 @@ use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
 use ssbm_utils::types::{Position, Velocity};
+use anyhow::{anyhow, Result};
 
 use crate::{columns::PostFrame, events::game_start::Version, Port};
 
@@ -630,7 +631,7 @@ pub fn parse_postframes(
     duration: usize,
     ports: [Port; 2],
     ics: [bool; 2],
-) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
+) -> Result<IntMap<u8, (PostFrames, Option<PostFrames>)>> {
     /* splitting these out saves us a small amount of time in conditional logic, and allows for
     exact iterator chunk sizes. */
     if !ics[0] && !ics[1] {
@@ -648,7 +649,7 @@ pub fn unpack_frames(
     duration: usize,
     ports: [Port; 2],
     version: Version,
-) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
+) -> Result<IntMap<u8, (PostFrames, Option<PostFrames>)>> {
     let offsets_iter = frames.chunks_exact(2).enumerate();
 
     let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
@@ -679,7 +680,7 @@ pub fn unpack_frames(
 
             unsafe {
                 // this one won't be unchecked just to make sure i don't accidentally overflow =)
-                working.frame_index[i] = frame_number;
+                *working.frame_index.get_mut(i).ok_or(anyhow!("Too many frames. Attempted to access frame at index {i}, max frame number is {duration}"))? = frame_number;
                 *working.character.get_unchecked_mut(i) = stream.get_u8();
                 *working.action_state.get_unchecked_mut(i) = stream.get_u16();
                 *working.position.get_unchecked_mut(i) =
@@ -768,7 +769,7 @@ pub fn unpack_frames(
             }
         }
     }
-    p_frames
+    Ok(p_frames)
 }
 
 pub fn unpack_frames_ics(
@@ -778,7 +779,7 @@ pub fn unpack_frames_ics(
     ports: [Port; 2],
     ics: [bool; 2],
     version: Version,
-) -> IntMap<u8, (PostFrames, Option<PostFrames>)> {
+) -> Result<IntMap<u8, (PostFrames, Option<PostFrames>)>> {
     let len = duration;
 
     let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
@@ -824,7 +825,7 @@ pub fn unpack_frames_ics(
         };
 
         unsafe {
-            working.frame_index[i] = frame_number;
+            *working.frame_index.get_mut(i).ok_or(anyhow!("Too many frames. Attempted to access frame at index {i}, max frame number is {duration}"))? = frame_number;
             *working.character.get_unchecked_mut(i) = stream.get_u8();
             *working.action_state.get_unchecked_mut(i) = stream.get_u16();
             *working.position.get_unchecked_mut(i) =
@@ -913,5 +914,5 @@ pub fn unpack_frames_ics(
         }
     }
 
-    p_frames
+    Ok(p_frames)
 }

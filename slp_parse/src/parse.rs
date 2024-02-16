@@ -252,7 +252,8 @@ impl Game {
 
         let frames_rollbacked =
             (pre_offsets.len() / (2 + ics_count)).saturating_sub(frame_count);
-        let (mut pre_frames, mut post_frames) = rayon::join(
+
+        let (pre_frames, post_frames) = rayon::join(
             || {
                 parse_preframes(
                     file_data.clone(),
@@ -276,11 +277,14 @@ impl Game {
             },
         );
 
+        let mut pre_f = pre_frames?;
+        let mut post_f = post_frames?;
+
         for player in players.iter_mut() {
-            let temp_pre = pre_frames.remove(&(player.port as u8)).unwrap();
+            let temp_pre = pre_f.remove(&(player.port as u8)).unwrap();
             player.frames.pre = Arc::new(temp_pre.0);
 
-            let temp_post = post_frames.remove(&(player.port as u8)).unwrap();
+            let temp_post = post_f.remove(&(player.port as u8)).unwrap();
             player.frames.post = Arc::new(temp_post.0);
             if temp_pre.1.is_some() {
                 player.nana_frames = Some(Frames {
