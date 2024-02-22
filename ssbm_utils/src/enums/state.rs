@@ -6,7 +6,7 @@ use crate::enums::Character;
 
 /// Wrapper enum for ActionState, CharacterState, and any possibly unknown values. Mainly useful via
 /// `State::from_state_and_char`
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Display)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq)]
 #[repr(u16)]
 pub enum State {
     Universal(ActionState),
@@ -22,6 +22,16 @@ impl State {
             Self::Unique(CharacterState::from_char_and_state(c, state))
         } else {
             Self::Unknown(state)
+        }
+    }
+}
+
+impl std::fmt::Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            State::Universal(x) => write!(f, "Universal({})", x),
+            State::Unique(x) => write!(f, "Unique({})", x),
+            State::Unknown(x) => write!(f, "Unknown({})", x),
         }
     }
 }

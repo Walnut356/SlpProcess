@@ -1,4 +1,4 @@
-import slp_process as slp
+import py_slp_parse as slp
 import polars as pl
 import time
 import slippistats as ss

@@ -7,14 +7,17 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Cargo debug",
-            "program": "G:\\Coding\\My Projects\\Slippi Stats\\SlpProcess\\target\\debug\\slpprocess.exe",
+            "name": "Debug slp_parse",
+            "program": "G:\\Coding\\My Projects\\Slippi Stats\\SlpProcess\\target\\debug\\slp_parse.exe",
             "cargo": {
                 "args": [
-                    "build",
-                ]
+                    "build"
+                ],
+                "filter": {"name":"slp_parse"}
             },
-            "args": []
+            "args": [
+                "--bin slp_parse"
+            ],
         }
     ]
 }

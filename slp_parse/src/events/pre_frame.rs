@@ -1,5 +1,7 @@
 #![allow(clippy::uninit_vec)]
 
+use std::{ops::Index, rc::Rc};
+
 use crate::{events::game_start::Version, Port};
 use anyhow::{anyhow, Result};
 use bytes::{Buf, Bytes};
@@ -7,6 +9,7 @@ use nohash_hasher::IntMap;
 use polars::prelude::*;
 use ssbm_utils::{
     enums::Character,
+    prelude::{ActionState, ControllerInput, EngineInput, Orientation, State},
     types::{Position, StickPos},
 };
 
@@ -300,7 +303,43 @@ pub struct PreRow {
 
 impl std::fmt::Display for PreRow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:#?}")
+        write!(
+            f,
+            r"PreFrame {{
+    character: {},
+    frame_index: {},
+    random_seed: {},
+    action_state: {},
+    position: {},
+    orientation: {:?},
+    joystick: {},
+    cstick: {},
+    engine_trigger: {},
+    engine_buttons: {},
+    controller_buttons: {},
+    controller_l: {},
+    controller_r: {},
+    percent: {:?},
+    raw_stick_x: {:?},
+    raw_stick_y: {:?},
+}}",
+            self.character,
+            self.frame_index,
+            self.random_seed,
+            State::from_state_and_char(self.action_state, Some(self.character)),
+            self.position,
+            Orientation::from_repr(self.orientation as i8).unwrap(),
+            self.joystick,
+            self.cstick,
+            self.engine_trigger,
+            EngineInput::Raw(self.engine_buttons),
+            ControllerInput::Raw(self.controller_buttons),
+            self.controller_l,
+            self.controller_r,
+            self.percent,
+            self.raw_stick_x,
+            self.raw_stick_y,
+        )
     }
 }
 

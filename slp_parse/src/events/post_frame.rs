@@ -1,10 +1,10 @@
 #![allow(clippy::uninit_vec)]
 
+use anyhow::{anyhow, Result};
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
 use polars::prelude::*;
-use ssbm_utils::types::{Position, Velocity};
-use anyhow::{anyhow, Result};
+use ssbm_utils::{enums::{Character, LCancel, State}, prelude::{Flags, Hurtbox, Orientation}, types::{Position, Velocity}};
 
 use crate::{columns::PostFrame, events::game_start::Version, Port};
 
@@ -620,7 +620,64 @@ pub struct PostRow {
 
 impl std::fmt::Display for PostRow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:#?}",)
+        let character = Character::try_from_internal(self.character).unwrap();
+        write!(
+            f,
+            r"PostFrame {{
+    frame_index: {},
+    character: {},
+    action_state: {},
+    position: {},
+    orientation: {},
+    percent: {},
+    shield_health: {},
+    last_attack_landed: {},
+    combo_count: {},
+    last_hit_by: {},
+    stocks: {},
+    state_frame: {:?},
+    flags: {:?},
+    misc_as: {:?},
+    is_grounded: {:?},
+    last_ground_id: {:?},
+    jumps_remaining: {:?},
+    l_cancel: {:?},
+    hurtbox_state: {:?},
+    air_velocity: {:?},
+    knockback: {:?},
+    ground_velocity: {:?},
+    hitlag_remaining: {:?},
+    animation_index: {:?},
+    instance_hit_by: {:?},
+    instance_id: {:?},
+}}",
+            self.frame_index,
+            character,
+            State::from_state_and_char(self.action_state, Some(character)),
+            self.position,
+            Orientation::from_repr(self.orientation as i8).unwrap(),
+            self.percent,
+            self.shield_health,
+            self.last_attack_landed,
+            self.combo_count,
+            self.last_hit_by,
+            self.stocks,
+            self.state_frame,
+            self.flags.map(Flags::Raw),
+            self.misc_as,
+            self.is_grounded,
+            self.last_ground_id,
+            self.jumps_remaining,
+            self.l_cancel.and_then(LCancel::from_repr),
+            self.hurtbox_state.and_then(Hurtbox::from_repr),
+            self.air_velocity,
+            self.knockback,
+            self.ground_velocity,
+            self.hitlag_remaining,
+            self.animation_index,
+            self.instance_hit_by,
+            self.instance_id,
+        )
     }
 }
 

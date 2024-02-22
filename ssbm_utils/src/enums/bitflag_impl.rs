@@ -185,7 +185,7 @@ impl EngineInput {
 
     fn pretty_print(&self) -> String {
         if **self == 0 {
-            "EngineInput{{None}}".to_string();
+            return "None".to_string();
         }
 
         let mut result: Vec<&str> = Vec::new();
@@ -392,8 +392,8 @@ impl Deref for ControllerInput {
 
 impl ControllerInput {
     fn pretty_print(&self) -> String {
-        if u16::from(*self) == 0 {
-            "ControllerInput{{None}}".to_string();
+        if **self == 0 {
+            return "None".to_string();
         }
         let mut result: Vec<&str> = Vec::new();
 
@@ -638,8 +638,8 @@ impl Deref for Flags {
 
 impl Flags {
     fn pretty_print(&self, debug: bool) -> String {
-        if u64::from(*self) == 0 {
-            "Flags{{None}}".to_string();
+        if **self == 0 {
+            return "None".to_string();
         }
 
         let mut result: Vec<&str> = Vec::new();

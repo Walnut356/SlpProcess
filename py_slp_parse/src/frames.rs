@@ -20,6 +20,10 @@ pub struct PyPre {
 
 #[pymethods]
 impl PyPre {
+    fn print_frame(&self, idx: usize) -> PyResult<String> {
+        Ok(format!("{}", self.frames.get_frame(idx)))
+    }
+
     #[getter]
     fn get_frame_index(&self) -> PyResult<Vec<i32>> {
         Ok(self.frames.frame_index.to_vec())
@@ -82,6 +86,10 @@ pub struct PyPost {
 
 #[pymethods]
 impl PyPost {
+    fn print_frame(&self, idx: usize) -> PyResult<String> {
+        Ok(format!("{}", self.frames.get_frame(idx)))
+    }
+
     #[getter]
     fn get_frame_index(&self) -> PyResult<Vec<i32>> {
         Ok(self.frames.frame_index.to_vec())

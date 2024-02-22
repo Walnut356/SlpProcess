@@ -150,11 +150,7 @@ class Player:
         self.__display_name: str | None
         self.__is_winner: bool | None
 
-
-def parse(path: str) -> list[Game]: ...
-
 class Game:
-
     @property
     def players(self) -> list[Player]: ...
     @property
@@ -225,3 +221,5 @@ class PreFrame(Enum):
     PHYSICAL_R = 14
     PERCENT = 15
     def __str__(self) -> str: ...
+
+def parse(path: str) -> list[Game]: ...
