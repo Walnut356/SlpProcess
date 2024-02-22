@@ -55,7 +55,9 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
             let tech_type =
                 TechType::from_state(post.action_state[i], post.orientation[i] as i8).unwrap();
             // this weeds out regular wall jumps, which use the same action state was walljump techs
-            if tech_type == TechType::WALL_JUMP_TECH && !is_damaged(post.action_state[i - 1]) {
+            if tech_type == TechType::WALL_JUMP_TECH
+                && !(is_damaged(post.action_state[i - 1]) || is_in_defender_hitlag(flags[i - 1]))
+            {
                 continue;
             }
 

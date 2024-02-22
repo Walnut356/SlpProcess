@@ -128,8 +128,16 @@ pub fn is_fastfalling(flags: u64) -> bool {
 pub fn is_damaged(state: u16) -> bool {
     (AR::DAMAGE_START..=AR::DAMAGE_END).contains(&state)
         || ActionState::DAMAGE_FALL == state
+        // jab reset states
         || ActionState::DOWN_DAMAGE_D == state
         || ActionState::DOWN_DAMAGE_U == state
+        // AFAIK you can only enter them from a different damage state that bounces you off a
+        // wall/ceil (and you miss the tech). This is important for properly differentiating
+        // Walljumps from Walljump-Techs because this state is still wall-techable (unlike
+        // DOWN_REFLECT). Credits to [Mai](https://x.com/MayBeTweeting/status/1759973064412971366?s=20)
+        // for figuring this out.
+        || ActionState::FLY_REFLECT_CEIL == state
+        || ActionState::FLY_REFLECT_WALL == state
 }
 
 /// Returns true if the character is in any Capture animations. See also `is_cmd_grabbed`
