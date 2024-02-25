@@ -1,15 +1,15 @@
 #![allow(clippy::uninit_vec)]
 
+use std::sync::Arc;
+
 use bytes::{Buf, Bytes};
-use polars::prelude::*;
 use ssbm_utils::types::{Position, Velocity};
 
-use crate::events::game_start::Version;
+use crate::{events::game_start::Version, game::Metadata};
 
 #[derive(Debug)]
 pub struct ItemFrames {
-    len: usize,
-    version: Version,
+    pub metadata: Arc<Metadata>,
     pub frame_index: Box<[i32]>,
     /// The ID corresponding to the type of item that this frame data is about.
     pub item_id: Box<[u16]>,
@@ -31,10 +31,10 @@ pub struct ItemFrames {
 }
 
 impl ItemFrames {
-    pub fn new(len: usize, version: Version) -> Self {
+    pub fn new(len: usize, metadata: Arc<Metadata>) -> Self {
+        let version = metadata.version;
         ItemFrames {
-            len,
-            version,
+            metadata,
             frame_index: unsafe {
                 let mut temp = Vec::with_capacity(len);
                 temp.set_len(len);
@@ -139,90 +139,17 @@ impl ItemFrames {
 
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
-        self.len
-    }
-}
-
-#[allow(clippy::from_over_into)]
-impl From<ItemFrames> for DataFrame {
-    fn from(val: ItemFrames) -> DataFrame {
-        let len = val.len();
-
-        use crate::columns::ItemFrame as col;
-        let mut vec_series = vec![
-            Series::new(col::FrameIndex.into(), val.frame_index),
-            Series::new(col::ItemID.into(), val.item_id),
-            Series::new(col::State.into(), val.state),
-            Series::new(col::Orientation.into(), val.orientation),
-            StructChunked::new(
-                col::Velocity.into(),
-                &[
-                    Series::new("x", val.velocity.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.velocity.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            StructChunked::new(
-                col::Position.into(),
-                &[
-                    Series::new("x", val.position.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.position.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            Series::new(col::DamageTaken.into(), val.damage_taken),
-            Series::new(col::ExpirationTimer.into(), val.expiration_timer),
-            Series::new(col::SpawnID.into(), val.spawn_id),
-        ];
-
-        if val.version.at_least(3, 2, 0) {
-            vec_series.push(Series::new(
-                col::MissileType.into(),
-                val.missile_type.unwrap(),
-            ));
-            vec_series.push(Series::new(
-                col::TurnipType.into(),
-                val.turnip_type.unwrap(),
-            ));
-            vec_series.push(Series::new(col::Launched.into(), val.launched.unwrap()));
-            vec_series.push(Series::new(
-                col::ChargePower.into(),
-                val.charge_power.unwrap(),
-            ));
-        } else {
-            vec_series.push(Series::new_null(col::MissileType.into(), len));
-            vec_series.push(Series::new_null(col::TurnipType.into(), len));
-            vec_series.push(Series::new_null(col::Launched.into(), len));
-            vec_series.push(Series::new_null(col::ChargePower.into(), len));
-        }
-
-        if val.version.at_least(3, 6, 0) {
-            vec_series.push(Series::new(col::Owner.into(), val.owner.unwrap()));
-        } else {
-            vec_series.push(Series::new_null(col::Owner.into(), len));
-        }
-
-        if val.version.at_least(3, 16, 0) {
-            vec_series.push(Series::new(
-                col::InstanceID.into(),
-                val.instance_id.unwrap(),
-            ));
-        } else {
-            vec_series.push(Series::new_null(col::InstanceID.into(), len));
-        }
-
-        DataFrame::new(vec_series).unwrap()
+        self.frame_index.len()
     }
 }
 
 pub fn parse_itemframes(
     mut stream: Bytes,
-    version: Version,
+    metadata: Arc<Metadata>,
     offsets: &[usize],
 ) -> ItemFrames {
-    let mut working = ItemFrames::new(offsets.len(), version);
+    let version = metadata.version;
+    let mut working = ItemFrames::new(offsets.len(), metadata);
 
     let file_length = stream.len();
 

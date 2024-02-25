@@ -1,8 +1,8 @@
 use duckdb::{params, Connection, DefaultOrder, Result};
 use slp_parse::prelude::*;
-use slp_parse::GameMetadata;
+use time::UtcOffset;
 
-pub fn create_stubs(conn: Connection, stubs: Vec<GameStub>) -> Result<()> {
+pub fn create_stubs(conn: &Connection, stubs: &[GameStub]) -> Result<()> {
     conn.execute_batch(
         r"
             CREATE TYPE MatchType AS ENUM ('Unranked', 'Ranked', 'Direct', 'Unknown');
@@ -11,7 +11,7 @@ pub fn create_stubs(conn: Connection, stubs: Vec<GameStub>) -> Result<()> {
             CREATE TYPE Character AS ENUM ('CaptainFalcon', 'DonkeyKong', 'Fox', 'GameAndWatch', 'Kirby', 'Bowser', 'Link', 'Luigi', 'Mario', 'Marth', 'Mewtwo', 'Ness', 'Peach', 'Pikachu', 'IceClimbers', 'Jigglypuff', 'Samus', 'Yoshi', 'Zelda', 'Sheik', 'Falco', 'YoungLink', 'DrMario', 'Roy', 'Pichu', 'Ganondorf');
             CREATE TYPE Costume AS ENUM ('DEFAULT', 'INDIGO', 'BLACK', 'RED', 'WHITE', 'GREEN', 'BLUE', 'BROWN', 'PINK', 'YELLOW', 'PURPLE', 'CYAN', 'NAVY', 'TAN', 'ORANGE', 'DAISY', 'CAP', 'PARTY_HAT', 'COWBOY', 'ROSE', 'BOW', 'HEADBAND', 'CROWN', 'BANDANA', 'GOGGLES', 'BACKPACK');
             CREATE TABLE stub (
-                datetime TIMESTAMP_MS PRIMARY KEY,
+                datetime TIMESTAMP_MS,
                 fname STRING UNIQUE,
                 version INT,
                 match_id STRING,
@@ -35,12 +35,19 @@ pub fn create_stubs(conn: Connection, stubs: Vec<GameStub>) -> Result<()> {
         ")?;
 
     let mut app = conn.appender("stub").unwrap();
-    for stub in stubs {
+    for (_i, stub) in stubs.iter().enumerate() {
         app.append_row(
             params![
-                (stub.date.unix_timestamp_nanos() / 1000) as i64,
-                stub.path.to_str(),
-                stub.version.as_u32(),
+                duckdb::types::Value::Timestamp(
+                    duckdb::types::TimeUnit::Millisecond,
+                    (stub
+                        .date()
+                        .to_offset(UtcOffset::current_local_offset().unwrap())
+                        .unix_timestamp_nanos()
+                        / 1000000) as i64
+                ),
+                stub.path().to_str(),
+                stub.version().as_u32(),
                 stub.match_id(),
                 stub.netplay(),
                 stub.match_type().to_string(),
@@ -58,7 +65,7 @@ pub fn create_stubs(conn: Connection, stubs: Vec<GameStub>) -> Result<()> {
                 stub.players[1].display_name,
                 stub.players[1].character.to_string(),
                 stub.players[1].costume.to_string(),
-                ],
+            ],
         )?;
     }
 
@@ -68,7 +75,7 @@ pub fn create_stubs(conn: Connection, stubs: Vec<GameStub>) -> Result<()> {
 }
 
 pub fn create_frame_tables() -> Result<()> {
-        let replay = r"E:\Slippi Replays\Netplay\";
+    let replay = r"E:\Slippi Replays\Netplay\";
 
     let games = slp_parse::parse(replay, true);
 
@@ -142,76 +149,73 @@ pub fn create_frame_tables() -> Result<()> {
     for (j, game) in games.iter().enumerate() {
         for player in &game.players {
             for i in 0..player.frames.len() {
-                pre_app.append_row(
-                    params![
-                        game.path.file_name().unwrap().to_str(),
-                        player.port.to_string(),
-                        player.character.to_string(),
-                        player.frames.pre.frame_index[i],
-                        player.frames.pre.random_seed[i],
-                        player.frames.pre.action_state[i],
-                        player.frames.pre.position[i].x,
-                        player.frames.pre.position[i].y,
-                        player.frames.pre.orientation[i],
-                        player.frames.pre.joystick[i].x,
-                        player.frames.pre.joystick[i].y,
-                        player.frames.pre.cstick[i].x,
-                        player.frames.pre.cstick[i].y,
-                        player.frames.pre.engine_trigger[i],
-                        player.frames.pre.engine_buttons[i],
-                        player.frames.pre.controller_buttons[i],
-                        player.frames.pre.controller_l[i],
-                        player.frames.pre.controller_r[i],
-                        player.frames.pre.percent.as_ref().unwrap()[i],
-                    ],
-                )?;
-                post_app.append_row(
-                    params![
-                        game.path.file_name().unwrap().to_str(),
-                        player.port.to_string(),
-                        player.frames.post.character[i].to_string(),
-                        player.frames.post.frame_index[i],
-                        player.frames.post.action_state[i],
-                        player.frames.post.position[i].x,
-                        player.frames.post.position[i].y,
-                        player.frames.post.orientation[i],
-                        player.frames.post.percent[i],
-                        player.frames.post.shield_health[i],
-                        player.frames.post.last_attack_landed[i],
-                        player.frames.post.combo_count[i],
-                        player.frames.post.last_hit_by[i],
-                        player.frames.post.stocks[i],
-                        player.frames.post.state_frame.as_ref().unwrap()[i],
-                        player.frames.post.flags.as_ref().unwrap()[i],
-                        player.frames.post.misc_as.as_ref().unwrap()[i],
-                        player.frames.post.is_grounded.as_ref().unwrap()[i],
-                        player.frames.post.last_ground_id.as_ref().unwrap()[i],
-                        player.frames.post.jumps_remaining.as_ref().unwrap()[i],
-                        player.frames.post.l_cancel.as_ref().unwrap()[i],
-                        player.frames.post.hurtbox_state.as_ref().unwrap()[i],
-                        player.frames.post.air_velocity.as_ref().unwrap()[i].x,
-                        player.frames.post.air_velocity.as_ref().unwrap()[i].y,
-                        player.frames.post.knockback.as_ref().unwrap()[i].x,
-                        player.frames.post.knockback.as_ref().unwrap()[i].y,
-                        player.frames.post.ground_velocity.as_ref().unwrap()[i].x,
-                        player.frames.post.ground_velocity.as_ref().unwrap()[i].y,
-                        player.frames.post.hitlag_remaining.as_ref().unwrap()[i],
-                        player.frames.post.animation_index.as_ref().unwrap()[i],
-                    ]
-                )?;
+                pre_app.append_row(params![
+                    game.path().file_name().unwrap().to_str(),
+                    player.port.to_string(),
+                    player.character.to_string(),
+                    player.frames.pre.frame_index[i],
+                    player.frames.pre.random_seed[i],
+                    player.frames.pre.action_state[i],
+                    player.frames.pre.position[i].x,
+                    player.frames.pre.position[i].y,
+                    player.frames.pre.orientation[i],
+                    player.frames.pre.joystick[i].x,
+                    player.frames.pre.joystick[i].y,
+                    player.frames.pre.cstick[i].x,
+                    player.frames.pre.cstick[i].y,
+                    player.frames.pre.engine_trigger[i],
+                    player.frames.pre.engine_buttons[i],
+                    player.frames.pre.controller_buttons[i],
+                    player.frames.pre.controller_l[i],
+                    player.frames.pre.controller_r[i],
+                    player.frames.pre.percent.as_ref().unwrap()[i],
+                ])?;
+                post_app.append_row(params![
+                    game.path().file_name().unwrap().to_str(),
+                    player.port.to_string(),
+                    player.frames.post.character[i].to_string(),
+                    player.frames.post.frame_index[i],
+                    player.frames.post.action_state[i],
+                    player.frames.post.position[i].x,
+                    player.frames.post.position[i].y,
+                    player.frames.post.orientation[i],
+                    player.frames.post.percent[i],
+                    player.frames.post.shield_health[i],
+                    player.frames.post.last_attack_landed[i],
+                    player.frames.post.combo_count[i],
+                    player.frames.post.last_hit_by[i],
+                    player.frames.post.stocks[i],
+                    player.frames.post.state_frame.as_ref().unwrap()[i],
+                    player.frames.post.flags.as_ref().unwrap()[i],
+                    player.frames.post.misc_as.as_ref().unwrap()[i],
+                    player.frames.post.is_grounded.as_ref().unwrap()[i],
+                    player.frames.post.last_ground_id.as_ref().unwrap()[i],
+                    player.frames.post.jumps_remaining.as_ref().unwrap()[i],
+                    player.frames.post.l_cancel.as_ref().unwrap()[i],
+                    player.frames.post.hurtbox_state.as_ref().unwrap()[i],
+                    player.frames.post.air_velocity.as_ref().unwrap()[i].x,
+                    player.frames.post.air_velocity.as_ref().unwrap()[i].y,
+                    player.frames.post.knockback.as_ref().unwrap()[i].x,
+                    player.frames.post.knockback.as_ref().unwrap()[i].y,
+                    player.frames.post.ground_velocity.as_ref().unwrap()[i].x,
+                    player.frames.post.ground_velocity.as_ref().unwrap()[i].y,
+                    player.frames.post.hitlag_remaining.as_ref().unwrap()[i],
+                    player.frames.post.animation_index.as_ref().unwrap()[i],
+                ])?;
             }
         }
-        println!("{j}");
     }
 
     pre_app.flush();
 
-
     Ok(())
 }
 
-pub fn export(conn: Connection, name: &str) -> Result<()> {
-    conn.execute(&format!("EXPORT DATABASE '{name}' (FORMAT PARQUET, COMPRESSION ZSTD);"), [])?;
+pub fn export(conn: &Connection, name: &str) -> Result<()> {
+    conn.execute(
+        &format!("EXPORT DATABASE '{name}' (FORMAT PARQUET, COMPRESSION ZSTD);"),
+        [],
+    )?;
 
     Ok(())
 }

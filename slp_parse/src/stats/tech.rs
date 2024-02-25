@@ -1,4 +1,3 @@
-use polars::prelude::*;
 use ssbm_utils::{
     checks::{is_damaged, is_downed, is_in_defender_hitlag, is_teching},
     enums::{
@@ -9,9 +8,9 @@ use ssbm_utils::{
     types::Position,
 };
 
-use crate::{frames::Frames, utils::as_vec_static_str};
+use crate::frames::Frames;
 
-pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> DataFrame {
+pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> TechStats {
     let pre = &plyr_frames.pre;
     let post = &plyr_frames.post;
     let flags = post.flags.as_ref().unwrap();
@@ -20,7 +19,7 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
     let opnt_pos = &opnt_frames.post.position;
 
     let mut event: Option<TechRow> = None;
-    let mut table = TechStats::default();
+    let mut table: TechStats = Default::default();
 
     // value tracking for v cancel
     let mut lockout = LockoutTracker::default();
@@ -123,27 +122,26 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
 }
 
 #[derive(Debug)]
-struct TechRow {
-    frame_index: i32,
-    stocks_remaining: u8,
-    percent: f32,
-    tech_type: TechType,
-    punished: bool,
-    position: Position,
-    location: GroundID,
-    missed_tech: bool,
-    towards_center: Option<bool>,
-    towards_opponent: Option<bool>,
-    jab_reset: Option<bool>,
-    last_hit_by: Attack,
-    opnt_distance: f32,
-    input_frame: Option<i32>,
-    lockout: bool,
-    during_hitlag: bool,
+pub struct TechRow {
+    pub frame_index: i32,
+    pub stocks_remaining: u8,
+    pub percent: f32,
+    pub tech_type: TechType,
+    pub punished: bool,
+    pub position: Position,
+    pub location: GroundID,
+    pub missed_tech: bool,
+    pub towards_center: Option<bool>,
+    pub towards_opponent: Option<bool>,
+    pub jab_reset: Option<bool>,
+    pub last_hit_by: Attack,
+    pub opnt_distance: f32,
+    pub input_frame: Option<i32>,
+    pub lockout: bool,
+    pub during_hitlag: bool,
 }
 
 impl TechRow {
-    #[inline]
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         frame_index: i32,
@@ -183,24 +181,24 @@ impl TechRow {
     }
 }
 
-#[derive(Debug, Default)]
-struct TechStats {
-    frame_index: Vec<i32>,
-    stocks_remaining: Vec<u8>,
-    percent: Vec<f32>,
-    input_frame: Vec<Option<i32>>,
-    tech_type: Vec<TechType>,
-    punished: Vec<bool>,
-    position: Vec<Position>,
-    location: Vec<GroundID>,
-    missed_tech: Vec<bool>,
-    lockout: Vec<bool>,
-    towards_center: Vec<Option<bool>>,
-    towards_opponent: Vec<Option<bool>>,
-    jab_reset: Vec<Option<bool>>,
-    last_hit_by: Vec<Attack>,
-    opnt_distance: Vec<f32>,
-    during_hitlag: Vec<bool>,
+#[derive(Debug, Default, Clone)]
+pub struct TechStats {
+    pub frame_index: Vec<i32>,
+    pub stocks_remaining: Vec<u8>,
+    pub percent: Vec<f32>,
+    pub input_frame: Vec<Option<i32>>,
+    pub tech_type: Vec<TechType>,
+    pub punished: Vec<bool>,
+    pub position: Vec<Position>,
+    pub location: Vec<GroundID>,
+    pub missed_tech: Vec<bool>,
+    pub lockout: Vec<bool>,
+    pub towards_center: Vec<Option<bool>>,
+    pub towards_opponent: Vec<Option<bool>>,
+    pub jab_reset: Vec<Option<bool>>,
+    pub last_hit_by: Vec<Attack>,
+    pub opnt_distance: Vec<f32>,
+    pub during_hitlag: Vec<bool>,
 }
 
 impl TechStats {
@@ -221,39 +219,5 @@ impl TechStats {
         self.last_hit_by.push(stat.last_hit_by);
         self.opnt_distance.push(stat.opnt_distance);
         self.during_hitlag.push(stat.during_hitlag);
-    }
-}
-
-impl From<TechStats> for DataFrame {
-    fn from(value: TechStats) -> Self {
-        use crate::columns::TechStats as clm;
-        let v_s = vec![
-            Series::new(clm::FrameIndex.into(), value.frame_index),
-            Series::new(clm::Stocks.into(), value.stocks_remaining),
-            Series::new(clm::Percent.into(), value.percent),
-            Series::new(clm::LastHitBy.into(), as_vec_static_str(value.last_hit_by)),
-            Series::new(clm::InputFrame.into(), value.input_frame),
-            Series::new(clm::DuringHitlag.into(), value.during_hitlag),
-            Series::new(clm::MissedTech.into(), value.missed_tech),
-            Series::new(clm::Lockout.into(), value.lockout),
-            Series::new(clm::TechType.into(), as_vec_static_str(value.tech_type)),
-            Series::new(clm::JabReset.into(), value.jab_reset),
-            Series::new(clm::Punished.into(), value.punished),
-            StructChunked::new(
-                clm::Position.into(),
-                &[
-                    Series::new("x", value.position.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", value.position.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            Series::new(clm::Location.into(), as_vec_static_str(value.location)),
-            Series::new(clm::TowardsCenter.into(), value.towards_center),
-            Series::new(clm::TowardsOpnt.into(), value.towards_opponent),
-            Series::new(clm::OpntDistance.into(), value.opnt_distance),
-        ];
-
-        DataFrame::new(v_s).unwrap()
     }
 }

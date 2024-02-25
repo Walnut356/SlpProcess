@@ -116,7 +116,7 @@ pub struct PyStats {
 impl PyStats {
     #[getter]
     fn get_input(&self) -> PyResult<PyDataFrame> {
-        Ok(PyDataFrame(self.stats.input.clone()))
+        Ok(PyDataFrame((&self.stats.input).into()))
     }
 
     #[getter]
@@ -125,22 +125,18 @@ impl PyStats {
             .stats
             .l_cancel
             .as_ref()
-            .map(|df| PyDataFrame(df.clone())))
+            .map(|df| PyDataFrame(df.into())))
     }
     #[getter]
     fn get_item(&self) -> PyResult<Option<PyDataFrame>> {
-        Ok(self.stats.item.as_ref().map(|df| PyDataFrame(df.clone())))
+        Ok(self.stats.item.as_ref().map(|df| PyDataFrame(df.into())))
     }
     #[getter]
     fn get_defense(&self) -> PyResult<Option<PyDataFrame>> {
-        Ok(self
-            .stats
-            .defense
-            .as_ref()
-            .map(|df| PyDataFrame(df.clone())))
+        Ok(self.stats.defense.as_ref().map(|df| PyDataFrame(df.into())))
     }
     #[getter]
     fn get_tech(&self) -> PyResult<Option<PyDataFrame>> {
-        Ok(self.stats.tech.as_ref().map(|df| PyDataFrame(df.clone())))
+        Ok(self.stats.tech.as_ref().map(|df| PyDataFrame(df.into())))
     }
 }

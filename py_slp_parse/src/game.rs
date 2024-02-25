@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types)]
 
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 use crate::{
     frames::{PyFrames, PyItem},
@@ -8,7 +8,7 @@ use crate::{
 };
 
 use pyo3::prelude::*;
-use slp_parse::Game;
+use slp_parse::prelude::*;
 
 #[pyclass(name = "Game", frozen)]
 pub struct PyGame {
@@ -43,51 +43,51 @@ impl PyGame {
     // --------------------------------------------- game start getters --------------------------------------------- //
     #[getter]
     pub fn get_random_seed(&self) -> PyResult<u32> {
-        Ok(self.game.metadata.random_seed)
+        Ok(self.game.random_seed())
     }
     #[getter]
     pub fn get_is_teams(&self) -> PyResult<bool> {
-        Ok(self.game.metadata.teams)
+        Ok(self.game.teams())
     }
     #[getter]
     pub fn get_stage(&self) -> PyResult<u16> {
-        Ok(self.game.metadata.stage as u16)
+        Ok(self.game.stage() as u16)
     }
     #[getter]
     pub fn get_timer(&self) -> PyResult<u64> {
-        Ok(self.game.metadata.timer.as_secs())
+        Ok(self.game.timer().as_secs())
     }
     #[getter]
     pub fn get_damage_ratio(&self) -> PyResult<f32> {
-        Ok(self.game.metadata.damage_ratio)
+        Ok(self.game.damage_ratio())
     }
     #[getter]
     pub fn get_is_pal(&self) -> PyResult<Option<bool>> {
-        Ok(self.game.metadata.pal)
+        Ok(self.game.pal())
     }
     #[getter]
     pub fn get_is_frozen_stadium(&self) -> PyResult<Option<bool>> {
-        Ok(self.game.metadata.frozen_stadium)
+        Ok(self.game.frozen_stadium())
     }
     #[getter]
     pub fn get_is_netplay(&self) -> PyResult<Option<bool>> {
-        Ok(self.game.metadata.netplay)
+        Ok(self.game.netplay())
     }
     #[getter]
     pub fn get_match_id(&self) -> PyResult<String> {
-        Ok(self.game.metadata.match_id.to_string())
+        Ok(self.game.match_id().to_string())
     }
     #[getter]
     pub fn get_match_type(&self) -> PyResult<u8> {
-        Ok(self.game.metadata.match_type as u8)
+        Ok(self.game.match_type() as u8)
     }
     #[getter]
     pub fn get_game_number(&self) -> PyResult<Option<u32>> {
-        Ok(self.game.metadata.game_number)
+        Ok(self.game.game_number())
     }
     #[getter]
     pub fn get_tiebreak_number(&self) -> PyResult<Option<u32>> {
-        Ok(self.game.metadata.tiebreak_number)
+        Ok(self.game.tiebreak_number())
     }
     #[getter]
     pub fn get_item_frames(&self) -> PyResult<Option<PyItem>> {
@@ -101,22 +101,26 @@ impl PyGame {
     // ---------------------------------------------- game end getters ---------------------------------------------- //
     #[getter]
     pub fn get_end_method(&self) -> PyResult<Option<u8>> {
-        match self.game.end.as_ref() {
+        match self.game.end() {
             Some(end) => Ok(Some(end.end_method.clone() as u8)),
             _ => Ok(None),
         }
     }
     #[getter]
     pub fn get_lras_initiator(&self) -> PyResult<Option<i8>> {
-        match self.game.end.as_ref() {
-            Some(end) => Ok(end.lras_initiator),
+        match self.game.end() {
+            Some(end) => Ok(end.lras_initiator.as_ref().map(|x| *x as i8)),
             _ => Ok(None),
         }
     }
     #[getter]
-    pub fn get_placements(&self) -> PyResult<Option<[i8; 4]>> {
-        match self.game.end.as_ref() {
-            Some(end) => Ok(end.placements),
+    pub fn get_placements(&self) -> PyResult<Option<HashMap<i8, i8>>> {
+        match self.game.end() {
+            Some(end) => Ok(end.placements.as_ref().map(|x| {
+                // dear god
+                x.iter()
+                    .map(|(x, y)| (*x as i8, *y as i8)).collect::<HashMap<i8, i8>>()
+            })),
             _ => Ok(None),
         }
     }

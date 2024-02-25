@@ -1,26 +1,10 @@
-use std::{fs::{self, DirEntry}, collections::HashSet};
-#[allow(unused_imports)]
+#[allow(unused)]
+#[allow(dead_code)]
 use std::hint::black_box;
-use std::io::Read;
-use std::iter::zip;
-use std::path::PathBuf;
-use std::time::Instant;
-use std::{
-    fs::File,
-    sync::{RwLock, RwLockReadGuard},
-};
 
-use bytes::{Buf, Bytes};
-use polars::prelude::*;
-use rayon::prelude::*;
-use serde_json;
-use slp_parse::events::{game_start::{GameStart, MatchType}, game_end::EndMethod};
-use slp_parse::game::GameStub;
-use slp_parse::player::{Player, PlayerStub};
-use slp_parse::stats::Stats;
-use slp_parse::{get_combos, parse, stats::StatType, to_dolphin_queue, Game};
-use slp_parse::{parse_iter, parse_stubs};
-use ssbm_utils::prelude::*;
+use std::time::Instant;
+
+use slp_parse::{prelude::*, stats::StatType};
 // static REPLAY: &[u8; 165123] = include_bytes!(r"G:/temp\Game_20230627T174002.slp");
 
 macro_rules! timeit {
@@ -39,11 +23,8 @@ pub fn main() {
     //     .unwrap();
     std::env::set_var("POLARS_FMT_TABLE_CELL_LIST_LEN", "-1");
 
-    let thing = "Sbubbby".to_owned();
-
-
     // let replay = r"G:/temp";
-    let replay = r"E:\Slippi Replays\Netplay\";
+    // let replay = r"E:\Slippi Replays\Netplay\";
 
     // let mut files: Vec<DirEntry> = fs::read_dir(replay)
     //     .unwrap()
@@ -66,9 +47,9 @@ pub fn main() {
     // dbg!(&files[0..10]);
 
     // TODO old replay stubs end up misaligned when reading metadata somehow
-    // let replay = r"E:\Slippi Replays\Netplay\Legacy\2020";
+    // let replay = r"E:\Slippi Replays\Netplay\Game_20240208T014130.slp";
     //
-    // let replay = r"E:\Slippi Replays\Netplay\Game_20231222T004632.slp";
+    let replay = r"G:/Coding/My Projects/Slippi Stats/SlpProcess/weird_slideon.slp";
     // let replay = r"E:\Slippi Replays\Netplay\";
     // crashes on yoshi action state id 341 - fixed but circumstance still weird
     // let replay = r"E:\Slippi Replays\Netplay\Game_20231213T003213.slp";
@@ -88,17 +69,24 @@ pub fn main() {
 
     //     dbg!(b.len() - d.len());
     //     dbg!(d.get_i32());
-    let mut games = parse(replay, true);
+    let games = parse(replay, true);
 
-    for game in games {
-        if let Some(lras) = game.end.clone().unwrap().lras_initiator {
-            if lras >=0 {
-                dbg!(game.end.unwrap());
-                println!("{}", game.players[0].frames.get_last_frame().0);
-                println!("{}", game.players[1].frames.get_last_frame().0);
-            }
-        }
-    }
+    let frames = games[0].players[0].frames.clone();
+
+    println!("{}", frames.pre.get_frame(5151 + 123));
+    // dbg!(games.iter().map(|g| g.item_frames.as_ref().unwrap().len()).sum::<usize>());
+    // for game in games {
+    //     let df = game.players[0].stats.defense.clone().unwrap();
+    //     let column = df.column("FrameIndex").unwrap().chunks();
+    //     dbg!(column.len());
+    //     // if let Some(lras) = game.end.clone().unwrap().lras_initiator {
+    //     //     if lras >=0 {
+    //     //         dbg!(game.end.unwrap());
+    //     //         println!("{}", game.players[0].frames.get_last_frame().0);
+    //     //         println!("{}", game.players[1].frames.get_last_frame().0);
+    //     //     }
+    //     // }
+    // }
 
     // dbg!(game.date);
 
@@ -119,67 +107,68 @@ pub fn main() {
     // }
 }
 
-fn print_summary(replay: &str) {
-    let now = Instant::now();
-    let games = parse(replay, false);
-    let dur = now.elapsed();
+// fn _print_summary(replay: &str) {
+//     let now = Instant::now();
+//     let games = parse(replay, false);
+//     let dur = now.elapsed();
 
-    println!(
-        "{}",
-        games[0].players[1]
-            .stats
-            .get_summary(StatType::Tech)
-            .unwrap()
-    );
-}
+//     println!(
+//         "{}",
+//         games[0].players[1]
+//             .stats
+//             .get_summary(StatType::Tech)
+//             .unwrap()
+//     );
+//     dbg!(dur);
+// }
 
-fn print_stat(replay: &str) {
-    use slp_parse::columns::DefenseStats as clm;
-    timeit!("create par_iter" let mut games = parse(replay, false));
+// fn _print_stat(replay: &str) {
+//     use slp_parse::columns::DefenseStats as clm;
+//     timeit!("create par_iter" let games = parse(replay, false));
 
-    timeit!(
-        "parse, filter, collect"
-    let stats: Vec<LazyFrame> = games.into_iter()
-        .filter_map(|x| {
-            x.player_by_code("nut#356")
-                .map(|y| y.stats.clone().get_summary(StatType::Defense).map(|x| x.lazy()))
-                .ok()
-                .flatten()
-        })
-        .collect()
-    );
+//     timeit!(
+//         "parse, filter, collect"
+//     let stats: Vec<LazyFrame> = games.into_iter()
+//         .filter_map(|x| {
+//             x.player_by_code("nut#356")
+//                 .map(|y| y.stats.clone().get_summary(StatType::Defense).map(|x| x.lazy()))
+//                 .ok()
+//                 .flatten()
+//         })
+//         .collect()
+//     );
 
-    timeit!(
-        "vstack"
-        // let lf = stats.into_iter().reduce(|a, b| a.vstack(&b).unwrap()).unwrap().lazy()
-        let lf = concat(stats, UnionArgs::default()).unwrap()
-    );
+//     timeit!(
+//         "vstack"
+//         // let lf = stats.into_iter().reduce(|a, b| a.vstack(&b).unwrap()).unwrap().lazy()
+//         let lf = concat(stats, UnionArgs::default()).unwrap()
+//     );
 
-    timeit!(
-        "aggregate"
-        let result = lf.select(&[
-            col("DamageTaken").count().alias("TotalGames"),
-            col("DamageTaken").sum(),
-            col("HitsTaken").sum(),
-            col("DamageTaken").mean().alias("AvgDamage"),
-            col("HitsTaken").mean().alias("AvgHits"),
-            col("DIEfficacy").mean(),
-            col("SDIPerHit").mean(),
-            col("LivableHitsLived").mean(),
-            // col("LivableHits").sum(),
-            col("FramesInHitlag").sum(),
-        ])
-        .collect().unwrap()
-    );
+//     timeit!(
+//         "aggregate"
+//         let result = lf.select(&[
+//             col("DamageTaken").count().alias("TotalGames"),
+//             col("DamageTaken").sum(),
+//             col("HitsTaken").sum(),
+//             col("DamageTaken").mean().alias("AvgDamage"),
+//             col("HitsTaken").mean().alias("AvgHits"),
+//             col("DIEfficacy").mean(),
+//             col("SDIPerHit").mean(),
+//             col("LivableHitsLived").mean(),
+//             // col("LivableHits").sum(),
+//             col("FramesInHitlag").sum(),
+//         ])
+//         .collect().unwrap()
+//     );
 
-    println!("{:?}", result);
-    // for game in games {
-    //     println!(
-    //         "{:?}",
-    //         game.player_by_code("nut#356")
-    //             .unwrap()
-    //             .stats
-    //             .get_summary(StatType::Defense)
-    //     )
-    // }
-}
+//     println!("{:?}", result);
+//     // for game in games {
+//     //     println!(
+//     //         "{:?}",
+//     //         game.player_by_code("nut#356")
+//     //             .unwrap()
+//     //             .stats
+//     //             .get_summary(StatType::Defense)
+//     //     )
+//     // }
+// }

@@ -1,15 +1,14 @@
 #![allow(clippy::uninit_vec)]
 
-use std::{ops::Index, rc::Rc};
+use std::sync::Arc;
 
-use crate::{events::game_start::Version, Port};
+use crate::{game::Metadata, Port};
 use anyhow::{anyhow, Result};
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
-use polars::prelude::*;
 use ssbm_utils::{
     enums::Character,
-    prelude::{ActionState, ControllerInput, EngineInput, Orientation, State},
+    prelude::{ControllerInput, EngineInput, Orientation, State},
     types::{Position, StickPos},
 };
 
@@ -18,9 +17,8 @@ use ssbm_utils::{
 /// you need.
 #[derive(Debug, Default, Clone)]
 pub struct PreFrames {
-    len: usize,
-    version: Version,
-    character: Character,
+    pub character: Character,
+    pub metadata: Arc<Metadata>,
     pub frame_index: Box<[i32]>,
     pub random_seed: Box<[u32]>,
     pub action_state: Box<[u16]>,
@@ -39,13 +37,14 @@ pub struct PreFrames {
 }
 
 impl PreFrames {
-    fn new(duration: usize, version: Version, character: Character) -> Self {
+    fn new(metadata: Arc<Metadata>, character: Character) -> Self {
+        let duration = metadata.total_frames;
+        let version = metadata.version;
         /* Because this is only used internally and only exists in this function, there's no real
         reason to 0-initialize the memory when we're immediately overwriting it anyway. Saves
         a fair few cycles */
         PreFrames {
-            len: duration,
-            version,
+            metadata,
             character,
             frame_index: unsafe {
                 let mut temp = Vec::with_capacity(duration);
@@ -140,7 +139,7 @@ impl PreFrames {
     #[allow(clippy::len_without_is_empty)]
     #[inline]
     pub fn len(&self) -> usize {
-        self.len
+        self.metadata.total_frames
     }
 
     /// Gets the full pre-frame data for a given frame index (0-indexed). This is very
@@ -177,13 +176,16 @@ impl PreFrames {
     /// a (possibly) nice result of this is that, unlike other parsers, we can guarantee that nana
     /// frames (if they exist) will always be the same length as leader frames, even if some of the
     /// data is filled with dummy "null" values.
-    fn ics(duration: usize, version: Version, character: Character) -> Self {
-        let len = (duration - 123) as i32;
+    fn ics(metadata: Arc<Metadata>, character: Character) -> Self {
+        let duration = metadata.total_frames;
+        let version = metadata.version;
+
         PreFrames {
-            len: duration,
-            version,
+            metadata,
             character,
-            frame_index: ((-123)..len).collect::<Vec<i32>>().into_boxed_slice(),
+            frame_index: ((-123)..(duration as i32 - 123))
+                .collect::<Vec<i32>>()
+                .into_boxed_slice(),
             random_seed: vec![0; duration].into_boxed_slice(),
             // Initialize to ActionState::Sleep, since that's what nana will be in when frames are
             // skipped
@@ -214,70 +216,6 @@ impl PreFrames {
                 None
             },
         }
-    }
-}
-
-impl From<PreFrames> for DataFrame {
-    fn from(val: PreFrames) -> Self {
-        let len = val.len();
-
-        use crate::columns::PreFrame as col;
-        let mut vec_series = vec![
-            Series::new(col::FrameIndex.into(), val.frame_index),
-            Series::new(col::RandomSeed.into(), val.random_seed),
-            Series::new(col::ActionState.into(), val.action_state),
-            // wow polars is ugly in rust
-            StructChunked::new(
-                col::Position.into(),
-                &[
-                    Series::new("x", val.position.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.position.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            Series::new(col::Orientation.into(), val.orientation),
-            StructChunked::new(
-                col::JoystickPos.into(),
-                &[
-                    Series::new("x", val.joystick.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.joystick.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            StructChunked::new(
-                col::CstickPos.into(),
-                &[
-                    Series::new("x", val.cstick.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.cstick.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            Series::new(col::EngineTrigger.into(), val.engine_trigger),
-            Series::new(col::EngineButtons.into(), val.engine_buttons),
-            Series::new(col::ControllerButtons.into(), val.controller_buttons),
-            Series::new(col::ControllerL.into(), val.controller_l),
-            Series::new(col::ControllerR.into(), val.controller_r),
-        ];
-        if val.version.at_least(1, 2, 0) {
-            vec_series.push(Series::new(col::RawStickX.into(), val.raw_stick_x.unwrap()));
-        } else {
-            vec_series.push(Series::new_null(col::RawStickX.into(), len));
-        }
-        if val.version.at_least(1, 4, 0) {
-            vec_series.push(Series::new(col::Percent.into(), val.percent.unwrap()));
-        } else {
-            vec_series.push(Series::new_null(col::Percent.into(), len));
-        }
-        if val.version.at_least(3, 15, 0) {
-            vec_series.push(Series::new(col::RawStickY.into(), val.raw_stick_y.unwrap()));
-        } else {
-            vec_series.push(Series::new_null(col::RawStickY.into(), len));
-        }
-
-        DataFrame::new(vec_series).unwrap()
     }
 }
 
@@ -345,9 +283,8 @@ impl std::fmt::Display for PreRow {
 
 pub fn parse_preframes(
     file_data: Bytes,
-    version: Version,
+    metadata: Arc<Metadata>,
     frames: &[usize],
-    duration: usize,
     ports: [Port; 2],
     ics: [bool; 2],
     characters: [Character; 2],
@@ -356,9 +293,9 @@ pub fn parse_preframes(
         /* splitting these out saves us a small amount of time in conditional logic, and allows for
         exact iterator chunk sizes. */
         if !ics[0] && !ics[1] {
-            unpack_frames(file_data, frames, duration, ports, version, characters)
+            unpack_frames(file_data, frames, metadata, ports, characters)
         } else {
-            unpack_frames_ics(file_data, frames, duration, ports, ics, version, characters)
+            unpack_frames_ics(file_data, frames, metadata, ports, ics, characters)
         }
     }?;
 
@@ -374,9 +311,8 @@ pub fn parse_preframes(
 pub fn unpack_frames(
     mut stream: Bytes,
     frames: &[usize],
-    duration: usize,
+    metadata: Arc<Metadata>,
     ports: [Port; 2],
-    version: Version,
     characters: [Character; 2],
 ) -> Result<IntMap<u8, (PreFrames, Option<PreFrames>)>> {
     /* TODO defining it like this *should* eliminate bounds checks, but i need to inspect the
@@ -387,13 +323,15 @@ pub fn unpack_frames(
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
     p_frames.insert(
         ports[0] as u8,
-        (PreFrames::new(duration, version, characters[0]), None),
+        (PreFrames::new(metadata.clone(), characters[0]), None),
     );
     p_frames.insert(
         ports[1] as u8,
-        (PreFrames::new(duration, version, characters[1]), None),
+        (PreFrames::new(metadata.clone(), characters[1]), None),
     );
 
+    let duration = metadata.total_frames;
+    let version = metadata.version;
     let file_length = stream.len();
 
     for (_, offsets) in frames_iter {
@@ -462,27 +400,27 @@ pub fn unpack_frames(
 pub fn unpack_frames_ics(
     mut stream: Bytes,
     offsets: &[usize],
-    duration: usize,
+    metadata: Arc<Metadata>,
     ports: [Port; 2],
     ics: [bool; 2],
-    version: Version,
     characters: [Character; 2],
 ) -> Result<IntMap<u8, (PreFrames, Option<PreFrames>)>> {
-    let len = duration;
+    let len = metadata.total_frames;
+    let version = metadata.version;
 
     let mut p_frames: IntMap<u8, (PreFrames, Option<PreFrames>)> = IntMap::default();
     p_frames.insert(
         ports[0] as u8,
         (
-            PreFrames::new(len, version, characters[0]),
-            ics[0].then(|| PreFrames::ics(len, version, characters[0])),
+            PreFrames::new(metadata.clone(), characters[0]),
+            ics[0].then(|| PreFrames::ics(metadata.clone(), characters[0])),
         ),
     );
     p_frames.insert(
         ports[1] as u8,
         (
-            PreFrames::new(len, version, characters[1]),
-            ics[1].then(|| PreFrames::ics(len, version, characters[1])),
+            PreFrames::new(metadata.clone(), characters[1]),
+            ics[1].then(|| PreFrames::ics(metadata.clone(), characters[1])),
         ),
     );
 
@@ -512,7 +450,7 @@ pub fn unpack_frames_ics(
         };
 
         unsafe {
-            *working.frame_index.get_mut(i).ok_or(anyhow!("Too many frames. Attempted to access frame at index {i}, max frame number is {duration}"))? = frame_number;
+            *working.frame_index.get_mut(i).ok_or(anyhow!("Too many frames. Attempted to access frame at index {i}, max frame number is {len}"))? = frame_number;
 
             *working.random_seed.get_unchecked_mut(i) = stream.get_u32();
             *working.action_state.get_unchecked_mut(i) = stream.get_u16();

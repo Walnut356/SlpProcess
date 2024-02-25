@@ -1,13 +1,12 @@
 #![allow(non_upper_case_globals)]
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use bytes::{Buf, Bytes};
 use encoding_rs::SHIFT_JIS;
-use polars::prelude::*;
 use strum_macros::{Display, FromRepr, IntoStaticStr};
-use time::OffsetDateTime;
 
 use crate::{
     player::{Player, UCFToggles},
@@ -597,60 +596,60 @@ impl Default for Version {
     }
 }
 
-/// Added in slippi 2.2.0
-#[allow(dead_code)] // allowing as I might need these later
-fn parse_framestart(frames: Vec<Bytes>) -> DataFrame {
-    let len = frames.len();
-    // I choose to record frame number because it allow for accessing frames 0-indexed (through the
-    // dataframe's rows), AND through melee's -123-index (through the frame_number column). This is
-    // flexibility that i sorely missed when debugging some other stuff
-    let mut frame_number = {
-        let temp: Vec<i32> = Vec::with_capacity(len);
-        temp
-    };
+// /// Added in slippi 2.2.0
+// #[allow(dead_code)] // allowing as I might need these later
+// fn parse_framestart(frames: Vec<Bytes>) -> DataFrame {
+//     let len = frames.len();
+//     // I choose to record frame number because it allow for accessing frames 0-indexed (through the
+//     // dataframe's rows), AND through melee's -123-index (through the frame_number column). This is
+//     // flexibility that i sorely missed when debugging some other stuff
+//     let mut frame_number = {
+//         let temp: Vec<i32> = Vec::with_capacity(len);
+//         temp
+//     };
 
-    let mut random_seed = {
-        let temp: Vec<u32> = Vec::with_capacity(len);
-        temp
-    };
+//     let mut random_seed = {
+//         let temp: Vec<u32> = Vec::with_capacity(len);
+//         temp
+//     };
 
-    let mut scene_frame_counter = {
-        let temp: Vec<Option<u32>> = Vec::with_capacity(len);
-        temp
-    };
+//     let mut scene_frame_counter = {
+//         let temp: Vec<Option<u32>> = Vec::with_capacity(len);
+//         temp
+//     };
 
-    for mut frame in frames {
-        frame_number.push(frame.get_i32());
-        random_seed.push(frame.get_u32());
-        if frame.has_remaining() {
-            scene_frame_counter.push(Some(frame.get_u32()));
-        }
-    }
+//     for mut frame in frames {
+//         frame_number.push(frame.get_i32());
+//         random_seed.push(frame.get_u32());
+//         if frame.has_remaining() {
+//             scene_frame_counter.push(Some(frame.get_u32()));
+//         }
+//     }
 
-    if scene_frame_counter.is_empty() {
-        scene_frame_counter.resize(len, None)
-    }
+//     if scene_frame_counter.is_empty() {
+//         scene_frame_counter.resize(len, None)
+//     }
 
-    df![
-        "frame_number" => frame_number,
-        "random_seed" => random_seed,
-        "scene_frame_counter" => scene_frame_counter,
-    ]
-    .unwrap()
-}
+//     df![
+//         "frame_number" => frame_number,
+//         "random_seed" => random_seed,
+//         "scene_frame_counter" => scene_frame_counter,
+//     ]
+//     .unwrap()
+// }
 
-#[allow(dead_code)] // allowing as I might need these later
-fn parse_frameend(frames: Vec<Bytes>) -> DataFrame {
-    let frame_number = {
-        let temp: Vec<i32> = Vec::with_capacity(frames.len());
-        temp
-    };
+// #[allow(dead_code)] // allowing as I might need these later
+// fn parse_frameend(frames: Vec<Bytes>) -> DataFrame {
+//     let frame_number = {
+//         let temp: Vec<i32> = Vec::with_capacity(frames.len());
+//         temp
+//     };
 
-    // NOTE i intentionally do not handle the latest finalized frame because this parser cannot
-    // handle live replays.
+//     // NOTE i intentionally do not handle the latest finalized frame because this parser cannot
+//     // handle live replays.
 
-    df![
-        "frame_number" => frame_number,
-    ]
-    .unwrap()
-}
+//     df![
+//         "frame_number" => frame_number,
+//     ]
+//     .unwrap()
+// }

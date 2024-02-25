@@ -1,10 +1,16 @@
-use polars::prelude::*;
-use ssbm_utils::enums::{Item, MissileType, Port, TurnipFace};
+use ssbm_utils::enums::{Item, Port};
 use std::collections::{HashMap, HashSet};
 
 use crate::events::item_frames::ItemFrames;
 
-pub fn find_items(port: Port, item_frames: &ItemFrames) -> DataFrame {
+#[derive(Debug, Clone)]
+pub struct ItemStats {
+    pub items: Vec<Item>,
+    pub counts: Vec<u32>,
+    // todo accuracy: Box<[f32]>,
+}
+
+pub fn find_items(port: Port, item_frames: &ItemFrames) -> ItemStats {
     let ids = &item_frames.item_id;
     let spawn_ids = &item_frames.spawn_id;
     let missiles = item_frames.missile_type.as_ref().unwrap();
@@ -42,21 +48,19 @@ pub fn find_items(port: Port, item_frames: &ItemFrames) -> DataFrame {
         }
     }
 
-    let mut keys: Vec<&str> = vec![];
+    let mut keys: Vec<Item> = vec![];
     let mut vals: Vec<u32> = vec![];
     for ((item, itype), count) in item_counter {
-        let item = Item::from_repr(item).unwrap_or(Item::UNKNOWN);
-        // if temp == Item::UNKNOWN.to_string() {
-        //     dbg!(key);
-        // }
-        let temp: &str = match item {
-            Item::PEACH_TURNIP => TurnipFace::from_repr(itype).unwrap().into(),
-            Item::SAMUS_MISSILE => MissileType::from_repr(itype).unwrap().into(),
-            _ => item.into(),
-        };
-        keys.push(temp);
+        let item = Item::from_repr(item)
+            .unwrap_or(Item::UNKNOWN)
+            .resolve_subitem(itype);
+
+        keys.push(item);
         vals.push(count);
     }
 
-    DataFrame::new(vec![Series::new("Item", keys), Series::new("Count", vals)]).unwrap()
+    ItemStats {
+        items: keys,
+        counts: vals,
+    }
 }

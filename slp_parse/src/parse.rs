@@ -3,16 +3,18 @@
 use anyhow::{anyhow, ensure, Result};
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::{Buf, Bytes};
-use polars::prelude::*;
 use strum_macros::FromRepr;
 use time::{format_description::well_known::Iso8601, OffsetDateTime};
 
-use std::io::{prelude::*, BufReader, SeekFrom};
 use std::path::Path;
 use std::time::Duration;
 use std::{collections::HashMap, fs::File};
+use std::{
+    io::{prelude::*, BufReader, SeekFrom},
+    sync::Arc,
+};
 
-use crate::game::GameStub;
+use crate::game::{GameStub, Metadata};
 use crate::{
     events::{
         game_end::parse_gameend, game_start::GameStart, item_frames::parse_itemframes,
@@ -240,26 +242,32 @@ impl Game {
             game_end = Some(parse_gameend(bytes));
         }
 
-        let mut item_frames = None;
+        let frames_rollbacked = (pre_offsets.len() / (2 + ics_count)).saturating_sub(frame_count);
 
-        if version.at_least(3, 0, 0) {
-            item_frames = Some(parse_itemframes(
-                file_data.clone(),
-                version,
-                &item_offsets,
-            ));
+        let metadata = Arc::new(Metadata {
+            version,
+            start: game_start,
+            end: game_end,
+            duration,
+                total_frames: frame_count,
+                rolled_back_frames: Some(frames_rollbacked),
+                path: Arc::new(path.to_owned()),
+                date,
+            });
+
+            let mut item_frames = None;
+            if version.at_least(3, 0, 0) {
+                item_frames = Some(parse_itemframes(file_data.clone(), metadata.clone(), &item_offsets));
         }
 
-        let frames_rollbacked =
-            (pre_offsets.len() / (2 + ics_count)).saturating_sub(frame_count);
+
 
         let (pre_frames, post_frames) = rayon::join(
             || {
                 parse_preframes(
                     file_data.clone(),
-                    version,
+                    metadata.clone(),
                     &pre_offsets,
-                    frame_count,
                     ports,
                     ics,
                     [players[0].character, players[1].character],
@@ -268,9 +276,8 @@ impl Game {
             || {
                 parse_postframes(
                     file_data.clone(),
-                    version,
+                    metadata.clone(),
                     &post_offsets,
-                    frame_count,
                     ports,
                     ics,
                 )
@@ -295,16 +302,9 @@ impl Game {
         }
 
         Ok(Game {
-            metadata: game_start,
-            end: game_end,
-            duration,
-            total_frames: frame_count,
+            metadata,
             players: players.map(Arc::new),
-            version,
             item_frames: item_frames.map(Arc::new),
-            path: Arc::new(path.to_owned()),
-            frames_rollbacked,
-            date,
         })
     }
 
@@ -312,7 +312,10 @@ impl Game {
         // TODO yeah yeah eventually i should extract this into a function instead of duplicating.
         // I'll get around to it eventually,it's gonna take a bit of fiddling to make sure all the
         // bytes objects are created/updated correctly and I just don't want to deal with it atm.
-        let mut stream = BufReader::new(File::open(path)?);
+
+        // default buffer capacity is more than 8x what we need, and read time is at a premium.
+        // we only need the gamestart, game end, and metadata events
+        let mut stream = BufReader::with_capacity(1000, File::open(path)?);
 
         let mut buf = [0; 11];
         stream.read_exact(&mut buf).unwrap();
@@ -365,11 +368,13 @@ impl Game {
 
         let mut duration: Duration = Duration::default();
         let metadata = ubjson::to_map(&mut metadata_block.reader())?;
+        let mut total_frames: usize = 0;
+
         if let serde_json::Value::Number(lastframe) = &metadata["lastFrame"] {
             // duration, in frames, is translated to seconds. 123 is subtracted from the frame count
-            // to match the duration to the in-game timer. The total frame count is easily
-            // found from player.frames.len()
+            // to match the duration to the in-game timer.
             let last = lastframe.as_i64().unwrap();
+            total_frames = (last + 123) as usize;
             let millis = ((last.max(0) as f32 / 60.0) * 1000.0) as u64;
 
             // i shouldn't have to do any checks on this conversion
@@ -383,17 +388,22 @@ impl Game {
         }
 
         Ok(GameStub {
-            metadata: game_start,
-            duration,
-            version,
+            metadata: Arc::new(Metadata {
+                version,
+                start: game_start,
+                end: None,
+                duration,
+                total_frames,
+                rolled_back_frames: None,
+                path: Arc::new(path.to_owned()),
+                date,
+            }),
             players: players
                 .into_iter()
                 .map(|x| x.into())
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
-            path: Arc::new(path.to_path_buf()),
-            date,
         })
     }
 }

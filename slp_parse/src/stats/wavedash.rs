@@ -1,4 +1,3 @@
-use polars::prelude::*;
 use ssbm_utils::{
     enums::ActionState,
     types::{Position, StickPos},
@@ -7,7 +6,7 @@ use ssbm_utils::{
 use crate::{frames::Frames, utils::Direction};
 
 #[derive(Debug, Clone, Default)]
-pub struct Wavedashes {
+pub struct WavedashStats {
     pub frame_index: Vec<i32>,
     pub angle: Vec<f32>,
     pub direction: Vec<Direction>,
@@ -15,50 +14,14 @@ pub struct Wavedashes {
     pub waveland: Vec<bool>,
 }
 
-impl From<Wavedashes> for DataFrame {
-    fn from(val: Wavedashes) -> Self {
-        use crate::columns::WavedashStats as col;
-
-        let vec_series = vec![
-            Series::new(col::FrameIndex.into(), val.frame_index),
-            Series::new(col::Waveland.into(), val.waveland),
-            Series::new(col::Angle.into(), val.angle),
-            Series::new(
-                col::Direction.into(),
-                val.direction
-                    .into_iter()
-                    .map(Into::<&str>::into)
-                    .collect::<Vec<_>>(),
-            ),
-            StructChunked::new(
-                col::StartPosition.into(),
-                &[
-                    Series::new(
-                        "x",
-                        val.start_position.iter().map(|p| p.x).collect::<Vec<_>>(),
-                    ),
-                    Series::new(
-                        "y",
-                        val.start_position.iter().map(|p| p.y).collect::<Vec<_>>(),
-                    ),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-        ];
-
-        DataFrame::new(vec_series).unwrap()
-    }
-}
-
-pub fn find_wavedashes(frames: &Frames) -> DataFrame {
+pub fn find_wavedashes(frames: &Frames) -> WavedashStats {
     let pre = &frames.pre;
     let post = &frames.post;
 
-    let button_frames = &pre.engine_buttons;
+    // let button_frames = &pre.engine_buttons;
     let state_frames = &post.action_state;
 
-    let mut wavedashes = Wavedashes::default();
+    let mut wavedashes = WavedashStats::default();
 
     // start 20 frames "late" to prevent index errors
     for i in 20..frames.len() {

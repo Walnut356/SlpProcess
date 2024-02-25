@@ -1,10 +1,9 @@
-use polars::prelude::*;
 use ssbm_utils::enums::{
     buttons::{ANYTRIGGER_MASK, CSTICK_MASK, DIGITAL_TRIGGER_MASK, JOYSTICK_MASK},
     BitFlags, ControllerInput,
 };
 
-use crate::{columns::InputStats, frames::Frames};
+use crate::{frames::Frames, stats::Stat};
 
 // #[derive(Debug, Default)]
 // struct ButtonCounts {
@@ -30,7 +29,21 @@ use crate::{columns::InputStats, frames::Frames};
 //     d_right: u32,
 // }
 
-pub fn find_inputs(frames: &Frames, duration: usize) -> DataFrame {
+
+#[derive(Debug, Clone, Default)]
+pub struct InputStats {
+    pub digital: Vec<u32>,
+    pub joystick: Vec<u32>,
+    pub cstick: Vec<u32>,
+    pub analog_trigger: Vec<u32>,
+    pub apm: Vec<f32>,
+    pub trigger_pref: Vec<ControllerInput>,
+    pub jump_pref: Vec<ControllerInput>,
+}
+
+impl Stat for InputStats {}
+
+pub fn find_inputs(frames: &Frames, duration: usize) -> InputStats {
     let en_btn = &frames.pre.engine_buttons;
     let ctrl_btn = &frames.pre.controller_buttons;
 
@@ -101,46 +114,49 @@ pub fn find_inputs(frames: &Frames, duration: usize) -> DataFrame {
         }
     }
 
-    let trigger_pref: &str = {
+    let trigger_pref = {
         if l_count == 0.0 && r_count == 0.0 {
-            "UNKNOWN"
+            ControllerInput::None
         } else if l_count == 0.0 && r_count != 0.0 {
-            "R"
+            ControllerInput::R
         } else if r_count == 0.0 && l_count != 0.0 {
-            "L"
+            ControllerInput::L
         } else {
             let l_ratio = l_count / (l_count + r_count);
             let r_ratio = r_count / (l_count + r_count);
             match l_ratio - r_ratio {
-                x if x >= 0.15 => "L",
-                x if x <= -0.15 => "R",
-                _ => "BOTH",
+                x if x >= 0.15 => ControllerInput::L,
+                x if x <= -0.15 => ControllerInput::R,
+                _ => ControllerInput::L | ControllerInput::R,
             }
         }
     };
     let jump_pref = {
         if x_count == 0.0 && y_count == 0.0 {
-            "UNKNOWN"
+            ControllerInput::None
         } else if x_count == 0.0 && y_count != 0.0 {
-            "Y"
+            ControllerInput::Y
         } else if r_count == 0.0 && x_count != 0.0 {
-            "X"
+            ControllerInput::X
         } else {
             let x_ratio = x_count / (x_count + y_count);
             let y_ratio = y_count / (x_count + y_count);
             match x_ratio - y_ratio {
-                x if x >= 0.15 => "X",
-                x if x <= -0.15 => "Y",
-                _ => "BOTH",
+                x if x >= 0.15 => ControllerInput::X,
+                x if x <= -0.15 => ControllerInput::Y,
+                _ => ControllerInput::X | ControllerInput::Y,
             }
         }
     };
-    use InputStats::*;
-    df!(Digital.into() => [digital_counts],
-    Joystick.into() => [stick_counts],
-    Cstick.into() => [cstick_counts],
-    AnalogTrigger.into() => [trigger_counts],
-    APM.into() => [(digital_counts + stick_counts + cstick_counts + trigger_counts) as f32 / (duration as f32 / 60.0 / 60.0)],
-    TriggerPref.into() => [trigger_pref],
-    JumpPref.into() => [jump_pref],).unwrap()
+
+    InputStats {
+        digital: vec![digital_counts],
+        joystick: vec![stick_counts],
+        cstick: vec![cstick_counts],
+        analog_trigger: vec![trigger_counts],
+        apm: vec![(digital_counts + stick_counts + cstick_counts + trigger_counts) as f32
+            / (duration as f32 / 60.0 / 60.0)],
+        trigger_pref: vec![trigger_pref],
+        jump_pref: vec![trigger_pref],
+    }
 }

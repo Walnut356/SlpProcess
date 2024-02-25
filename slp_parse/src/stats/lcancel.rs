@@ -1,22 +1,26 @@
 #![allow(clippy::type_complexity)]
 
-use ssbm_utils::checks::{is_fastfalling, is_in_hitlag, just_input_lcancel};
-use ssbm_utils::enums::{stage::Stage, ActionState, Attack, LCancel};
+use ssbm_utils::{checks::{is_fastfalling, is_in_hitlag, just_input_lcancel}, prelude::stage::GroundID};
+use ssbm_utils::enums::{stage::Stage, ActionState, Attack, LCancelState};
 use std::ops::Deref;
 
-use crate::{columns::*, frames::Frames};
-use polars::prelude::*;
+use crate::frames::Frames;
 
-pub fn find_lcancels(frames: &Frames, stage: &Stage) -> DataFrame {
-    let mut frame_index_col: Vec<i32> = Vec::new();
-    let mut stocks_col: Vec<u8> = Vec::new();
-    let mut attack_col: Vec<&str> = Vec::new();
-    let mut lcancelled_col: Vec<bool> = Vec::new();
-    let mut l_input_col: Vec<Option<i32>> = Vec::new();
-    let mut position_col: Vec<&str> = Vec::new();
-    let mut fastfall_col: Vec<bool> = Vec::new();
-    let mut hitlag_col: Vec<bool> = Vec::new();
-    let mut percent_col: Vec<f32> = Vec::new();
+#[derive(Debug, Clone, Default)]
+pub struct LCancelStats {
+    pub frame_index: Vec<i32>,
+    pub stocks: Vec<u8>,
+    pub attack: Vec<Attack>,
+    pub l_cancel: Vec<bool>,
+    pub trigger_input_frame: Vec<Option<i32>>,
+    pub position: Vec<GroundID>,
+    pub fastfall: Vec<bool>,
+    pub during_hitlag: Vec<bool>,
+    pub percent: Vec<f32>,
+}
+
+pub fn find_lcancels(frames: &Frames, stage: &Stage) -> LCancelStats {
+    let mut table = LCancelStats::default();
 
     let mut l_input_frame: Option<i32> = None;
     let mut during_hitlag: bool = false;
@@ -37,7 +41,7 @@ pub fn find_lcancels(frames: &Frames, stage: &Stage) -> DataFrame {
             during_hitlag = is_in_hitlag(flags[i]);
         }
 
-        if lcancel == LCancel::NOT_APPLICABLE as u8 {
+        if lcancel == LCancelState::NOT_APPLICABLE as u8 {
             continue;
         }
 
@@ -52,7 +56,7 @@ pub fn find_lcancels(frames: &Frames, stage: &Stage) -> DataFrame {
 
         // if there's no l cancel input that was too early, and the input failed, check the next 5 frames to see if
         // there was a late l cancel
-        if lcancel == LCancel::FAILURE as u8 && l_input_frame.is_some() {
+        if lcancel == LCancelState::FAILURE as u8 && l_input_frame.is_some() {
             for j in 0..6 {
                 let temp_index = i + j;
                 if temp_index >= pre_buttons.len() {
@@ -87,25 +91,16 @@ pub fn find_lcancels(frames: &Frames, stage: &Stage) -> DataFrame {
             continue;
         }
 
-        frame_index_col.push(i as i32 - 123);
-        stocks_col.push(stocks[i]);
-        attack_col.push(attack.unwrap().into());
-        lcancelled_col.push(LCancel::from_repr(lcancel) == Some(LCancel::SUCCESS));
-        l_input_col.push(l_input_frame);
-        position_col.push(stage.ground_from_id(last_ground_ids[i]).into());
-        fastfall_col.push(is_fastfalling(flags[i - 1]));
-        hitlag_col.push(during_hitlag);
-        percent_col.push(percents[i]);
+        table.frame_index.push(i as i32 - 123);
+        table.stocks.push(stocks[i]);
+        table.attack.push(attack.unwrap().into());
+        table.l_cancel.push(LCancelState::from_repr(lcancel) == Some(LCancelState::SUCCESS));
+        table.trigger_input_frame.push(l_input_frame);
+        table.position.push(stage.ground_from_id(last_ground_ids[i]).into());
+        table.fastfall.push(is_fastfalling(flags[i - 1]));
+        table.during_hitlag.push(during_hitlag);
+        table.percent.push(percents[i]);
     }
 
-    df!(LCancelStats::FrameIndex.into() => frame_index_col,
-    LCancelStats::Attack.into() => attack_col,
-    LCancelStats::Stocks.into() => stocks_col,
-    LCancelStats::Percent.into() => percent_col,
-    LCancelStats::LCancelled.into() => lcancelled_col,
-    LCancelStats::TriggerFrame.into() => l_input_col,
-    LCancelStats::Position.into() => position_col,
-    LCancelStats::Fastfall.into() => fastfall_col,
-    LCancelStats::InputDuringHitlag.into() => hitlag_col, )
-    .unwrap()
+    table
 }

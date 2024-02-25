@@ -20,6 +20,7 @@ use super::ActionState as AS;
     EnumString,
     IntoStaticStr,
     Display,
+    Hash,
 )]
 #[repr(u8)]
 pub enum Port {
@@ -85,7 +86,7 @@ impl TryFrom<f32> for Orientation {
     Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
 )]
 #[repr(u8)]
-pub enum LCancel {
+pub enum LCancelState {
     NOT_APPLICABLE = 0,
     SUCCESS = 1,
     FAILURE = 2,

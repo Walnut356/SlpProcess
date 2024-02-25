@@ -1,7 +1,5 @@
 #![allow(clippy::too_many_arguments)]
 
-use polars::prelude::*;
-
 use ssbm_utils::{
     calc::{
         apply_di, get_di_efficacy, initial_x_velocity, initial_y_velocity, kb_from_initial,
@@ -16,10 +14,7 @@ use ssbm_utils::{
     types::{Degrees, Position, StickPos, Velocity},
 };
 
-use crate::{
-    frames::Frames,
-    utils::{as_vec_arrow, as_vec_static_str},
-};
+use crate::{frames::Frames, stats::Stat};
 
 pub(crate) fn find_defense(
     plyr_frames: &Frames,
@@ -27,7 +22,7 @@ pub(crate) fn find_defense(
     stage_id: u16,
     player_char: Character,
     opnt_char: Character,
-) -> DataFrame {
+) -> DefenseStats {
     let pre = &plyr_frames.pre;
     let post = &plyr_frames.post;
     let attacks = &opnt_frames.post.last_attack_landed;
@@ -240,36 +235,36 @@ pub(crate) fn find_defense(
         }
     }
 
-    stat_table.into()
+    stat_table
 }
 
-#[derive(Debug, Default)]
-struct DefenseStats {
-    frame_index: Vec<i32>,
-    stocks_remaining: Vec<u8>,
-    percent: Vec<f32>,
-    damage_taken: Vec<f32>,
-    last_hit_by: Vec<Attack>,
-    state_before_hit: Vec<State>,
-    grounded: Vec<bool>,
-    crouch_cancel: Vec<Option<bool>>,
-    hitlag_frames: Vec<u8>,
-    stick_during_hitlag: Vec<Vec<StickRegion>>,
-    sdi_inputs: Vec<Vec<StickRegion>>,
-    asdi: Vec<StickRegion>,
-    kb: Vec<Velocity>,
-    kb_angle: Vec<Degrees>,
-    di_stick: Vec<StickPos>,
-    di_kb: Vec<Velocity>,
-    di_efficacy: Vec<Option<f32>>,
-    di_kb_angle: Vec<Degrees>,
-    hitlag_start: Vec<Position>,
-    hitlag_end: Vec<Position>,
-    kills_with_di: Vec<bool>,
-    kills_no_di: Vec<bool>,
-    kills_any_di: Vec<bool>,
-    kills_some_di: Vec<bool>,
-    v_cancel: Vec<Option<bool>>,
+#[derive(Debug, Default, Clone)]
+pub struct DefenseStats {
+    pub frame_index: Vec<i32>,
+    pub stocks_remaining: Vec<u8>,
+    pub percent: Vec<f32>,
+    pub damage_taken: Vec<f32>,
+    pub last_hit_by: Vec<Attack>,
+    pub state_before_hit: Vec<State>,
+    pub grounded: Vec<bool>,
+    pub crouch_cancel: Vec<Option<bool>>,
+    pub hitlag_frames: Vec<u8>,
+    pub stick_during_hitlag: Vec<Vec<StickRegion>>,
+    pub sdi_inputs: Vec<Vec<StickRegion>>,
+    pub asdi: Vec<StickRegion>,
+    pub kb: Vec<Velocity>,
+    pub kb_angle: Vec<Degrees>,
+    pub di_stick: Vec<StickPos>,
+    pub di_kb: Vec<Velocity>,
+    pub di_efficacy: Vec<Option<f32>>,
+    pub di_kb_angle: Vec<Degrees>,
+    pub hitlag_start: Vec<Position>,
+    pub hitlag_end: Vec<Position>,
+    pub kills_with_di: Vec<bool>,
+    pub kills_no_di: Vec<bool>,
+    pub kills_any_di: Vec<bool>,
+    pub kills_some_di: Vec<bool>,
+    pub v_cancel: Vec<Option<bool>>,
     // TODO shieldpoke: Vec<Option<bool>>,
     // TODO ground_id: Vec<Option<GroundID>>,
 }
@@ -305,130 +300,35 @@ impl DefenseStats {
     }
 }
 
-impl From<DefenseStats> for DataFrame {
-    fn from(val: DefenseStats) -> Self {
-        use crate::columns::DefenseStats as col;
-
-        let vec_series = vec![
-            Series::new(col::FrameIndex.into(), val.frame_index),
-            Series::new(col::Stocks.into(), val.stocks_remaining),
-            Series::new(col::Percent.into(), val.percent),
-            Series::new(col::DamageTaken.into(), val.damage_taken),
-            Series::new(col::LastHitBy.into(), as_vec_static_str(val.last_hit_by)),
-            Series::new(
-                col::StateBeforeHit.into(),
-                as_vec_static_str(val.state_before_hit),
-            ),
-            Series::new(col::Grounded.into(), val.grounded),
-            Series::new(col::CrouchCancel.into(), val.crouch_cancel),
-            Series::new(col::VCancel.into(), val.v_cancel),
-            Series::new(col::ASDI.into(), as_vec_arrow(val.asdi)),
-            Series::new(col::HitlagFrames.into(), val.hitlag_frames),
-            Series::new(
-                col::StickDuringHitlag.into(),
-                val.stick_during_hitlag
-                    .into_iter()
-                    .map(|x| Series::new("", as_vec_arrow(x)))
-                    .collect::<Vec<_>>(),
-            ),
-            Series::new(
-                col::SDIInputs.into(),
-                val.sdi_inputs
-                    .into_iter()
-                    .map(|x| Series::new("", as_vec_arrow(x)))
-                    .collect::<Vec<_>>(),
-            ),
-            StructChunked::new(
-                col::HitlagStart.into(),
-                &[
-                    Series::new(
-                        "x",
-                        val.hitlag_start.iter().map(|p| p.x).collect::<Vec<_>>(),
-                    ),
-                    Series::new(
-                        "y",
-                        val.hitlag_start.iter().map(|p| p.y).collect::<Vec<_>>(),
-                    ),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            StructChunked::new(
-                col::HitlagEnd.into(),
-                &[
-                    Series::new("x", val.hitlag_end.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.hitlag_end.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            StructChunked::new(
-                col::DIStick.into(),
-                &[
-                    Series::new("x", val.di_stick.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.di_stick.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            StructChunked::new(
-                col::Knockback.into(),
-                &[
-                    Series::new("x", val.kb.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.kb.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            StructChunked::new(
-                col::DIKnockback.into(),
-                &[
-                    Series::new("x", val.di_kb.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.di_kb.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            Series::new(col::KBAngle.into(), val.kb_angle),
-            Series::new(col::DIKBAngle.into(), val.di_kb_angle),
-            Series::new(col::DIEfficacy.into(), val.di_efficacy),
-            Series::new(col::KillsWithDI.into(), val.kills_with_di),
-            Series::new(col::KillsNoDI.into(), val.kills_no_di),
-            Series::new(col::KillsAllDI.into(), val.kills_any_di),
-            Series::new(col::KillsSomeDI.into(), val.kills_some_di),
-        ];
-
-        DataFrame::new(vec_series).unwrap()
-    }
-}
+impl Stat for DefenseStats {}
 
 #[derive(Debug, Default, Clone)]
-struct DefenseRow {
-    frame_index: i32,
-    stocks_remaining: u8,
-    percent: f32,
-    damage_taken: f32,
-    last_hit_by: Attack,
-    state_before_hit: State,
-    grounded: bool,
-    crouch_cancel: Option<bool>,
-    hitlag_frames: u8,
-    stick_during_hitlag: Vec<StickRegion>,
-    sdi_inputs: Vec<StickRegion>,
-    asdi: StickRegion,
-    kb: Velocity,
-    kb_angle: Degrees,
-    di_stick: StickPos,
-    di_kb: Velocity,
-    di_kb_angle: Degrees,
-    di_efficacy: Option<f32>,
-    hitlag_start: Position,
-    hitlag_end: Position,
-    kills_with_di: bool,
-    kills_no_di: bool,
-    kills_any_di: bool,
-    kills_some_di: bool,
-    v_cancel: Option<bool>,
+pub struct DefenseRow {
+    pub frame_index: i32,
+    pub stocks_remaining: u8,
+    pub percent: f32,
+    pub damage_taken: f32,
+    pub last_hit_by: Attack,
+    pub state_before_hit: State,
+    pub grounded: bool,
+    pub crouch_cancel: Option<bool>,
+    pub hitlag_frames: u8,
+    pub stick_during_hitlag: Vec<StickRegion>,
+    pub sdi_inputs: Vec<StickRegion>,
+    pub asdi: StickRegion,
+    pub kb: Velocity,
+    pub kb_angle: Degrees,
+    pub di_stick: StickPos,
+    pub di_kb: Velocity,
+    pub di_kb_angle: Degrees,
+    pub di_efficacy: Option<f32>,
+    pub hitlag_start: Position,
+    pub hitlag_end: Position,
+    pub kills_with_di: bool,
+    pub kills_no_di: bool,
+    pub kills_any_di: bool,
+    pub kills_some_di: bool,
+    pub v_cancel: Option<bool>,
 }
 
 impl DefenseRow {

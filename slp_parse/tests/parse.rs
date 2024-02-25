@@ -1,10 +1,8 @@
 use std::{
-    iter::zip,
-    path::{Path, PathBuf},
-    sync::Arc,
-    time::Duration,
+    collections::HashMap, iter::zip, path::{Path, PathBuf}, sync::Arc, time::Duration
 };
 
+use slp_parse::{events::game_end::Placement, prelude::*};
 use slp_parse::{
     events::{
         game_end::{EndMethod, GameEnd},
@@ -14,7 +12,6 @@ use slp_parse::{
     },
     frames::Frame,
     player::UCFToggles,
-    Game, Port,
 };
 use ssbm_utils::{
     enums::{character::Costume, Character, ControllerInput, EngineInput, Flags, StageID},
@@ -55,20 +52,25 @@ pub fn test_metadata() {
         // date: OffsetDateTime::parse("2023-11-29T00:26:22+00:00", &Iso8601::DEFAULT).unwrap(),
     };
 
-    assert_eq!(game.metadata, metadata);
-    assert_eq!(game.total_frames, 9809);
+    assert_eq!(game.metadata().start, metadata);
+    assert_eq!(game.total_frames(), 9809);
     assert_eq!(
-        game.duration,
+        game.duration(),
         Duration::from_millis((((9809.0 - 124.0) / 60.0) * 1000.0) as u64)
     );
-    assert_eq!(game.version, Version::new(3, 16, 0));
+    assert_eq!(game.version(), Version::new(3, 16, 0));
     assert_eq!(
-        game.end,
-        Some(GameEnd {
+        game.end().unwrap(),
+        &GameEnd {
             end_method: EndMethod::Stocks,
             lras_initiator: None,
-            placements: Some([0, 1, -1, -1])
-        })
+            placements: {
+                let mut temp = HashMap::new();
+                temp.insert(Port::P1, Placement::Win);
+                temp.insert(Port::P2, Placement::Loss);
+                Some(temp)
+            }
+        }
     );
     assert_eq!(game.item_frames.as_ref().unwrap().len(), 14232);
 }
@@ -78,7 +80,7 @@ pub fn test_players() {
     let replay = test_data_path(r"test_replays\netplay_sample.slp");
     let game = Game::new(&replay).unwrap();
 
-    let players = game.players;
+    let players = &game.players;
 
     assert!(players[0].character == Character::Falco && players[1].character == Character::Falco);
     assert!(players[0].costume == Costume::GREEN && players[1].costume == Costume::RED);
@@ -105,8 +107,8 @@ pub fn test_players() {
                 })
     );
     assert!(
-        players[0].frames.len() == game.total_frames as usize
-            && players[1].frames.len() == game.total_frames as usize
+        players[0].frames.len() == game.total_frames() as usize
+            && players[1].frames.len() == game.total_frames() as usize
     );
     assert!(players[0].nana_frames.is_none() && players[0].nana_frames.is_none());
 }

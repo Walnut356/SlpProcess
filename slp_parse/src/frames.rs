@@ -38,7 +38,10 @@ impl Frames {
     }
 
     pub fn get_last_frame(&self) -> Frame {
-        Frame(self.pre.get_frame(self.len() - 1), self.post.get_frame(self.len() - 1))
+        Frame(
+            self.pre.get_frame(self.len() - 1),
+            self.post.get_frame(self.len() - 1),
+        )
     }
 }
 

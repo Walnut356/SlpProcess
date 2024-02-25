@@ -7,7 +7,7 @@ pub mod events {
     pub mod post_frame;
     pub mod pre_frame;
 }
-pub mod columns;
+
 pub mod frames;
 pub mod game;
 pub mod parse;
@@ -16,12 +16,17 @@ pub mod stats;
 pub(crate) mod ubjson;
 pub mod utils;
 
-pub use crate::game::{Game, GameStub, GameMetadata};
+#[cfg(feature = "polars")]
+pub mod columns;
+#[cfg(feature = "polars")]
+pub mod polars_impl;
 
-use crate::stats::combos::Combos;
+pub use crate::game::{Game, GameMetadata, GameStub};
+pub use crate::stats::{
+    Combos, DefenseStats, InputStats, ItemStats, LCancelStats, Stats, TechStats, WavedashStats,
+};
 use serde_json::json;
-pub use ssbm_utils::enums::Port;
-use stats::Stats;
+use ssbm_utils::enums::Port;
 
 use rayon::{iter::FilterMap, prelude::*, vec::IntoIter};
 use std::{
@@ -147,7 +152,6 @@ pub fn parse_stubs(path: &str, multithreaded: bool) -> Vec<GameStub> {
         return vec![Game::stub(f_path).unwrap()];
     }
     if f_path.is_dir() {
-        let eef = fs::read_dir(f_path).unwrap();
         let files: Vec<PathBuf> = fs::read_dir(f_path)
             .unwrap()
             .filter_map(|file| {
@@ -213,7 +217,7 @@ pub fn parse_stubs(path: &str, multithreaded: bool) -> Vec<GameStub> {
 // }
 
 /// Returns a single stats object containing the stats from all individual games.
-pub fn get_stats(games: &[Game], connect_code: &str) -> Stats {
+pub fn get_stats(games: &[Game], connect_code: &str) -> Vec<Arc<Stats>> {
     games
         .iter()
         .filter_map(|game| {
@@ -224,7 +228,6 @@ pub fn get_stats(games: &[Game], connect_code: &str) -> Stats {
             }
         })
         .collect::<Vec<_>>()
-        .into()
 }
 
 pub fn get_combos(games: &[Game], connect_code: &str) -> Vec<Arc<Combos>> {
@@ -240,7 +243,7 @@ pub fn get_combos(games: &[Game], connect_code: &str) -> Vec<Arc<Combos>> {
         .collect()
 }
 
-pub fn to_dolphin_queue(target_path: PathBuf, combo_list: &[Arc<Combos>]) {
+pub fn to_dolphin_queue(target_path: PathBuf, combo_list: &[&Combos]) {
     let mut playback_queue = json!({
         "mode": "queue",
         "replay": "",
@@ -264,16 +267,21 @@ pub fn to_dolphin_queue(target_path: PathBuf, combo_list: &[Arc<Combos>]) {
 }
 
 pub mod prelude {
-    pub use crate::{game::{Game, GameStub}, player::Player, stats::Stats};
+    pub use crate::{
+        game::{Game, GameMetadata, GameStub},
+        player::Player,
+        stats::{Stat, StatType, Stats},
+    };
     pub use crate::{get_combos, get_stats, parse, to_dolphin_queue};
 
-    pub use ssbm_utils::enums::BitFlags;
+    pub use ssbm_utils;
+    pub use ssbm_utils::enums::{BitFlags, Port};
 }
 
 #[cfg(test)]
 mod test {
-    use crate::parse;
-    use ssbm_utils::enums::{Character, Port};
+    use crate::prelude::*;
+    use ssbm_utils::prelude::*;
 
     #[test]
     fn test_ics() {
@@ -283,15 +291,15 @@ mod test {
         let player = game.player_by_port(Port::P1).unwrap();
 
         assert_eq!(
-            (game.duration.as_millis() as f32 / 1000.0 * 60.0) as u64 + 124,
+            (game.duration().as_millis() as f32 / 1000.0 * 60.0) as u64 + 124,
             16408
         );
         // asserts in parsing code itself should take care of out of bounds access
         // game.total_frames is 16408, this was also manually checked against py-slippi
-        assert!(player.frames.pre.frame_index.len() == game.total_frames as usize);
+        assert!(player.frames.pre.frame_index.len() == game.total_frames() as usize);
         assert!(
             player.nana_frames.as_ref().unwrap().post.frame_index.len()
-                == game.total_frames as usize
+                == game.total_frames() as usize
         );
 
         assert_eq!(player.character, Character::IceClimbers);

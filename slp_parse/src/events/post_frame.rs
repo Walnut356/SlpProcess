@@ -1,20 +1,24 @@
 #![allow(clippy::uninit_vec)]
 
+use std::sync::Arc;
+
 use anyhow::{anyhow, Result};
 use bytes::{Buf, Bytes};
 use nohash_hasher::IntMap;
-use polars::prelude::*;
-use ssbm_utils::{enums::{Character, LCancel, State}, prelude::{Flags, Hurtbox, Orientation}, types::{Position, Velocity}};
+use ssbm_utils::{
+    enums::{Character, LCancelState, State},
+    prelude::{Flags, Hurtbox, Orientation},
+    types::{Position, Velocity},
+};
 
-use crate::{columns::PostFrame, events::game_start::Version, Port};
+use crate::{events::game_start::Version, game::Metadata, Port};
 
 /// Contains all post-frame data for a single character. Stored in columnar format, thus row-wise
 /// access via `.get_frame(index)` will be very slow. If possible, only iterate through the columns
 /// you need.
 #[derive(Debug, Default, Clone)]
 pub struct PostFrames {
-    len: usize,
-    version: Version,
+    pub metadata: Arc<Metadata>,
     pub frame_index: Box<[i32]>,
     pub character: Box<[u8]>,
     pub action_state: Box<[u16]>,
@@ -44,10 +48,11 @@ pub struct PostFrames {
 }
 
 impl PostFrames {
-    fn new(duration: usize, version: Version) -> Self {
+    fn new(metadata: Arc<Metadata>) -> Self {
+        let duration = metadata.total_frames;
+        let version = metadata.version;
         PostFrames {
-            len: duration,
-            version,
+            metadata,
             frame_index: unsafe {
                 let mut temp = Vec::with_capacity(duration);
                 temp.set_len(duration);
@@ -243,7 +248,7 @@ impl PostFrames {
 
     #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
-        self.len
+        self.metadata.total_frames
     }
 
     /// Gets the full post-frame data for a given frame index (0-indexed). This is very
@@ -290,12 +295,14 @@ impl PostFrames {
     /// a (possibly) nice result of this is that, unlike other parsers, we can guarantee that nana
     /// frames (if they exist) will always be the same length as leader frames, even if some of the
     /// data is filled with dummy "null" values.
-    fn ics(duration: usize, version: Version) -> Self {
-        let len = (duration - 123) as i32;
+    fn ics(metadata: Arc<Metadata>) -> Self {
+        let duration = metadata.total_frames;
+        let version = metadata.version;
         PostFrames {
-            len: duration,
-            version,
-            frame_index: ((-123)..len).collect::<Vec<i32>>().into_boxed_slice(),
+            metadata,
+            frame_index: ((-123)..(duration as i32 - 123))
+                .collect::<Vec<i32>>()
+                .into_boxed_slice(),
             // Initialize character to nana, since she's the only one who can have "skipped" frames
             character: vec![33; duration].into_boxed_slice(),
             // Initialize to ActionState::Sleep, since that's what nana will be in when frames are
@@ -398,196 +405,6 @@ impl PostFrames {
     }
 }
 
-impl From<PostFrames> for DataFrame {
-    fn from(val: PostFrames) -> Self {
-        let len = val.len();
-
-        use PostFrame as col;
-        let mut vec_series = vec![
-            Series::new(col::FrameIndex.into(), val.frame_index),
-            Series::new(col::Character.into(), val.character),
-            Series::new(col::ActionState.into(), val.action_state),
-            StructChunked::new(
-                col::Position.into(),
-                &[
-                    Series::new("x", val.position.iter().map(|p| p.x).collect::<Vec<_>>()),
-                    Series::new("y", val.position.iter().map(|p| p.y).collect::<Vec<_>>()),
-                ],
-            )
-            .unwrap()
-            .into_series(),
-            Series::new(col::Orientation.into(), val.orientation),
-            Series::new(col::Percent.into(), val.percent),
-            Series::new(col::ShieldHealth.into(), val.shield_health),
-            Series::new(col::LastAttackLanded.into(), val.last_attack_landed),
-            Series::new(col::ComboCount.into(), val.combo_count),
-            Series::new(col::LastHitBy.into(), val.last_hit_by),
-            Series::new(col::Stocks.into(), val.stocks),
-        ];
-
-        if val.version.at_least(2, 0, 0) {
-            vec_series.push(Series::new(
-                col::StateFrame.into(),
-                val.state_frame.unwrap(),
-            ));
-            vec_series.push(Series::new(col::Flags.into(), val.flags.unwrap()));
-            vec_series.push(Series::new(col::MiscAS.into(), val.misc_as.unwrap()));
-            vec_series.push(Series::new(
-                col::IsGrounded.into(),
-                val.is_grounded.unwrap(),
-            ));
-            vec_series.push(Series::new(
-                col::LastGroundID.into(),
-                val.last_ground_id.unwrap(),
-            ));
-            vec_series.push(Series::new(
-                col::JumpsRemaining.into(),
-                val.jumps_remaining.unwrap(),
-            ));
-            vec_series.push(Series::new(col::LCancel.into(), val.l_cancel.unwrap()));
-        } else {
-            vec_series.push(Series::new_null(col::StateFrame.into(), len));
-            vec_series.push(Series::new_null(col::Flags.into(), len));
-            vec_series.push(Series::new_null(col::MiscAS.into(), len));
-            vec_series.push(Series::new_null(col::IsGrounded.into(), len));
-            vec_series.push(Series::new_null(col::LastGroundID.into(), len));
-            vec_series.push(Series::new_null(col::JumpsRemaining.into(), len));
-            vec_series.push(Series::new_null(col::LCancel.into(), len));
-        }
-
-        if val.version.at_least(2, 1, 0) {
-            vec_series.push(Series::new(
-                col::HurtboxState.into(),
-                val.hurtbox_state.unwrap(),
-            ));
-        } else {
-            vec_series.push(Series::new_null(col::HurtboxState.into(), len));
-        }
-
-        if val.version.at_least(3, 5, 0) {
-            vec_series.push(
-                StructChunked::new(
-                    col::AirVel.into(),
-                    &[
-                        Series::new(
-                            "x",
-                            val.air_velocity
-                                .as_ref()
-                                .unwrap()
-                                .iter()
-                                .map(|p| p.x)
-                                .collect::<Vec<_>>(),
-                        ),
-                        Series::new(
-                            "y",
-                            val.air_velocity
-                                .as_ref()
-                                .unwrap()
-                                .iter()
-                                .map(|p| p.y)
-                                .collect::<Vec<_>>(),
-                        ),
-                    ],
-                )
-                .unwrap()
-                .into_series(),
-            );
-            vec_series.push(
-                StructChunked::new(
-                    col::Knockback.into(),
-                    &[
-                        Series::new(
-                            "x",
-                            val.knockback
-                                .as_ref()
-                                .unwrap()
-                                .iter()
-                                .map(|p| p.x)
-                                .collect::<Vec<_>>(),
-                        ),
-                        Series::new(
-                            "y",
-                            val.knockback
-                                .as_ref()
-                                .unwrap()
-                                .iter()
-                                .map(|p| p.y)
-                                .collect::<Vec<_>>(),
-                        ),
-                    ],
-                )
-                .unwrap()
-                .into_series(),
-            );
-            vec_series.push(
-                StructChunked::new(
-                    col::GroundVel.into(),
-                    &[
-                        Series::new(
-                            "x",
-                            val.ground_velocity
-                                .as_ref()
-                                .unwrap()
-                                .iter()
-                                .map(|p| p.x)
-                                .collect::<Vec<_>>(),
-                        ),
-                        Series::new(
-                            "y",
-                            val.ground_velocity
-                                .as_ref()
-                                .unwrap()
-                                .iter()
-                                .map(|p| p.y)
-                                .collect::<Vec<_>>(),
-                        ),
-                    ],
-                )
-                .unwrap()
-                .into_series(),
-            );
-        } else {
-            vec_series.push(Series::new_null(col::AirVel.into(), len));
-            vec_series.push(Series::new_null(col::Knockback.into(), len));
-            vec_series.push(Series::new_null(col::GroundVel.into(), len));
-        }
-
-        if val.version.at_least(3, 8, 0) {
-            vec_series.push(Series::new(
-                col::HitlagRemaining.into(),
-                val.hitlag_remaining.unwrap(),
-            ));
-        } else {
-            vec_series.push(Series::new_null(col::HitlagRemaining.into(), len));
-        }
-
-        if val.version.at_least(3, 11, 0) {
-            vec_series.push(Series::new(
-                col::AnimationIndex.into(),
-                val.animation_index.unwrap(),
-            ));
-        } else {
-            vec_series.push(Series::new_null(col::AnimationIndex.into(), len));
-        }
-
-        if val.version.at_least(3, 16, 0) {
-            vec_series.push(Series::new(
-                col::InstanceHitBy.into(),
-                val.instance_hit_by.unwrap(),
-            ));
-            vec_series.push(Series::new(
-                col::InstanceID.into(),
-                val.instance_id.unwrap(),
-            ));
-        } else {
-            vec_series.push(Series::new_null(col::InstanceHitBy.into(), len));
-            vec_series.push(Series::new_null(col::InstanceID.into(), len));
-        }
-
-        DataFrame::new(vec_series).unwrap()
-    }
-}
-
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct PostRow {
     pub frame_index: i32,
@@ -668,7 +485,7 @@ impl std::fmt::Display for PostRow {
             self.is_grounded,
             self.last_ground_id,
             self.jumps_remaining,
-            self.l_cancel.and_then(LCancel::from_repr),
+            self.l_cancel.and_then(LCancelState::from_repr),
             self.hurtbox_state.and_then(Hurtbox::from_repr),
             self.air_velocity,
             self.knockback,
@@ -683,18 +500,17 @@ impl std::fmt::Display for PostRow {
 
 pub fn parse_postframes(
     file_data: Bytes,
-    version: Version,
+    metadata: Arc<Metadata>,
     frames: &[usize],
-    duration: usize,
     ports: [Port; 2],
     ics: [bool; 2],
 ) -> Result<IntMap<u8, (PostFrames, Option<PostFrames>)>> {
     /* splitting these out saves us a small amount of time in conditional logic, and allows for
     exact iterator chunk sizes. */
     if !ics[0] && !ics[1] {
-        unpack_frames(file_data, frames, duration, ports, version)
+        unpack_frames(file_data, frames, metadata, ports)
     } else {
-        unpack_frames_ics(file_data, frames, duration, ports, ics, version)
+        unpack_frames_ics(file_data, frames, metadata, ports, ics)
     }
 }
 
@@ -703,17 +519,18 @@ pub fn parse_postframes(
 pub fn unpack_frames(
     mut stream: Bytes,
     frames: &[usize],
-    duration: usize,
+    metadata: Arc<Metadata>,
     ports: [Port; 2],
-    version: Version,
 ) -> Result<IntMap<u8, (PostFrames, Option<PostFrames>)>> {
     let offsets_iter = frames.chunks_exact(2).enumerate();
 
     let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
-    p_frames.insert(ports[0] as u8, (PostFrames::new(duration, version), None));
-    p_frames.insert(ports[1] as u8, (PostFrames::new(duration, version), None));
+    p_frames.insert(ports[0] as u8, (PostFrames::new(metadata.clone()), None));
+    p_frames.insert(ports[1] as u8, (PostFrames::new(metadata.clone()), None));
 
     let file_length = stream.len();
+    let duration = metadata.total_frames;
+    let version = metadata.version;
 
     for (_, offsets) in offsets_iter {
         for &offset in offsets {
@@ -832,26 +649,26 @@ pub fn unpack_frames(
 pub fn unpack_frames_ics(
     mut stream: Bytes,
     offsets: &[usize],
-    duration: usize,
+    metadata: Arc<Metadata>,
     ports: [Port; 2],
     ics: [bool; 2],
-    version: Version,
 ) -> Result<IntMap<u8, (PostFrames, Option<PostFrames>)>> {
-    let len = duration;
+    let len = metadata.total_frames;
+    let version = metadata.version;
 
     let mut p_frames: IntMap<u8, (PostFrames, Option<PostFrames>)> = IntMap::default();
     p_frames.insert(
         ports[0] as u8,
         (
-            PostFrames::new(len, version),
-            ics[0].then(|| PostFrames::ics(len, version)),
+            PostFrames::new(metadata.clone()),
+            ics[0].then(|| PostFrames::ics(metadata.clone())),
         ),
     );
     p_frames.insert(
         ports[1] as u8,
         (
-            PostFrames::new(len, version),
-            ics[1].then(|| PostFrames::ics(len, version)),
+            PostFrames::new(metadata.clone()),
+            ics[1].then(|| PostFrames::ics(metadata.clone())),
         ),
     );
 
@@ -882,7 +699,7 @@ pub fn unpack_frames_ics(
         };
 
         unsafe {
-            *working.frame_index.get_mut(i).ok_or(anyhow!("Too many frames. Attempted to access frame at index {i}, max frame number is {duration}"))? = frame_number;
+            *working.frame_index.get_mut(i).ok_or(anyhow!("Too many frames. Attempted to access frame at index {i}, max frame number is {len}"))? = frame_number;
             *working.character.get_unchecked_mut(i) = stream.get_u8();
             *working.action_state.get_unchecked_mut(i) = stream.get_u16();
             *working.position.get_unchecked_mut(i) =

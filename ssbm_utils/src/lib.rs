@@ -86,8 +86,17 @@ pub mod constants {
     pub const SDI_DIST: f32 = 6.0;
 }
 
+/// Converts a melee frame index (i32 starting at -123) to a real-time frame index (usize starting at 0)
+#[macro_export]
+macro_rules! mf {
+    ($frames:expr) => {
+        Into::<usize>::into($frames + 123)
+    };
+}
+
 pub mod prelude {
     pub use crate::calc::*;
     pub use crate::constants::*;
     pub use crate::enums::*;
+    pub use crate::mf;
 }

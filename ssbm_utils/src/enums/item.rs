@@ -273,6 +273,74 @@ pub enum Item {
     ARWING_LASER = 0xEA,
     GREAT_FOX_LASER = 0xEB,
     BIRDO_EGG = 0xEC,
+
+    // ----------------------------- NO REAL ITEMS BEYOND THIS POINT ---------------------------- //
+    // this section is convenience so that "sub-items" (i.e. turnip types, missile types) can have
+    // the same static type and representation as all other items. It's a little gross, but I can't
+    // add data to the individual types, as old replay versions don't have turnip/missile types. Also,
+    // if you're working with raw game data, you might not have it so it is what it is.
+
+    // turnip faces
+    TURNIP_SMILEY = 1000,
+    TURNIP_BORED,
+    TURNIP_SLEEPY,
+    TURNIP_SHOCKED,
+    TURNIP_LAUGHING,
+    TURNIP_WINK,
+    TURNIP_DOT,
+    TURNIP_STITCH,
+
+    // missile types
+    HOMING_MISSILE,
+    SUPER_MISSILE,
+}
+
+impl Item {
+    /// Same as from_repr, except also resolves TurnipFace and MissileType into their respective
+    /// sub-items
+    pub fn resolve_subitem(&self, subitem: u8) -> Item {
+        match self {
+            Item::PEACH_TURNIP => match subitem {
+                0 => Item::TURNIP_SMILEY,
+                1 => Item::TURNIP_BORED,
+                2 => Item::TURNIP_SLEEPY,
+                3 => Item::TURNIP_SHOCKED,
+                4 => Item::TURNIP_LAUGHING,
+                5 => Item::TURNIP_WINK,
+                6 => Item::TURNIP_DOT,
+                7 => Item::TURNIP_STITCH,
+                _ => panic!("Invalid turnip type {subitem}. Expected value 0-7 inclusive"),
+            },
+            Item::SAMUS_MISSILE => match subitem {
+                0 => Item::HOMING_MISSILE,
+                1 => Item::SUPER_MISSILE,
+                _ => panic!("Invalid missile type {subitem}. Expected value 0 or 1"),
+            },
+
+            _ => *self,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, EnumString, IntoStaticStr, Display, FromRepr, PartialEq, Eq)]
+#[repr(u8)]
+pub enum TurnipFace {
+    // TODO verify this
+    SMILEY = 0,
+    BORED = 1,
+    SLEEPY = 2,
+    SHOCKED = 3,
+    LAUGHING = 4,
+    WINK = 5,
+    DOT = 6,
+    STITCH = 7,
+}
+
+#[derive(Debug, Clone, Copy, EnumString, IntoStaticStr, Display, FromRepr, PartialEq, Eq)]
+#[repr(u8)]
+pub enum MissileType {
+    HOMING = 0,
+    SUPER = 1,
 }
 
 // TODO maybe eventually finish this? Requires a lot of "what even is this" work in dolphin
@@ -308,24 +376,3 @@ pub enum Item {
 //     Item::NESS_PK_THUNDER_5 as u16,
 //     ]);
 // }
-
-#[derive(Debug, Clone, Copy, EnumString, IntoStaticStr, Display, FromRepr, PartialEq, Eq)]
-#[repr(u8)]
-pub enum TurnipFace {
-    // TODO verify this
-    SMILEY = 0,
-    BORED = 1,
-    SLEEPY = 2,
-    SHOCKED = 3,
-    LAUGHING = 4,
-    WINK = 5,
-    DOT = 6,
-    STITCH = 7,
-}
-
-#[derive(Debug, Clone, Copy, EnumString, IntoStaticStr, Display, FromRepr, PartialEq, Eq)]
-#[repr(u8)]
-pub enum MissileType {
-    HOMING = 0,
-    SUPER = 1,
-}

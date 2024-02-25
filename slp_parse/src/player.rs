@@ -5,7 +5,7 @@ use ssbm_utils::enums::{character::Costume, Character, Port};
 use crate::{
     events::game_start::ControllerFix,
     frames::Frames,
-    stats::{combos::Combos, Stats},
+    stats::{Combos, Stats},
 };
 
 ///

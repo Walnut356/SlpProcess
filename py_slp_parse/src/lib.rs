@@ -4,11 +4,11 @@ pub mod player;
 
 use game::PyGame;
 use pyo3::prelude::*;
-use slp_parse::Game;
+use slp_parse;
 
 #[pyfunction]
 pub fn parse(path: String) -> Vec<PyGame> {
-    let vals: Vec<Game> = slp_parse::parse(&path, true);
+    let vals: Vec<slp_parse::Game> = slp_parse::parse(&path, true);
 
     vals.into_iter().map(PyGame::new).collect()
 }

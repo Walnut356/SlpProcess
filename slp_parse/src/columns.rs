@@ -87,7 +87,7 @@ pub enum PostFrame {
     /// `u16` | >= v3.16.0
     InstanceHitBy,
     /// `u16` | >= v3.16.0
-    InstanceID
+    InstanceID,
 }
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
@@ -130,7 +130,7 @@ pub enum LCancelStats {
     Attack,
     Stocks,
     Percent,
-    LCancelled,
+    LCancel,
     TriggerFrame,
     Position,
     Fastfall,
