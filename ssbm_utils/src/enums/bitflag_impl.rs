@@ -88,28 +88,8 @@ impl From<EngineInput> for u32 {
         use EngineInput::*;
         match val {
             Raw(x) => x,
-            None => 0,
-            DPAD_LEFT => 1 << 0,
-            DPAD_RIGHT => 1 << 1,
-            DPAD_DOWN => 1 << 2,
-            DPAD_UP => 1 << 3,
-            Z => 1 << 4,
-            R => 1 << 5,
-            L => 1 << 6,
-            A => 1 << 8,
-            B => 1 << 9,
-            X => 1 << 10,
-            Y => 1 << 11,
-            START => 1 << 12,
-            JOYSTICK_UP => 1 << 16,
-            JOYSTICK_DOWN => 1 << 17,
-            JOYSTICK_LEFT => 1 << 18,
-            JOYSTICK_RIGHT => 1 << 19,
-            CSTICK_UP => 1 << 20,
-            CSTICK_DOWN => 1 << 21,
-            CSTICK_LEFT => 1 << 22,
-            CSTICK_RIGHT => 1 << 23,
-            ANY_TRIGGER => 1 << 31,
+            // safe due to repr(u32) guarantees
+            _ => unsafe { *(&val as *const EngineInput as *const u32) }
         }
     }
 }
@@ -323,19 +303,8 @@ impl From<ControllerInput> for u16 {
         use ControllerInput as CI;
         match val {
             CI::Raw(x) => x,
-            CI::None => 0,
-            CI::DPAD_LEFT => 1 << 0,
-            CI::DPAD_RIGHT => 1 << 1,
-            CI::DPAD_DOWN => 1 << 2,
-            CI::DPAD_UP => 1 << 3,
-            CI::Z => 1 << 4,
-            CI::R => 1 << 5,
-            CI::L => 1 << 6,
-            CI::A => 1 << 8,
-            CI::B => 1 << 9,
-            CI::X => 1 << 10,
-            CI::Y => 1 << 11,
-            CI::START => 1 << 12,
+            // safe due to repr(u16) guarantees
+            _ => unsafe { *(&val as *const ControllerInput as *const u16) },
         }
     }
 }
@@ -522,50 +491,11 @@ impl From<u64> for Flags {
 impl From<Flags> for u64 {
     #[inline]
     fn from(val: Flags) -> Self {
-        use Flags::*;
+        use Flags as F;
         match val {
             Flags::Raw(x) => x,
-            None => 0,
-            BIT_1_1 => 1 << 0,
-            ABSORB_BUBBLE => 1 << 1,
-            BIT_1_3 => 1 << 2,
-            REFLECT_NO_STEAL => 1 << 3,
-            REFLECT_BUBBLE => 1 << 4,
-            BIT_1_6 => 1 << 5,
-            BIT_1_7 => 1 << 6,
-            BIT_1_8 => 1 << 7,
-            BIT_2_1 => 1 << 8,
-            BIT_2_2 => 1 << 9,
-            SUBACTION_INVULN => 1 << 10,
-            FASTFALL => 1 << 11,
-            DEFENDER_HITLAG => 1 << 12,
-            HITLAG => 1 << 13,
-            BIT_2_7 => 1 << 14,
-            BIT_2_8 => 1 << 15,
-            BIT_3_1 => 1 << 16,
-            BIT_3_2 => 1 << 17,
-            GRAB_HOLD => 1 << 18,
-            BIT_3_4 => 1 << 19,
-            BIT_3_5 => 1 << 20,
-            BIT_3_6 => 1 << 21,
-            BIT_3_7 => 1 << 22,
-            SHIELDING => 1 << 23,
-            BIT_4_1 => 1 << 24,
-            HITSTUN => 1 << 25,
-            HITBOX_TOUCHING_SHIELD => 1 << 26,
-            BIT_4_4 => 1 << 27,
-            BIT_4_5 => 1 << 28,
-            POWERSHIELD_BUBBLE => 1 << 29,
-            BIT_4_7 => 1 << 30,
-            BIT_4_8 => 1 << 31,
-            BIT_5_1 => 1 << 32,
-            CLOAKING_DEVICE => 1 << 33,
-            BIT_5_3 => 1 << 34,
-            FOLLOWER => 1 << 35,
-            INACTIVE => 1 << 36,
-            BIT_5_6 => 1 << 37,
-            DEAD => 1 << 38,
-            OFFSCREEN => 1 << 39,
+            // safe due to repr(u64) guarantees
+            _ => unsafe { *(&val as *const Flags as *const u64) },
         }
     }
 }
