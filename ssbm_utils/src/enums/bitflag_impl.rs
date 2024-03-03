@@ -678,7 +678,7 @@ impl Flags {
             result.push("HITBOX_TOUCHING_SHIELD");
         }
         if self.contains(Self::POWERSHIELD_BUBBLE.into()) {
-            result.push("PWERSHIELD_BUBBLE");
+            result.push("POWERSHIELD_BUBBLE");
         }
         if self.contains(Self::CLOAKING_DEVICE.into()) {
             result.push("CLOAKING_DEVICE");

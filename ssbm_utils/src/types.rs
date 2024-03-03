@@ -123,6 +123,9 @@ impl PartialEq for StickPos {
     }
 }
 
+impl Eq for StickPos {
+}
+
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Velocity {
     pub x: f32,

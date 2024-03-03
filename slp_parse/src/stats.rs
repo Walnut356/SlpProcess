@@ -57,7 +57,6 @@ pub struct Stats {
     pub defense: Option<DefenseStats>,
 }
 
-
 // Eventually maybe i'll use this and add convenience methods for bulk parsing
 // #[derive(Debug, Default, Clone)]
 // pub struct StatsList {
