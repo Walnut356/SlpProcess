@@ -46,6 +46,20 @@ pub enum StageID {
     KONGO_JUNGLE_N64 = 30,
 }
 
+impl StageID {
+    pub fn tournament_legal(&self) -> bool {
+        matches!(
+            self,
+            Self::FOUNTAIN_OF_DREAMS
+                | Self::POKEMON_STADIUM
+                | Self::YOSHIS_STORY
+                | Self::DREAM_LAND_N64
+                | Self::BATTLEFIELD
+                | Self::FINAL_DESTINATION
+        )
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, EnumString, Display, FromRepr, IntoStaticStr)]
 pub enum GroundID {
     UNKNOWN,
