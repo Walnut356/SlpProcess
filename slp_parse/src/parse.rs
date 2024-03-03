@@ -163,6 +163,27 @@ impl Game {
             duration = Duration::from_millis(millis);
         };
 
+        let mut metadata_identifiers = [("", ""), ("", "")];
+
+        if let serde_json::Value::Object(ps) = &metadata["players"] {
+            let mut i = 0;
+            for (k, v) in ps.iter() {
+                if let serde_json::Value::Object(player_vals) = v {
+                    if let serde_json::Value::Object(names) = &player_vals["names"] {
+                        metadata_identifiers[i].0 = match names.get("code") {
+                            Some(x) => x.as_str().unwrap_or_default(),
+                            None => "",
+                        };
+                        metadata_identifiers[i].1 = match names.get("netplay") {
+                            Some(x) => x.as_str().unwrap_or_default(),
+                            None => "",
+                        };
+                    }
+                }
+                i += 1;
+            }
+        }
+
         let mut date = OffsetDateTime::UNIX_EPOCH;
         if let serde_json::Value::String(start_at) = &metadata["startAt"] {
             date = OffsetDateTime::parse(start_at.as_str(), &Iso8601::DEFAULT)
@@ -184,6 +205,13 @@ impl Game {
         // );
 
         let (game_start, version, mut players) = GameStart::parse(raw_start)?;
+
+        for (i, player) in players.iter_mut().enumerate() {
+            if !version.at_least(3, 9, 0) {
+                player.connect_code = Some(metadata_identifiers[i].0.to_owned());
+                player.display_name = Some(metadata_identifiers[i].1.to_owned());
+            }
+        }
 
         // i could map but this gives me arrays instead of slices without into
         let ports = [players[0].port, players[1].port];
