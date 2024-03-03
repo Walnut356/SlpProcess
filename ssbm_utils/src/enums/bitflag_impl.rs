@@ -637,7 +637,7 @@ impl Deref for Flags {
 }
 
 impl Flags {
-    fn pretty_print(&self, debug: bool) -> String {
+    fn pretty_print(&self) -> String {
         if **self == 0 {
             return "None".to_string();
         }
@@ -653,6 +653,9 @@ impl Flags {
         if self.contains(Self::REFLECT_NO_STEAL.into()) {
             result.push("REFLECT_NO_STEAL");
         }
+        if self.contains(Self::ALLOW_INTERRUPT.into()) {
+            result.push("ALLOW_INTERRUPT")
+        }
         if self.contains(Self::SUBACTION_INVULN.into()) {
             result.push("SUBACTION_INVULN");
         }
@@ -667,6 +670,9 @@ impl Flags {
         }
         if self.contains(Self::GRAB_HOLD.into()) {
             result.push("GRAB_HOLD");
+        }
+        if self.contains(Self::GUARD_BUBBLE.into()) {
+            result.push("GUARD_BUBBLE");
         }
         if self.contains(Self::SHIELDING.into()) {
             result.push("SHIELDING");
@@ -696,76 +702,68 @@ impl Flags {
             result.push("OFFSCREEN");
         }
 
-        if debug {
-            if self.contains(Self::BIT_1_1.into()) {
-                result.push("BIT_1_1");
-            }
-            if self.contains(Self::BIT_1_3.into()) {
-                result.push("BIT_1_3");
-            }
-            if self.contains(Self::BIT_1_6.into()) {
-                result.push("BIT_1_6");
-            }
-            if self.contains(Self::BIT_1_7.into()) {
-                result.push("BIT_1_7");
-            }
-            if self.contains(Self::BIT_1_8.into()) {
-                result.push("BIT_1_8");
-            }
-            if self.contains(Self::BIT_2_1.into()) {
-                result.push("BIT_2_1");
-            }
-            if self.contains(Self::BIT_2_2.into()) {
-                result.push("BIT_2_2");
-            }
-            if self.contains(Self::BIT_2_7.into()) {
-                result.push("BIT_2_7");
-            }
-            if self.contains(Self::BIT_2_8.into()) {
-                result.push("BIT_2_8");
-            }
-            if self.contains(Self::BIT_3_1.into()) {
-                result.push("BIT_3_1");
-            }
-            if self.contains(Self::BIT_3_2.into()) {
-                result.push("BIT_3_2");
-            }
-            if self.contains(Self::BIT_3_4.into()) {
-                result.push("BIT_3_4");
-            }
-            if self.contains(Self::BIT_3_5.into()) {
-                result.push("BIT_3_5");
-            }
-            if self.contains(Self::BIT_3_6.into()) {
-                result.push("BIT_3_6");
-            }
-            if self.contains(Self::BIT_3_7.into()) {
-                result.push("BIT_3_7");
-            }
-            if self.contains(Self::BIT_4_1.into()) {
-                result.push("BIT_4_1");
-            }
-            if self.contains(Self::BIT_4_4.into()) {
-                result.push("BIT_4_4");
-            }
-            if self.contains(Self::BIT_4_5.into()) {
-                result.push("BIT_4_5");
-            }
-            if self.contains(Self::BIT_4_7.into()) {
-                result.push("BIT_4_7");
-            }
-            if self.contains(Self::BIT_4_8.into()) {
-                result.push("BIT_4_8");
-            }
-            if self.contains(Self::BIT_5_1.into()) {
-                result.push("BIT_5_1");
-            }
-            if self.contains(Self::BIT_5_3.into()) {
-                result.push("BIT_5_3");
-            }
-            if self.contains(Self::BIT_5_6.into()) {
-                result.push("BIT_5_6");
-            }
+        if self.contains(Self::BIT_1_1.into()) {
+            result.push("BIT_1_1");
+        }
+        if self.contains(Self::BIT_1_3.into()) {
+            result.push("BIT_1_3");
+        }
+        if self.contains(Self::BIT_1_6.into()) {
+            result.push("BIT_1_6");
+        }
+        if self.contains(Self::BIT_1_7.into()) {
+            result.push("BIT_1_7");
+        }
+        if self.contains(Self::BIT_2_2.into()) {
+            result.push("BIT_2_2");
+        }
+        if self.contains(Self::BIT_2_7.into()) {
+            result.push("BIT_2_7");
+        }
+        if self.contains(Self::BIT_2_8.into()) {
+            result.push("BIT_2_8");
+        }
+        if self.contains(Self::BIT_3_1.into()) {
+            result.push("BIT_3_1");
+        }
+        if self.contains(Self::BIT_3_2.into()) {
+            result.push("BIT_3_2");
+        }
+        if self.contains(Self::BIT_3_4.into()) {
+            result.push("BIT_3_4");
+        }
+        if self.contains(Self::BIT_3_5.into()) {
+            result.push("BIT_3_5");
+        }
+        if self.contains(Self::BIT_3_6.into()) {
+            result.push("BIT_3_6");
+        }
+        if self.contains(Self::BIT_3_7.into()) {
+            result.push("BIT_3_7");
+        }
+        if self.contains(Self::BIT_4_1.into()) {
+            result.push("BIT_4_1");
+        }
+        if self.contains(Self::BIT_4_4.into()) {
+            result.push("BIT_4_4");
+        }
+        if self.contains(Self::BIT_4_5.into()) {
+            result.push("BIT_4_5");
+        }
+        if self.contains(Self::BIT_4_7.into()) {
+            result.push("BIT_4_7");
+        }
+        if self.contains(Self::BIT_4_8.into()) {
+            result.push("BIT_4_8");
+        }
+        if self.contains(Self::BIT_5_1.into()) {
+            result.push("BIT_5_1");
+        }
+        if self.contains(Self::BIT_5_3.into()) {
+            result.push("BIT_5_3");
+        }
+        if self.contains(Self::BIT_5_6.into()) {
+            result.push("BIT_5_6");
         }
 
         result.join("|")
@@ -774,13 +772,13 @@ impl Flags {
 
 impl Debug for Flags {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", ["Flags{", &self.pretty_print(true), "}"].join(""))
+        write!(f, "{}", ["Flags{", &self.pretty_print(), "}"].join(""))
     }
 }
 
 impl Display for Flags {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.pretty_print(false))
+        write!(f, "{}", self.pretty_print())
     }
 }
 

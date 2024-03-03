@@ -1,5 +1,11 @@
 # Release History
 
+## 0.3.1
+
+---
+
+* Updated bitflags and descriptions with additional info from the decomp
+
 ## 0.3.0
 
 ---

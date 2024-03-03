@@ -111,6 +111,7 @@ pub enum Hurtbox {
 /// * Bit 2 - ABSORB_BUBBLE
 /// * Bit 4 - REFLECT_NO_STEAL
 /// * Bit 5 - REFLECT_BUBBLE
+/// * Bit 7 - ALLOW_INTERRUPT
 ///
 /// Post-frame bitfield 2
 ///
@@ -148,16 +149,24 @@ pub enum Flags {
     BIT_1_1 = 1 << 0,
     /// Active when any absorber hitbox is active (ness down b)
     ABSORB_BUBBLE = 1 << 1,
+    /// "Setting this to 1 causes reflector to skip ownership change". Not sure how this differs
+    /// from REFLECT_NO_STEAL
     BIT_1_3 = 1 << 2,
     /// Active when REFLECT_BUBBLE is active, but the reflected projectile does not change ownership
     /// (e.g. Mewtwo side b)
     REFLECT_NO_STEAL = 1 << 3,
     /// Active when any projectile reflect bubble is active
     REFLECT_BUBBLE = 1 << 4,
+    /// Seems like the bit that determines if the character goes for jab 2 or jab 3
     BIT_1_6 = 1 << 5,
+    /// Seems like the bit that determines if the character goes for jab 1 or jab2/3
     BIT_1_7 = 1 << 6,
-    BIT_1_8 = 1 << 7,
-    BIT_2_1 = 1 << 8,
+    /// Active when the player is able to interrupt their current state (e.g. IASA, wait, fall)
+    ALLOW_INTERRUPT = 1 << 7,
+    /// Active when shielding, likely always accompanied by GUARD_BUBBLE
+    SHIELDING = 1 << 8,
+    /// Related to being curled up? Active when inside a yoshi egg via yoshi's neutral B, active for
+    /// yoshi when he is shielding, and also active for samus when she is in her morph ball
     BIT_2_2 = 1 << 9,
     /// "Active when a character recieves intangibility or invulnerability due to a subaction that
     /// is removed when the subaction ends" - per UnclePunch. Little else is known besides this
@@ -172,6 +181,7 @@ pub enum Flags {
     HITLAG = 1 << 13,
     BIT_2_7 = 1 << 14,
     BIT_2_8 = 1 << 15,
+    /// Active when attached to another character (e.g. both characters during falcon up-b hug)
     BIT_3_1 = 1 << 16,
     BIT_3_2 = 1 << 17,
     /// Active when the character has grabbed another character and is holding them
@@ -180,13 +190,16 @@ pub enum Flags {
     BIT_3_5 = 1 << 20,
     BIT_3_6 = 1 << 21,
     BIT_3_7 = 1 << 22,
-    /// Active when the character is shielding
-    SHIELDING = 1 << 23,
+    /// Active whenever a character has a guard bubble. This includes shielding, as well as
+    /// marth/roy/peach counters
+    GUARD_BUBBLE = 1 << 23,
     BIT_4_1 = 1 << 24,
     /// Active when character is in hitstun
     HITSTUN = 1 << 25,
-    /// Dubious meaning, likely related to subframe events (per UnclePunch). Very little is known
-    /// besides offhand remarks
+    /// Dubious meaning, likely related to subframe events (per UnclePunch). This bit is relevant when
+    /// peach side B hits a guarding opponent. If the guarding opponent is marth, roy, or peach and
+    /// that opponent is using their counter, peach will be forced into the regular side B end animation
+    /// instead of the smash side B end animation
     HITBOX_TOUCHING_SHIELD = 1 << 26,
     BIT_4_4 = 1 << 27,
     BIT_4_5 = 1 << 28,
