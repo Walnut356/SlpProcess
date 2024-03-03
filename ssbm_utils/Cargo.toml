@@ -1,6 +1,6 @@
 [package]
 name = "ssbm_utils"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 repository = "https://github.com/Walnut356/SlpProcess"
 readme = "./README.md"
