@@ -1,6 +1,7 @@
 #![allow(non_camel_case_types)]
 
 use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
+use anyhow::{anyhow, Result};
 
 use crate::enums::Character;
 
@@ -19,7 +20,10 @@ impl State {
         if state < 341 {
             Self::Universal(ActionState::from_repr(state).unwrap())
         } else if let Some(c) = character {
-            Self::Unique(CharacterState::from_char_and_state(c, state))
+            match CharacterState::from_char_and_state(c, state) {
+                Ok(x) => Self::Unique(x),
+                Err(_) => Self::Unknown(state),
+            }
         } else {
             Self::Unknown(state)
         }
@@ -1714,11 +1718,11 @@ pub enum CharacterState {
 }
 
 impl CharacterState {
-    pub fn from_char_and_state(character: Character, state: u16) -> Self {
+    pub fn from_char_and_state(character: Character, state: u16) -> Result<Self> {
         use CharacterState::*;
         assert!(state >= 341);
         // pain
-        match character {
+        Ok(match character {
             Character::CaptainFalcon => match state {
                 341 => SWORD_SWING_4,
                 342 => BAT_SWING_4,
@@ -1743,7 +1747,7 @@ impl CharacterState {
                 361 => FALCON_KICK_AIR_ENDING_IN_AIR,
                 362 => FALCON_KICK_GROUND_ENDING_IN_AIR,
                 363 => FALCON_KICK_HIT_WALL,
-                _ => panic!("Invalid state value for {character}. Value must be in range 347-363 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 347-363 inclusive. Got: {state}"))
             },
             Character::DonkeyKong => match state {
                 341 => HEAVY_WAIT,
@@ -1791,7 +1795,7 @@ impl CharacterState {
                 383 => HAND_SLAP_STARTUP,
                 384 => HAND_SLAP_LOOP,
                 385 => HAND_SLAP_END,
-                _ => panic!("Invalid state value for {character}. Value must be in range 351-385 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 351-385 inclusive. Got: {state}"))
             },
             Character::Fox => match state {
                 341 => BLASTER_GROUND_STARTUP,
@@ -1829,7 +1833,7 @@ impl CharacterState {
                 373 => SMASH_TAUNT_LEFT_RISE,
                 374 => SMASH_TAUNT_RIGHT_FINISH,
                 375 => SMASH_TAUNT_LEFT_FINISH,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-375 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-375 inclusive. Got: {state}"))
             },
             Character::GameAndWatch => match state {
                 341 => JAB,
@@ -1872,7 +1876,7 @@ impl CharacterState {
                 378 => OIL_PANIC_AIR,
                 379 => OIL_PANIC_AIR_ABSORB,
                 380 => OIL_PANIC_AIR_SPILL,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-380 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-380 inclusive. Got: {state}"))
             },
             // lol
             Character::Kirby => match state {
@@ -2078,7 +2082,7 @@ impl CharacterState {
                 541 => GIGA_BOWSER_FIRE_BREATH_AIR_START,
                 542 => GIGA_BOWSER_FIRE_BREATH_AIR_LOOP,
                 543 => GIGA_BOWSER_FIRE_BREATH_AIR_END,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-537 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-537 inclusive. Got: {state}"))
             },
             Character::Bowser => match state {
                 341 => FIRE_BREATH_GROUND_STARTUP,
@@ -2104,7 +2108,7 @@ impl CharacterState {
                 361 => BOMB_GROUND_BEGIN,
                 362 => BOMB_AIR,
                 363 => BOMB_LAND,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-363 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-363 inclusive. Got: {state}"))
             },
             Character::Link => match state {
                 341 => SIDE_SMASH_2,
@@ -2128,7 +2132,7 @@ impl CharacterState {
                 359 => BOMB_AIR,
                 360 => ZAIR,
                 361 => ZAIR_CATCH,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-361 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-361 inclusive. Got: {state}"))
             },
             Character::Luigi => match state {
                 341 => FIREBALL_GROUND,
@@ -2148,7 +2152,7 @@ impl CharacterState {
                 356 => SUPER_JUMP_PUNCH_AIR,
                 357 => CYCLONE_GROUND,
                 358 => CYCLONE_AIR,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-358 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-358 inclusive. Got: {state}"))
             },
             Character::Mario => match state {
                 341 => TAUNT_R,
@@ -2161,7 +2165,7 @@ impl CharacterState {
                 348 => SUPER_JUMP_PUNCH_AIR,
                 349 => TORNADO_GROUND,
                 350 => TORNADO_AIR,
-                _ => panic!("Invalid state value for {character}. Value must be in range 343-350 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 343-350 inclusive. Got: {state}"))
             },
             Character::Marth => match state {
                 341 => SHIELD_BREAKER_GROUND_START_CHARGE,
@@ -2196,7 +2200,7 @@ impl CharacterState {
                 370 => COUNTER_GROUND_HIT,
                 371 => COUNTER_AIR,
                 372 => COUNTER_AIR_HIT,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-372 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-372 inclusive. Got: {state}"))
             },
             Character::Mewtwo => match state {
                 341 => SHADOW_BALL_GROUND_START_CHARGE,
@@ -2219,7 +2223,7 @@ impl CharacterState {
                 358 => TELEPORT_AIR_REAPPEAR,
                 359 => DISABLE_GROUND,
                 360 => DISABLE_AIR,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-360 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-360 inclusive. Got: {state}"))
             },
             Character::Ness => match state {
                 341 => SIDE_SMASH,
@@ -2258,7 +2262,7 @@ impl CharacterState {
                 374 => PSI_MAGNET_AIR_ABSORB,
                 375 => PSI_MAGNET_AIR_END,
                 376 => PSI_MAGNET_AIR_TURN,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-375 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-375 inclusive. Got: {state}"))
             },
             Character::Peach => match state {
                 341 => FLOAT,
@@ -2291,7 +2295,7 @@ impl CharacterState {
                 368 => TOAD_AIR_ATTACK,
                 369 => PARASOL_OPEN,
                 370 => PARASOL_FALL,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-370 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-370 inclusive. Got: {state}"))
             },
             Character::Pikachu => match state {
                 341 => TJOLT_GROUND,
@@ -2320,7 +2324,7 @@ impl CharacterState {
                 364 => THUNDER_AIR,
                 365 => THUNDER_AIR_HIT,
                 366 => THUNDER_AIR_END,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-366 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-366 inclusive. Got: {state}"))
             },
             Character::Jigglypuff => match state {
                 341 => JUMP_2,
@@ -2354,7 +2358,7 @@ impl CharacterState {
                 370 => REST_AIR_LEFT,
                 371 => REST_GROUND_RIGHT,
                 372 => REST_AIR_RIGHT,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-372 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-372 inclusive. Got: {state}"))
             },
             Character::Samus => match state {
                 341 => BOMB_JUMP_GROUND,
@@ -2375,7 +2379,7 @@ impl CharacterState {
                 356 => BOMB_AIR,
                 357 => ZAIR,
                 358 => ZAIR_CATCH,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-358 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-358 inclusive. Got: {state}"))
             },
             Character::Yoshi => match state {
                 341 => GUARD_ON,
@@ -2406,7 +2410,7 @@ impl CharacterState {
                 366 => BOMB_GROUND,
                 367 => BOMB_LAND,
                 368 => BOMB_AIR,
-                _ => panic!("Invalid state value for {character}. Value must be in range 342-368 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 342-368 inclusive. Got: {state}"))
             },
             Character::Zelda => match state {
                 341 => NAYRUS_LOVE_GROUND,
@@ -2427,7 +2431,7 @@ impl CharacterState {
                 356 => TRANSFORM_GROUND_ENDING,
                 357 => TRANSFORM_AIR,
                 358 => TRANSFORM_AIR_ENDING,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-358 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-358 inclusive. Got: {state}"))
             },
             Character::Sheik => match state {
                 341 => NEEDLE_GROUND_START_CHARGE,
@@ -2454,7 +2458,7 @@ impl CharacterState {
                 362 => TRANSFORM_GROUND_ENDING,
                 363 => TRANSFORM_AIR,
                 364 => TRANSFORM_AIR_ENDING,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-364 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-364 inclusive. Got: {state}"))
             },
             Character::Falco => match state {
                 341 => BLASTER_GROUND_STARTUP,
@@ -2492,7 +2496,7 @@ impl CharacterState {
                 373 => SMASH_TAUNT_LEFT_RISE,
                 374 => SMASH_TAUNT_RIGHT_FINISH,
                 375 => SMASH_TAUNT_LEFT_FINISH,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-375 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-375 inclusive. Got: {state}"))
             },
             Character::YoungLink => match state {
                 341 => SIDE_SMASH_2,
@@ -2516,7 +2520,7 @@ impl CharacterState {
                 359 => BOMB_AIR,
                 360 => ZAIR,
                 361 => ZAIR_CATCH,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-361 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-361 inclusive. Got: {state}"))
             },
             Character::DrMario => match state {
                 341 => TAUNT_R,
@@ -2529,7 +2533,7 @@ impl CharacterState {
                 348 => SUPER_JUMP_PUNCH_AIR,
                 349 => TORNADO_GROUND,
                 350 => TORNADO_AIR,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-350 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-350 inclusive. Got: {state}"))
             },
             Character::Roy => match state {
                 341 => FLARE_BLADE_GROUND_START_CHARGE,
@@ -2564,7 +2568,7 @@ impl CharacterState {
                 370 => COUNTER_GROUND_HIT,
                 371 => COUNTER_AIR,
                 372 => COUNTER_AIR_HIT,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-372 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-372 inclusive. Got: {state}"))
             },
             Character::Pichu => match state {
                 341 => TJOLT_GROUND,
@@ -2593,7 +2597,7 @@ impl CharacterState {
                 364 => THUNDER_AIR,
                 365 => THUNDER_AIR_HIT,
                 366 => THUNDER_AIR_END,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-366 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-366 inclusive. Got: {state}"))
             },
             Character::Ganondorf => match state {
                 341 => SWORD_SWING_4,
@@ -2619,7 +2623,7 @@ impl CharacterState {
                 361 => WIZARDS_FOOT_AIR_ENDING_IN_AIR,
                 362 => WIZARDS_FOOT_GROUND_ENDING_IN_AIR,
                 363 => WIZARDS_FOOT_HIT_WALL,
-                _ => panic!("Invalid state value for {character}. Value must be in range 347-363 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 347-363 inclusive. Got: {state}"))
             },
 
             Character::Popo | Character::IceClimbers | Character::Nana => match state {
@@ -2649,14 +2653,14 @@ impl CharacterState {
                 364 => BELAY_3,
                 365 => BELAY_CATAPULTING,
                 366 => BELAY_5,
-                _ => panic!("Invalid state value for {character}. Value must be in range 341-358 inclusive. Got: {state}")
+                _ => return Err(anyhow!("Invalid state value for {character}. Value must be in range 341-358 inclusive. Got: {state}"))
             },
             Character::MasterHand |
             Character::WireframeMale |
             Character::WireframeFemale |
             Character::GigaBowser |
             Character::CrazyHand |
-            Character::Sandbag => panic!("Invalid state value for {character}. No state specific information available"),
-        }
+            Character::Sandbag => return Err(anyhow!("Invalid state value for {character}. No state specific information available")),
+        })
     }
 }
