@@ -90,7 +90,7 @@ pub mod constants {
 #[macro_export]
 macro_rules! mf {
     ($frames:expr) => {
-        Into::<usize>::into($frames + 123)
+        TryInto::<usize>::try_into($frames + 123).unwrap()
     };
 }
 

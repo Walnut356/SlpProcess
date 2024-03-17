@@ -2,17 +2,17 @@
 #![allow(clippy::upper_case_acronyms)]
 #![allow(non_upper_case_globals)]
 
-use num_enum::{FromPrimitive, IntoPrimitive};
-use strum_macros::{Display, EnumString, IntoStaticStr};
+use strum_macros::{Display, EnumString, IntoStaticStr, FromRepr};
 
 /// Attack values as they appear in the stale move queue, and the player's last_attack_landed field.
 #[derive(
     Debug,
     Clone,
     Copy,
-    FromPrimitive,
-    IntoPrimitive,
+    FromRepr,
     PartialEq,
+    Eq,
+    Hash,
     PartialOrd,
     EnumString,
     Display,
@@ -20,7 +20,6 @@ use strum_macros::{Display, EnumString, IntoStaticStr};
 )]
 #[repr(u8)]
 pub enum Attack {
-    #[default]
     NONE = 0,
     /// Any attack that does not register as a move in the stale move queue
     NON_STALING = 1,

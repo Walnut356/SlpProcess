@@ -491,7 +491,6 @@ impl From<u64> for Flags {
 impl From<Flags> for u64 {
     #[inline]
     fn from(val: Flags) -> Self {
-        use Flags as F;
         match val {
             Flags::Raw(x) => x,
             // safe due to repr(u64) guarantees

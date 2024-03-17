@@ -70,10 +70,11 @@ impl From<State> for u16 {
 ///
 /// ID's match debug mode names, see docstrings for additional context
 #[derive(
-    Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, EnumString, IntoStaticStr, Display, FromRepr,
+    Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, EnumString, IntoStaticStr, Display, FromRepr, Default
 )]
 #[repr(u16)]
 pub enum ActionState {
+    #[default]
     NONE = u16::MAX,
     /// Bottom blast zone death
     DEAD_DOWN = 0,
