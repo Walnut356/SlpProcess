@@ -100,4 +100,6 @@ pub mod prelude {
     pub use crate::enums::*;
     pub use crate::mf;
     pub use crate::types::*;
+    pub use crate::pos;
+    pub use crate::vel;
 }
