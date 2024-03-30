@@ -76,7 +76,7 @@ pub(crate) fn find_defense(
                 post.stocks[i],
                 post.percent[i],
                 damage_taken,
-                Attack::from(attacks[i]),
+                Attack::from_repr(attacks[i]).unwrap(),
                 State::from_state_and_char(prev_state, Some(player_char)),
                 grounded[i - 1],
                 post.position[i],

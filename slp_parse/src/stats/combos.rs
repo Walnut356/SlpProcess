@@ -1,5 +1,6 @@
 use std::{
-    ops::{Deref, Range},
+    collections::HashSet,
+    ops::{Deref, Range, RangeInclusive},
     path::PathBuf,
     sync::Arc,
 };
@@ -7,20 +8,18 @@ use std::{
 use derive_new::new;
 use serde_json::json;
 use ssbm_utils::{
-    checks::{
-        get_damage_taken, is_cmd_grabbed, is_damaged, is_dodging, is_downed, is_dying, is_grabbed,
-        is_in_hitlag, is_in_hitstun, is_ledge_action, is_shield_broken, is_shielding,
-        is_special_fall, is_teching, is_upb_lag, just_lost_stock,
-    },
+    checks::{is_grabbed, just_lost_stock},
     enums::{stage::Stage, Attack, Character, StageID},
+    mf,
+    prelude::*,
     types::Position,
 };
 
-use crate::frames::Frames;
+use crate::{frames::Frames, Game, GameMetadata};
 
 pub const COMBO_LENIENCY: u32 = 45;
-pub const PRE_COMBO_BUFFER_FRAMES: i32 = 60;
-pub const POST_COMBO_BUFFER_FRAMES: i32 = 90;
+pub const PRE_COMBO_BUFFER_FRAMES: i32 = 75;
+pub const POST_COMBO_BUFFER_FRAMES: i32 = 120;
 
 #[derive(Debug, Clone, new)]
 pub struct Move {
@@ -31,10 +30,12 @@ pub struct Move {
     pub damage: f32,
     pub opponent_position: Position,
     pub player_position: Position,
+    pub player_orientation: Orientation,
 }
 
 #[derive(Debug, Clone, new)]
 pub struct Combo {
+    pub path: Arc<PathBuf>,
     #[new(default)]
     pub move_list: Vec<Move>,
     #[new(value = "false")]
@@ -54,9 +55,9 @@ pub struct Combo {
 }
 
 impl Combo {
-    pub fn to_queue_obj(&self, path: &str) -> serde_json::Value {
+    pub fn to_queue_obj(&self) -> serde_json::Value {
         json!({
-            "path": path,
+            "path": self.path.to_str(),
             "startFrame": self.start_frame - PRE_COMBO_BUFFER_FRAMES,
             "endFrame": self.end_frame + POST_COMBO_BUFFER_FRAMES,
         })
@@ -70,6 +71,24 @@ impl Combo {
         self.move_list
             .iter()
             .filter(move |m| attacks.contains(&m.move_id))
+    }
+
+    pub fn damage(&self) -> f32 {
+        self.end_percent - self.start_percent
+    }
+
+    pub fn duration(&self) -> i32 {
+        self.end_frame - self.start_frame
+    }
+
+    /// Returns a 0-indexed range object useful for iterating over the frames during the combo
+    pub fn frame_range(&self) -> RangeInclusive<usize> {
+        (self.start_frame + 123) as usize..=(self.end_frame + 123) as usize
+    }
+
+    /// Returns a -123 indexed range object useful for checking the timing of other events
+    pub fn melee_frame_range(&self) -> RangeInclusive<i32> {
+        self.start_frame..=self.end_frame
     }
 }
 
@@ -143,17 +162,16 @@ pub fn find_combos(
         let plyr_state = plyr_frames.post.action_state[i];
         let plyr_position = plyr_frames.post.position[i];
 
-        let opnt_state = opnt_frames.post.action_state[i];
-        let prev_opnt_state = opnt_frames.post.action_state[i - 1];
+        // let opnt_state = opnt_frames.post.action_state[i];
+        // let prev_opnt_state = opnt_frames.post.action_state[i - 1];
 
         let opnt_position = opnt_frames.post.position[i];
-        let opnt_is_damaged = is_damaged(opnt_state);
-        let opnt_flags = opnt_frames.post.flags.as_ref().unwrap()[i];
-        let opnt_is_in_hitstun = is_in_hitstun(opnt_flags);
-        let opnt_is_grabbed = is_grabbed(opnt_state) || is_cmd_grabbed(opnt_state);
-        let opnt_percent = opnt_frames.post.percent[i];
+        let opnt_is_damaged = opnt_frames.damaged_state(i);
+        let opnt_is_in_hitstun = opnt_frames.in_hitstun(i);
+        let opnt_is_grabbed = opnt_frames.grabbed(i) || opnt_frames.cmd_grabbed(i);
+        let opnt_damage_taken = opnt_frames.damage_taken(i);
         let opnt_prev_percent = opnt_frames.post.percent[i - 1];
-        let opnt_damage_taken = get_damage_taken(opnt_percent, opnt_prev_percent);
+        // let opnt_damage_taken = get_damage_taken(opnt_percent, opnt_prev_percent);
 
         /* "Keep track of whether actionState changes after a hit. Used to compute move count
         When purely using action state there was a bug where if you did two of the same
@@ -180,6 +198,7 @@ pub fn find_combos(
             // if the opponent has been hit and there's no active combo, start a combo
             if event.is_none() {
                 event = Some(Combo::new(
+                    path.clone(),
                     opnt_position,
                     plyr_frames.post.stocks[i],
                     opnt_frames.post.stocks[i],
@@ -197,10 +216,11 @@ pub fn find_combos(
                 if combo_state.last_hit_animation.is_none() {
                     event.as_mut().unwrap().move_list.push(Move::new(
                         i as i32 - 123,
-                        Attack::from(plyr_frames.post.last_attack_landed[i]),
+                        Attack::from_repr(plyr_frames.post.last_attack_landed[i]).unwrap(),
                         opnt_damage_taken,
                         opnt_position,
                         plyr_position,
+                        Orientation::from_repr(plyr_frames.post.orientation[i] as i8).unwrap(),
                     ));
                 } else {
                     let temp = event
@@ -222,17 +242,17 @@ pub fn find_combos(
         }
 
         // Now we check all relevant conditions and see if we should keep the combo going or end it
-        let opnt_is_in_hitlag = is_in_hitlag(opnt_flags);
-        let opnt_is_teching = is_teching(opnt_state);
-        let opnt_is_downed = is_downed(opnt_state);
-        let opnt_is_dying = is_dying(opnt_state);
+        let opnt_is_in_hitlag = opnt_frames.in_hitlag(i);
+        let opnt_is_teching = opnt_frames.teching(i);
+        let opnt_is_downed = opnt_frames.downed(i);
+        let opnt_is_dying = opnt_frames.dying(i);
         let opnt_is_offstage = stage.is_offstage(opnt_position);
-        let opnt_is_dodging = is_dodging(opnt_state);
-        let opnt_is_shielding = is_shielding(opnt_state);
-        let opnt_shield_broken = is_shield_broken(opnt_state);
-        let opnt_is_ledge_action = is_ledge_action(opnt_state);
-        let opnt_is_special_fall = is_special_fall(opnt_state);
-        let opnt_is_upb_lag = is_upb_lag(opnt_state, prev_opnt_state);
+        let opnt_is_dodging = opnt_frames.dodging(i);
+        let opnt_is_shielding = opnt_frames.shielding(i);
+        let opnt_shield_broken = opnt_frames.shield_broken(i);
+        let opnt_is_ledge_action = opnt_frames.ledge_action(i);
+        let opnt_is_special_fall = opnt_frames.special_fall(i);
+        let opnt_is_upb_lag = opnt_frames.upb_lag(i);
 
         if opnt_is_damaged
             || opnt_is_grabbed
@@ -272,7 +292,9 @@ pub fn find_combos(
             temp.end_percent = opnt_prev_percent;
             temp.end_position = opnt_frames.post.position[i - 1];
 
-            result.push(event.unwrap());
+            if !temp.move_list.is_empty() {
+                result.push(event.unwrap());
+            }
 
             event = None;
         }
@@ -280,3 +302,4 @@ pub fn find_combos(
 
     Combos { data: result, path }
 }
+

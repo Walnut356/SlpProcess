@@ -93,10 +93,10 @@ pub fn find_lcancels(frames: &Frames, stage: &Stage) -> LCancelStats {
 
         table.frame_index.push(i as i32 - 123);
         table.stocks.push(stocks[i]);
-        table.attack.push(attack.unwrap().into());
+        table.attack.push(attack.unwrap());
         table.l_cancel.push(LCancelState::from_repr(lcancel) == Some(LCancelState::SUCCESS));
         table.trigger_input_frame.push(l_input_frame);
-        table.position.push(stage.ground_from_id(last_ground_ids[i]).into());
+        table.position.push(stage.ground_from_id(last_ground_ids[i]));
         table.fastfall.push(is_fastfalling(flags[i - 1]));
         table.during_hitlag.push(during_hitlag);
         table.percent.push(percents[i]);

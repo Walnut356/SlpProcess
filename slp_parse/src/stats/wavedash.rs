@@ -50,7 +50,7 @@ pub fn find_wavedashes(frames: &Frames) -> WavedashStats {
         wavedashes.waveland.push(waveland);
     }
 
-    wavedashes.into()
+    wavedashes
 }
 
 fn degrees_below_horizontal(stick: StickPos) -> (f32, Direction) {

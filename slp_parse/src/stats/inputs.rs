@@ -157,6 +157,6 @@ pub fn find_inputs(frames: &Frames, duration: usize) -> InputStats {
         apm: vec![(digital_counts + stick_counts + cstick_counts + trigger_counts) as f32
             / (duration as f32 / 60.0 / 60.0)],
         trigger_pref: vec![trigger_pref],
-        jump_pref: vec![trigger_pref],
+        jump_pref: vec![jump_pref],
     }
 }

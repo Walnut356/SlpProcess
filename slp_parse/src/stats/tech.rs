@@ -35,7 +35,9 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
         if !curr_teching {
             if was_teching && event.is_some() {
                 let row = event.as_mut().unwrap();
-                for j in 0..=8 {
+                // if the defender was hit within 10 frames of exiting the tech animation, consider
+                // the tech punished
+                for j in 0..=10 {
                     if i + j >= pre.len() {
                         break;
                     }
@@ -68,7 +70,7 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
                 tech_type,
                 post.position[i],
                 stage.ground_from_id(last_ground[i]),
-                attacks[i].into(),
+                Attack::from_repr(attacks[i]).unwrap(),
                 post.position[i].distance(opnt_frames.post.position[i]),
                 (-40..=0)
                     .contains(&most_recent_input)
@@ -118,7 +120,7 @@ pub fn find_techs(plyr_frames: &Frames, opnt_frames: &Frames, stage: &Stage) -> 
         }
     }
 
-    table.into()
+    table
 }
 
 #[derive(Debug)]
