@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ssbm_utils::enums::{ActionRange as AR, ActionState, BitFlags, EngineInput, Flags};
+use ssbm_utils::{enums::{ActionState, BitFlags, EngineInput, Flags}, checks::*};
 
 use crate::events::{
     post_frame::{PostFrames, PostRow},
@@ -63,65 +63,53 @@ impl std::fmt::Display for Frame {
 impl Frames {
     #[inline]
     pub fn just_changed_state(&self, i: usize) -> bool {
-        self.post.action_state[i] != self.post.action_state[i - 1]
+        i > 0 && just_changed_state(self.post.action_state[i], self.post.action_state[i - 1])
     }
 
     #[inline]
     pub fn just_entered_state(&self, state: ActionState, i: usize) -> bool {
-        self.post.action_state[i] == state && self.post.action_state[i - 1] != state
+        i > 0 && just_entered_state(state, self.post.action_state[i], self.post.action_state[i - 1])
     }
 
     #[inline]
     pub fn just_exited_state(&self, state: ActionState, i: usize) -> bool {
-        self.post.action_state[i] != state && self.post.action_state[i - 1] == state
+        i > 0 && just_exited_state(state, self.post.action_state[i], self.post.action_state[i - 1])
     }
 
     #[inline]
     pub fn just_took_damage(&self, i: usize) -> bool {
-        self.post.percent[i] > self.post.percent[i - 1]
+        i > 0 && just_took_damage(self.post.percent[i], self.post.percent[i - 1])
     }
 
     #[inline]
     pub fn damage_taken(&self, i: usize) -> f32 {
-        (self.post.percent[i] - self.post.percent[i - 1]).max(0.0)
+        (self.post.percent[i] - self.post.percent.get(i - 1).unwrap_or(&0.0)).max(0.0)
     }
 
     #[inline]
     pub fn in_hitlag(&self, i: usize) -> bool {
-        match &self.post.flags {
-            Some(f) => Flags::HITLAG.intersects(f[i]),
-            None => false,
-        }
+        self.post.flags.as_ref().is_some_and(|x| is_in_hitlag(x[i]))
     }
 
     #[inline]
     pub fn in_defender_hitlag(&self, i: usize) -> bool {
-        match &self.post.flags {
-            Some(f) => Flags::DEFENDER_HITLAG.intersects(f[i]),
-            None => false,
-        }
+        self.post.flags.as_ref().is_some_and(|x| is_in_defender_hitlag(x[i]))
     }
 
     #[inline]
     pub fn in_hitstun(&self, i: usize) -> bool {
-        match &self.post.flags {
-            Some(f) => Flags::HITSTUN.intersects(f[i]),
-            None => false,
-        }
+        self.post.flags.as_ref().is_some_and(|x| is_in_hitstun(x[i]))
     }
 
     #[inline]
     pub fn in_magnifying_glass(&self, i: usize) -> bool {
-        match &self.post.flags {
-            Some(f) => Flags::OFFSCREEN.intersects(f[i]),
-            None => false,
-        }
+        self.post.flags.as_ref().is_some_and(|x| is_in_magnifying_glass(x[i]))
     }
 
     #[inline]
     pub fn shielding(&self, i: usize) -> bool {
         match &self.post.flags {
-            Some(f) => Flags::SHIELDING.intersects(f[i]),
+            Some(f) => Flags::SHIELDING.contained_by(f[i]),
             None => matches!(
                 // deliberately ignoring shield release
                 ActionState::from_repr(self.post.action_state[i]).unwrap(),
@@ -135,92 +123,81 @@ impl Frames {
 
     #[inline]
     pub fn fastfalling(&self, i: usize) -> bool {
-        match &self.post.flags {
-            Some(f) => Flags::FASTFALL.intersects(f[i]),
-            None => false,
-        }
+        self.post.flags.as_ref().is_some_and(|x| is_fastfalling(x[i]))
     }
 
     #[inline]
     pub fn damaged_state(&self, i: usize) -> bool {
-        let state = self.post.action_state[i];
-        (AR::DAMAGE_START..=AR::DAMAGE_END).contains(&state)
-            || ActionState::DAMAGE_FALL == state
-            || ActionState::DOWN_DAMAGE_D == state
-            || ActionState::DOWN_DAMAGE_U == state
+        is_damaged(self.post.action_state[i])
     }
 
     #[inline]
     pub fn grabbed(&self, i: usize) -> bool {
-        (AR::CAPTURE_START..=AR::CAPTURE_END).contains(&self.post.action_state[i])
+        is_grabbed(self.post.action_state[i])
     }
 
     #[inline]
     pub fn cmd_grabbed(&self, i: usize) -> bool {
-        let state = self.post.action_state[i];
-        ActionState::BARREL_WAIT != state
-            && ((AR::COMMAND_GRAB_RANGE1_START..=AR::COMMAND_GRAB_RANGE1_END).contains(&state)
-                || (AR::COMMAND_GRAB_RANGE2_START..=AR::COMMAND_GRAB_RANGE2_END).contains(&state))
+        is_cmd_grabbed(self.post.action_state[i])
     }
 
     #[inline]
     pub fn teching(&self, i: usize) -> bool {
-        let state = self.post.action_state[i];
-        (AR::TECH_START..=AR::TECH_END).contains(&state)
-        // || (AR::DOWN_START..=AR::DOWN_END).contains(&state)
-        || ActionState::FLY_REFLECT_CEIL == state
-        || ActionState::FLY_REFLECT_WALL == state
+        is_teching(self.post.action_state[i])
     }
 
     #[inline]
     pub fn downed(&self, i: usize) -> bool {
-        (AR::DOWN_START..=AR::DOWN_END).contains(&self.post.action_state[i])
+        is_downed(self.post.action_state[i])
     }
 
     #[inline]
     pub fn thrown(&self, i: usize) -> bool {
-        (AR::THROWN_START..=AR::THROWN_END).contains(&self.post.action_state[i])
+        is_thrown(self.post.action_state[i])
     }
 
     #[inline]
     pub fn dying(&self, i: usize) -> bool {
-        (AR::DYING_START..=AR::DYING_END).contains(&self.post.action_state[i])
+        is_dying(self.post.action_state[i])
     }
 
     #[inline]
     pub fn dodging(&self, i: usize) -> bool {
-        (AR::DODGE_START..AR::DODGE_END).contains(&self.post.action_state[i])
+        is_dodging(self.post.action_state[i])
     }
 
     #[inline]
     pub fn shield_broken(&self, i: usize) -> bool {
-        (AR::GUARD_BREAK_START..=AR::GUARD_BREAK_END).contains(&self.post.action_state[i])
+        is_shield_broken(self.post.action_state[i])
     }
 
     #[inline]
     pub fn ledge_action(&self, i: usize) -> bool {
-        (AR::LEDGE_ACTION_START..=AR::LEDGE_ACTION_END).contains(&self.post.action_state[i])
+        is_ledge_action(self.post.action_state[i])
     }
 
     #[inline]
     pub fn special_fall(&self, i: usize) -> bool {
-        (AR::FALL_SPECIAL_START..=AR::FALL_SPECIAL_END).contains(&self.post.action_state[i])
+        is_special_fall(self.post.action_state[i])
+    }
+
+    #[inline]
+    pub fn upb_lag(&self, i: usize) -> bool {
+        i > 0 && is_upb_lag(self.post.action_state[i], self.post.action_state[i - 1])
     }
 
     #[inline]
     pub fn just_lost_stock(&self, i: usize) -> bool {
-        self.post.stocks[i] < self.post.stocks[i - 1]
+        just_lost_stock(self.post.stocks[i], self.post.stocks[i - 1])
     }
 
     #[inline]
     pub fn just_pressed_any(&self, target: EngineInput, i: usize) -> bool {
-        target.intersects(self.pre.engine_buttons[i])
-            && !target.intersects(self.pre.engine_buttons[i - 1])
+        just_pressed_any(target, self.pre.engine_buttons[i], self.pre.engine_buttons[i - 1])
     }
 
     #[inline]
     pub fn just_pressed_all(&self, target: EngineInput, i: usize) -> bool {
-        target.contained_by(self.pre.engine_buttons[i])
-            && !target.contained_by(self.pre.engine_buttons[i - 1])
+        just_pressed_all(target, self.pre.engine_buttons[i], self.pre.engine_buttons[i - 1])
     }
 }

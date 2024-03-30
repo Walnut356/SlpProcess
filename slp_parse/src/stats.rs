@@ -9,7 +9,8 @@ pub(crate) mod wavedash;
 
 use std::sync::Arc;
 
-pub use combos::Combos;
+pub use combos::{Combos, Combo, Move, rate_falco_combos};
+
 pub use defense::DefenseStats;
 pub use inputs::InputStats;
 pub use items::ItemStats;
@@ -43,6 +44,7 @@ pub enum StatType {
 
 #[derive(Debug, Default, Clone)]
 pub struct Stats {
+    pub metadata: Arc<Metadata>,
     /// Minimum Replay Version: Any
     pub input: InputStats,
     /// Minimum Replay Version: Any

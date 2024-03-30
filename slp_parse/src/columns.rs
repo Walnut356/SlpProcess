@@ -1,4 +1,4 @@
-use strum_macros::{Display, EnumString, IntoStaticStr};
+use strum_macros::{Display, EnumString, IntoStaticStr, VariantNames};
 
 #[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
 pub enum PreFrame {
@@ -148,7 +148,7 @@ pub enum InputStats {
     JumpPref,
 }
 
-#[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr)]
+#[derive(Debug, Clone, Copy, Display, EnumString, IntoStaticStr, VariantNames)]
 pub enum DefenseStats {
     FrameIndex,
     Stocks,

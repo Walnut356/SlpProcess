@@ -11,7 +11,7 @@ use ssbm_utils::{
     types::{Position, Velocity},
 };
 
-use crate::{events::game_start::Version, game::Metadata, Port};
+use crate::{game::Metadata, Port};
 
 /// Contains all post-frame data for a single character. Stored in columnar format, thus row-wise
 /// access via `.get_frame(index)` will be very slow. If possible, only iterate through the columns

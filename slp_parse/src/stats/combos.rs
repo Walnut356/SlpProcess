@@ -303,3 +303,188 @@ pub fn find_combos(
     Combos { data: result, path }
 }
 
+pub fn rate_falco_combos(connect_code: &str, games: &[Game]) -> Vec<(Combo, i32)> {
+    let mut result = Vec::new();
+
+    for game in games {
+        let player = game.player_by_code(connect_code);
+
+        if player.is_err() {
+            continue;
+        }
+
+        let player = player.unwrap();
+        if player.character != Character::Falco {
+            continue;
+        }
+
+        let stage = Stage::from_id(game.stage());
+        let opnt = game.opponent_by_code(connect_code).unwrap();
+
+        for combo in &player.combos.data {
+            let mut rating: i32 = 0;
+
+            if !combo.did_kill || combo.move_list.len() < 3 {
+                rating -= 100;
+            } else if combo.start_percent == 0.0 {
+                // 0-death bonus
+                rating += 10;
+            }
+
+            // really really long combos are rarely worth watching
+            if combo.end_frame - combo.start_frame >= 900 {
+                rating -= 100;
+            }
+
+            if combo.is_game_ender() {
+                rating += 10;
+            }
+
+            // incentivize longer combos, but cap at 60. Longer combos tend to be meandering and
+            // not very interesting.
+            rating += (combo.move_list.len() * 10).min(70) as i32;
+
+            // incentivize combos where the opponent is in hitstun more of the time - balances out
+            // the above by allowing shorter combos to get extra points
+            let hitstun_frames = opnt.frames.post.flags.as_ref().unwrap()
+                [mf!(combo.start_frame)..mf!(combo.end_frame)]
+                .iter()
+                .fold(0, |acc, x| {
+                    if (Flags::HITSTUN).contained_by(*x) {
+                        acc + 1
+                    } else {
+                        acc
+                    }
+                });
+
+            rating += ((hitstun_frames as f32 / combo.duration() as f32) * 50.0) as i32;
+
+            // deduct points if the player gets hit
+            for def in &player.stats.defense.as_ref().unwrap().frame_index {
+                if (combo.start_frame..combo.end_frame).contains(def) {
+                    rating -= 5;
+                }
+            }
+
+            // deduct points if the first hit is offstage - this targets certain long edgeguard
+            // strings that aren't particularly interesting
+            if stage.is_offstage(combo.move_list[0].opponent_position) {
+                rating -= 10;
+            }
+
+            {
+                // deduct points for missing moves. Does not count B moves, as those can be used for
+                // utility purposes
+                let mut attack = false;
+                let mut hit = false;
+                let flags = player.frames.post.flags.as_deref().unwrap();
+
+                for i in combo.frame_range() {
+                    let prev = player.frames.post.action_state[i - 1];
+                    let state = player.frames.post.action_state[i];
+
+                    if ActionState::GROUND_ATTACK_RANGE.contains(&state) {
+                        if state != prev {
+                            attack = true;
+                            hit = false;
+                        }
+                        if Flags::HITLAG.contained_by(flags[i])
+                            && !Flags::DEFENDER_HITLAG.contained_by(flags[i])
+                        {
+                            hit = true;
+                        }
+                    } else {
+                        if attack && !hit {
+                            rating -= 5;
+                        }
+                        attack = false;
+                        hit = false;
+                    }
+                }
+            }
+
+            let mut moveset = HashSet::new();
+
+            for mv in &combo.move_list {
+                moveset.insert(mv.move_id);
+
+                // non-standard moves are cool
+                if is_unusual(mv) {
+                    rating += 2;
+                }
+                // lasers are boring
+                if mv.move_id == Attack::NEUTRAL_SPECIAL {
+                    rating -= 2;
+                }
+
+                // jab resets
+                if matches!(
+                    ActionState::from_repr(opnt.frames.post.action_state[mf!(mv.frame_index)])
+                        .unwrap_or_default(),
+                    ActionState::DOWN_DAMAGE_U | ActionState::DOWN_DAMAGE_D
+                ) {
+                    rating += 4;
+                }
+
+                // reverse hits
+                // neat trick: orientation left is negative, right is positive. Normalizing the
+                // opponent's position to the player will make it negative if they are farther left
+                // and positive if they are farther right. If the player is facing the same direction
+                // as their opponent is positioned relative to them, the result will be positive
+                // (right/pos * right/pos or left/neg * left/neg).
+                let relative_pos = mv.player_orientation as i8 as f32
+                    * (mv.opponent_position.x - mv.player_position.x);
+                // make sure it's a move that can actually be meaningfully reversed
+                // also bair is a special case in that a reverse hit means you're facing your opnt
+                if !matches!(mv.move_id, Attack::NEUTRAL_SPECIAL | Attack::DOWN_SPECIAL)
+                    && relative_pos.is_sign_negative()
+                    && mv.move_id != Attack::BAIR
+                    || relative_pos.is_sign_positive() && mv.move_id == Attack::BAIR
+                {
+                    rating += 2;
+                }
+            }
+
+            // tech reads are cool
+            if let Some(techs) = opnt.stats.tech.as_ref() {
+                for i in 0..techs.frame_index.len() {
+                    if !(combo.start_frame..combo.end_frame).contains(&techs.frame_index[i]) {
+                        continue;
+                    }
+
+                    if techs.punished[i] {
+                        rating += 5;
+                    }
+                }
+            }
+
+            // offstage edgeguards are cool
+            if stage.is_offstage(combo.move_list.last().unwrap().player_position)
+                && stage.is_offstage(combo.move_list.last().unwrap().opponent_position)
+            {
+                rating += 5;
+            }
+
+            rating += 2 * moveset.len() as i32;
+
+            result.push((combo.clone(), rating));
+        }
+    }
+
+    result
+}
+
+fn is_unusual(mv: &Move) -> bool {
+    matches!(
+        mv.move_id,
+        Attack::F_TILT
+            | Attack::D_TILT
+            | Attack::FAIR
+            | Attack::UAIR
+            | Attack::SIDE_SPECIAL
+            | Attack::FORWARD_THROW
+            | Attack::BACK_THROW
+            | Attack::UP_THROW
+            | Attack::DOWN_THROW
+    )
+}

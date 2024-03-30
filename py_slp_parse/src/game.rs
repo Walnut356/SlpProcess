@@ -33,7 +33,7 @@ impl PyGame {
     #[new]
     pub fn __init__(path: String) -> Self {
         let f_path = Path::new(&path);
-        let game = Game::new(f_path).unwrap();
+        let game = Game::new(f_path, true).unwrap();
         PyGame::new(game)
     }
 

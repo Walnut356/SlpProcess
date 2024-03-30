@@ -5,7 +5,7 @@ use std::sync::Arc;
 use bytes::{Buf, Bytes};
 use ssbm_utils::types::{Position, Velocity};
 
-use crate::{events::game_start::Version, game::Metadata};
+use crate::game::Metadata;
 
 #[derive(Debug)]
 pub struct ItemFrames {

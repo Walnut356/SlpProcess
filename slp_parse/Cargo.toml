@@ -14,7 +14,7 @@ polars = ["dep:polars"]
 
 
 [dependencies]
-polars = { version = "0.37.0", features = [
+polars = { version = "0.38", features = [
     "lazy",
     "dtype-u16",
     "dtype-u8",
@@ -47,7 +47,7 @@ derive-new = "0.6.0"
 time = { version = "0.3.30", features = ["serde", "parsing", "local-offset"] }
 
 [profile.release.package."polars"]
-version = "0.37.0"
+version = "0.38"
 features = [
     "lazy",
     "dtype-u16",

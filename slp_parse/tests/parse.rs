@@ -34,7 +34,7 @@ pub fn test_data_path(file_path: &str) -> PathBuf {
 #[test]
 pub fn test_metadata() {
     let replay = test_data_path(r"test_replays\netplay_sample.slp");
-    let game = Game::new(&replay).unwrap();
+    let game = Game::new(&replay, false).unwrap();
 
     let metadata = GameStart {
         random_seed: 32794,
@@ -78,7 +78,7 @@ pub fn test_metadata() {
 #[test]
 pub fn test_players() {
     let replay = test_data_path(r"test_replays\netplay_sample.slp");
-    let game = Game::new(&replay).unwrap();
+    let game = Game::new(&replay, false).unwrap();
 
     let players = &game.players;
 
@@ -116,7 +116,7 @@ pub fn test_players() {
 #[test]
 pub fn test_frames() {
     let replay = test_data_path(r"test_replays\netplay_sample.slp");
-    let game = Game::new(&replay).unwrap();
+    let game = Game::new(&replay, false).unwrap();
 
     let p1_frames = &game.players[0].frames;
     let p2_frames = &game.players[1].frames;

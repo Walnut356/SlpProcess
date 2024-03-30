@@ -141,7 +141,7 @@ pub trait GameMetadata {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq,)]
 pub struct Metadata {
     /// Replay SemVer number in the form `major`, `minor`, `revision`
     pub version: Version,
@@ -189,9 +189,8 @@ impl Default for Metadata {
 #[derive(Clone, Default)]
 pub struct Game {
     pub metadata: Arc<Metadata>,
-    /// Contains exactly 2 Players in threadsafe containers (`.load()` to access). Players are in
-    /// port order, but may be any combination of ports. Port numbers are stored in the Player
-    /// objects
+    /// Contains exactly 2 Players in port order, but may be any combination of ports. Port numbers
+    /// are stored in the Player objects
     pub players: [Arc<Player>; 2],
     /// Contains Item Frames if the replay is new enough. Item frames themselves may be empty if no
     /// items spawned during the match (highly unlikely), but the container will populate so long as
@@ -204,29 +203,22 @@ impl Game {
     ///
     /// Can panic if replay is severely malformed (Payload size doesn't match Payload Sizes listing,
     /// metadata event missing, etc.)
-    pub fn new(path: &Path) -> Result<Self> {
+    pub fn new(path: &Path, stats: bool) -> Result<Self> {
         ensure!(
             path.is_file() && path.extension().unwrap() == "slp",
             "Expected file with extension .slp, got path: {path:?}"
         );
         let file_data = Self::get_file_contents(path)?;
         let mut game = Game::parse(file_data, path)?;
-        // let now = Instant::now();
-        game.get_stats();
-        // let dur = now.elapsed();
-        // println!("{:?}", dur);
+        if stats {
+            game.get_stats();
+        }
 
         Ok(game)
     }
 
     pub fn player_by_port(&self, port: Port) -> Result<Arc<Player>> {
-        for p_lock in self.players.iter() {
-            // TODO i don't like making this a string, but RwLock errors require Sync/Send so
-            // they can't be directly converted to anyhow errors without some fiddling. I don't
-            // feel super confident about that, but it's also not very important atm so i'll
-            // look into it later
-            let player = p_lock;
-
+        for player in self.players.iter() {
             if player.port == port {
                 return Ok(player.clone());
             }
@@ -236,9 +228,7 @@ impl Game {
     }
 
     pub fn player_by_code(&self, connect_code: &str) -> Result<Arc<Player>> {
-        for p_lock in self.players.iter() {
-            let player = p_lock;
-
+        for player in self.players.iter() {
             if player
                 .connect_code
                 .as_ref()
@@ -252,6 +242,22 @@ impl Game {
             "Unable to find player with connect code '{:?}'",
             connect_code
         ))
+    }
+
+    /// Returns the first Player object whose connect code does NOT match the given connect code.
+    /// Does not check to see that the given connect code exists in the game
+    pub fn opponent_by_code(&self, connect_code: &str) -> Result<Arc<Player>> {
+        for player in &self.players {
+            if player
+                .connect_code
+                .as_ref()
+                .is_some_and(|x| x.to_ascii_uppercase() != connect_code)
+            {
+                return Ok(player.clone());
+            }
+        }
+
+        Err(anyhow!("Neither port contains a connect code",))
     }
 
     /// Replaces the `frames` object of each player with `Default::default()`. Used to save memory
@@ -323,6 +329,7 @@ impl Game {
             let wavedash = find_wavedashes(&player.frames);
 
             let stats = Arc::new(Stats {
+                metadata: self.metadata.clone(),
                 input,
                 l_cancel,
                 item,
@@ -340,16 +347,16 @@ impl Game {
             ));
 
             /* This should be a pretty cheap clone all things considered. The frames are 2 Arc
-            clones, and the connect code/display name are a max of 40 bytes (max 10 for code, max
+            clones, and the connect code/display name are a max of 40 bytes each (max 10 for code, max
             30 for display name)
 
             I'm not super happy with how this turned out, but the ergonomics for the end-user are
             nicer than Arc<RwLock<>> or RwLock<Arc<>>.
 
             The alternative (i think?) is to use something like OnceLock<Arc<Stats>>, which i may
-            still change to later. It's a negligable performance impact to save typing .get()
-            and i'm lazy =)
-             */
+            still change to later. It's a negligable performance impact to save typing .get() or
+            .read().unwrap() and i'm lazy =)
+            */
 
             result.push(Arc::new(Player {
                 character: player.character,
@@ -472,13 +479,13 @@ impl GameMetadata for GameStub {
 impl From<GameStub> for Game {
     fn from(value: GameStub) -> Self {
         // should be fine to unwrap. If you can get a stub, the game parsing shouldn't panic
-        Self::new(&value.path()).unwrap()
+        Self::new(&value.path(), false).unwrap()
     }
 }
 
 impl From<&GameStub> for Game {
     fn from(value: &GameStub) -> Self {
-        Self::new(&value.path()).unwrap()
+        Self::new(&value.path(), false).unwrap()
     }
 }
 

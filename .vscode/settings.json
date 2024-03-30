@@ -1,7 +1,12 @@
 {
-    "lldb.displayFormat": "auto",
-    "lldb.showDisassembly": "auto",
-    "lldb.dereferencePointers": true,
-    "lldb.consoleMode": "evaluate",
-    "python.analysis.typeCheckingMode": "basic"
+  "lldb.displayFormat": "auto",
+  "lldb.showDisassembly": "auto",
+  "lldb.dereferencePointers": true,
+  "lldb.consoleMode": "evaluate",
+  "python.analysis.typeCheckingMode": "basic",
+  "cSpell.enableFiletypes": [
+    "!python",
+    "!rust"
+  ],
+  "rust-analyzer.showUnlinkedFileNotification": false
 }

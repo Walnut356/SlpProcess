@@ -8,6 +8,7 @@ pub mod events {
     pub mod pre_frame;
 }
 
+pub mod columns;
 pub mod frames;
 pub mod game;
 pub mod parse;
@@ -16,8 +17,6 @@ pub mod stats;
 pub(crate) mod ubjson;
 pub mod utils;
 
-#[cfg(feature = "polars")]
-pub mod columns;
 #[cfg(feature = "polars")]
 pub mod polars_impl;
 
@@ -41,10 +40,10 @@ use std::{
 /// Replays that error out during parsing for any reason are skipped.
 ///
 /// Directory parsing is multi-threaded by default, can end up IO limited if replays aren't on an SSD
-pub fn parse(path: &str, multithreaded: bool) -> Vec<Game> {
+pub fn parse(path: &str, stats: bool, multithreaded: bool) -> Vec<Game> {
     let f_path = Path::new(path);
     if f_path.is_file() {
-        return vec![Game::new(f_path).unwrap()];
+        return vec![Game::new(f_path, stats).unwrap()];
     }
     if f_path.is_dir() {
         let files: Vec<PathBuf> = fs::read_dir(f_path)
@@ -66,7 +65,7 @@ pub fn parse(path: &str, multithreaded: bool) -> Vec<Game> {
         let mut result: Vec<Game> = if multithreaded {
             files
                 .par_iter()
-                .filter_map(|path| match Game::new(path.as_path()) {
+                .filter_map(|path| match Game::new(path.as_path(), stats) {
                     Ok(game) => Some(game),
                     Err(err) => {
                         #[cfg(debug_assertions)]
@@ -81,7 +80,7 @@ pub fn parse(path: &str, multithreaded: bool) -> Vec<Game> {
         } else {
             files
                 .iter()
-                .filter_map(|path| match Game::new(path.as_path()) {
+                .filter_map(|path| match Game::new(path.as_path(), stats) {
                     Ok(game) => Some(game),
                     Err(err) => {
                         #[cfg(debug_assertions)]
@@ -103,7 +102,10 @@ pub fn parse(path: &str, multithreaded: bool) -> Vec<Game> {
 
 /// Returns a parallel iterator over all .slp files in a directory. Any files that error out during
 /// processing are ignored. No ordering is guaranteed
-pub fn parse_iter(path: &str) -> FilterMap<IntoIter<PathBuf>, impl Fn(PathBuf) -> Option<Game>> {
+pub fn parse_iter(
+    path: &str,
+    stats: bool,
+) -> FilterMap<IntoIter<PathBuf>, impl Fn(PathBuf) -> Option<Game>> {
     let f_path = Path::new(path);
     if f_path.is_dir() {
         let files = fs::read_dir(f_path)
@@ -125,7 +127,7 @@ pub fn parse_iter(path: &str) -> FilterMap<IntoIter<PathBuf>, impl Fn(PathBuf) -
         let result =
             files
                 .into_par_iter()
-                .filter_map(move |path| match Game::new(path.as_path()) {
+                .filter_map(move |path| match Game::new(path.as_path(), stats) {
                     Ok(game) => Some(game),
                     Err(err) => {
                         #[cfg(debug_assertions)]
@@ -243,7 +245,7 @@ pub fn get_combos(games: &[Game], connect_code: &str) -> Vec<Arc<Combos>> {
         .collect()
 }
 
-pub fn to_dolphin_queue(target_path: PathBuf, combo_list: &[&Combos]) {
+pub fn to_dolphin_queue(target_path: PathBuf, combo_list: &[&stats::combos::Combo]) {
     let mut playback_queue = json!({
         "mode": "queue",
         "replay": "",
@@ -254,11 +256,8 @@ pub fn to_dolphin_queue(target_path: PathBuf, combo_list: &[&Combos]) {
 
     let result = playback_queue["queue"].as_array_mut().unwrap();
 
-    for combos in combo_list {
-        let path = combos.path.to_str().unwrap();
-        for combo in combos.iter() {
-            result.push(combo.to_queue_obj(path));
-        }
+    for combo in combo_list {
+        result.push(combo.to_queue_obj());
     }
 
     let f = File::create(target_path).unwrap();
@@ -270,12 +269,13 @@ pub mod prelude {
     pub use crate::{
         game::{Game, GameMetadata, GameStub},
         player::Player,
-        stats::{Stat, StatType, Stats},
+        stats::*,
     };
     pub use crate::{get_combos, get_stats, parse, to_dolphin_queue};
+    pub use strum::VariantNames;
 
-    pub use ssbm_utils;
-    pub use ssbm_utils::enums::{BitFlags, Port};
+    // pub use ssbm_utils;
+    pub use ssbm_utils::prelude::*;
 }
 
 #[cfg(test)]
@@ -286,7 +286,7 @@ mod test {
     #[test]
     fn test_ics() {
         let replay = r"../test_replays/ics_ditto.slp";
-        let game = parse(replay, true).pop().unwrap();
+        let game = parse(replay, false, true).pop().unwrap();
 
         let player = game.player_by_port(Port::P1).unwrap();
 

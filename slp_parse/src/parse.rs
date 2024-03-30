@@ -166,8 +166,7 @@ impl Game {
         let mut metadata_identifiers = [("", ""), ("", "")];
 
         if let serde_json::Value::Object(ps) = &metadata["players"] {
-            let mut i = 0;
-            for (k, v) in ps.iter() {
+            for (i, (_k, v)) in ps.iter().enumerate() {
                 if let serde_json::Value::Object(player_vals) = v {
                     if let serde_json::Value::Object(names) = &player_vals["names"] {
                         metadata_identifiers[i].0 = match names.get("code") {
@@ -180,7 +179,6 @@ impl Game {
                         };
                     }
                 }
-                i += 1;
             }
         }
 
@@ -193,7 +191,7 @@ impl Game {
         // ------------------------------------- game start ------------------------------------- //
         let event_sizes = Self::get_event_sizes(&mut stream)?;
 
-        assert_eq!(stream.get_u8(), EventType::GameStart as u8);
+        expect_bytes(&mut stream, &[EventType::GameStart as u8])?;
 
         let raw_start = stream.slice(0..event_sizes[&EventType::GameStart] as usize);
         stream.advance(event_sizes[&EventType::GameStart] as usize);
