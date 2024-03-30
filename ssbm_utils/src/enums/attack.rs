@@ -4,6 +4,8 @@
 
 use strum_macros::{Display, EnumString, IntoStaticStr, FromRepr};
 
+
+
 /// Attack values as they appear in the stale move queue, and the player's last_attack_landed field.
 #[derive(
     Debug,
@@ -14,12 +16,15 @@ use strum_macros::{Display, EnumString, IntoStaticStr, FromRepr};
     Eq,
     Hash,
     PartialOrd,
+    Ord,
     EnumString,
     Display,
     IntoStaticStr,
+    Default
 )]
 #[repr(u8)]
 pub enum Attack {
+    #[default]
     NONE = 0,
     /// Any attack that does not register as a move in the stale move queue
     NON_STALING = 1,
@@ -118,9 +123,36 @@ pub enum Attack {
     HAMMER = 93,
 }
 
-impl Default for Attack {
-    #[inline]
-    fn default() -> Self {
-        Self::NONE
+impl Attack {
+    pub fn is_jab(&self) -> bool {
+        matches!(self, Attack::JAB_1 | Attack::JAB_2 | Attack::JAB_3)
+    }
+
+    pub fn is_tilt(&self) -> bool {
+        matches!(self, Attack::F_TILT | Attack::U_TILT | Attack::D_TILT)
+    }
+
+    pub fn is_smash(&self) -> bool {
+        matches!(self, Attack::F_SMASH | Attack::U_SMASH | Attack::D_SMASH)
+    }
+
+    pub fn is_aerial(&self) -> bool {
+        matches!(self, Attack::NAIR | Attack::FAIR | Attack::BAIR | Attack::UAIR | Attack::DAIR)
+    }
+
+    pub fn is_special(&self) -> bool {
+        (Attack::NEUTRAL_SPECIAL..=Attack::KIRBY_HAT_ROY).contains(self)
+    }
+
+    pub fn is_getup_attack(&self) -> bool {
+        matches!(self, Attack::GET_UP_ATTACK_BACK | Attack::GET_UP_ATTACK_FRONT | Attack::LEDGE_ATTACK_FAST | Attack::LEDGE_ATTACK_SLOW)
+    }
+
+    pub fn is_throw(&self) -> bool {
+        (Attack::FORWARD_THROW..=Attack::CARGO_DOWN_THROW).contains(self)
+    }
+
+    pub fn is_item(&self) -> bool {
+        *self as u8 > 62
     }
 }
