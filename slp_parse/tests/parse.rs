@@ -78,7 +78,7 @@ pub fn test_metadata() {
 #[test]
 pub fn test_players() {
     let replay = test_data_path(r"test_replays\netplay_sample.slp");
-    let game = Game::new(&replay, false).unwrap();
+    let game = Game::new(&replay, true).unwrap();
 
     let players = &game.players;
 
