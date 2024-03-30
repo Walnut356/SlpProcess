@@ -18,3 +18,7 @@ Cargo.lock
 .idea/*
 
 test_db/
+
+*.db
+
+*.ipynb
