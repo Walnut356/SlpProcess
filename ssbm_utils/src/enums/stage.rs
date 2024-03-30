@@ -6,7 +6,19 @@ use strum_macros::{Display, EnumString, FromRepr, IntoStaticStr};
 use crate::types::{Point, Position};
 
 #[derive(
-    Debug, Copy, Clone, Default, PartialEq, Eq, EnumString, Display, FromRepr, IntoStaticStr,
+    Debug,
+    Copy,
+    Clone,
+    Default,
+    PartialOrd,
+    Ord,
+    PartialEq,
+    Eq,
+    Hash,
+    EnumString,
+    Display,
+    FromRepr,
+    IntoStaticStr,
 )]
 #[repr(u16)]
 pub enum StageID {
@@ -60,7 +72,7 @@ impl StageID {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, EnumString, Display, FromRepr, IntoStaticStr)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, Display, FromRepr, IntoStaticStr)]
 pub enum GroundID {
     UNKNOWN,
     MAIN_STAGE,
@@ -78,12 +90,18 @@ pub enum GroundID {
     RANDALL,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone,)]
 pub struct Stage {
     pub id: StageID,
     pub blastzones: BlastZones,
     pub ledges: [Point; 2],
     // TODO add dimensions, properties, etc.
+}
+
+impl PartialEq for Stage {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
 }
 
 impl TryFrom<u16> for Stage {

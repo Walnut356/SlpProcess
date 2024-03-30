@@ -24,6 +24,7 @@ pub trait BitFlags: Into<Self::Other> + Copy {
         Into::<Self::Other>::into(self) & other == other
     }
 
+    /// returns true if `self` is entirely represented in `other`
     #[inline]
     fn contained_by(self, other: Self::Other) -> bool {
         let temp = Into::<Self::Other>::into(self);

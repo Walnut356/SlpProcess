@@ -2,7 +2,7 @@
 
 use num_traits::PrimInt;
 
-use crate::enums::ActionRange as AR;
+// use crate::enums::ActionRange as AR;
 use crate::enums::*;
 
 /// Returns true if the current state is different from the previous state
@@ -66,7 +66,7 @@ pub fn is_magnifying_damage(damage_taken: f32, flags: &[u64], index: usize) -> b
     let min = index.saturating_sub(60);
 
     for flagset in &flags[min..=index] {
-        if !Flags::OFFSCREEN.intersects(*flagset) {
+        if !Flags::OFFSCREEN.contained_by(*flagset) {
             return false;
         }
     }
@@ -78,7 +78,7 @@ pub fn is_magnifying_damage(damage_taken: f32, flags: &[u64], index: usize) -> b
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 #[inline]
 pub fn is_in_hitlag(flags: u64) -> bool {
-    Flags::HITLAG.intersects(flags)
+    Flags::HITLAG.contained_by(flags)
 }
 
 /// Returns true if the character has the hitstun bitflag active
@@ -86,7 +86,7 @@ pub fn is_in_hitlag(flags: u64) -> bool {
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 #[inline]
 pub fn is_in_hitstun(flags: u64) -> bool {
-    Flags::HITSTUN.intersects(flags)
+    Flags::HITSTUN.contained_by(flags)
 }
 
 /// Returns true if the character has the defender-hitlag bitflag active
@@ -94,7 +94,7 @@ pub fn is_in_hitstun(flags: u64) -> bool {
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 #[inline]
 pub fn is_in_defender_hitlag(flags: u64) -> bool {
-    Flags::DEFENDER_HITLAG.intersects(flags)
+    Flags::DEFENDER_HITLAG.contained_by(flags)
 }
 
 /// Returns true if the character has the magnifying glass bitflag active
@@ -102,7 +102,7 @@ pub fn is_in_defender_hitlag(flags: u64) -> bool {
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 #[inline]
 pub fn is_in_magnifying_glass(flags: u64) -> bool {
-    Flags::OFFSCREEN.intersects(flags)
+    Flags::OFFSCREEN.contained_by(flags)
 }
 
 /// Returns true if the character has the shielding bitflag active
@@ -110,7 +110,7 @@ pub fn is_in_magnifying_glass(flags: u64) -> bool {
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 #[inline]
 pub fn is_shielding_flag(flags: u64) -> bool {
-    Flags::SHIELDING.intersects(flags)
+    Flags::SHIELDING.contained_by(flags)
 }
 
 /// Returns true if the character has the fastfall bitflag active
@@ -118,7 +118,7 @@ pub fn is_shielding_flag(flags: u64) -> bool {
 /// Minimum Slippi Version: 2.0.0 - Post-frame Bitflags
 #[inline]
 pub fn is_fastfalling(flags: u64) -> bool {
-    Flags::FASTFALL.intersects(flags)
+    Flags::FASTFALL.contained_by(flags)
 }
 
 /// Returns true if the character is in any tumble or reeling animation, or if they are in the jab reset animation
@@ -126,7 +126,7 @@ pub fn is_fastfalling(flags: u64) -> bool {
 /// Minimum Slippi Version: 0.1.0
 #[inline]
 pub fn is_damaged(state: u16) -> bool {
-    (AR::DAMAGE_START..=AR::DAMAGE_END).contains(&state)
+    ActionState::DAMAGED_RANGE.contains(&state)
         || ActionState::DAMAGE_FALL == state
         // jab reset states
         || ActionState::DOWN_DAMAGE_D == state
@@ -145,7 +145,7 @@ pub fn is_damaged(state: u16) -> bool {
 /// Minimum Slippi Version: 0.1.0
 #[inline]
 pub fn is_grabbed(state: u16) -> bool {
-    (AR::CAPTURE_START..=AR::CAPTURE_END).contains(&state)
+    ActionState::CAPTURE_RANGE.contains(&state)
 }
 
 /// Returns true if the character is in any command grab state
@@ -154,8 +154,8 @@ pub fn is_grabbed(state: u16) -> bool {
 #[inline]
 pub fn is_cmd_grabbed(state: u16) -> bool {
     ActionState::BARREL_WAIT != state
-        && ((AR::COMMAND_GRAB_RANGE1_START..=AR::COMMAND_GRAB_RANGE1_END).contains(&state)
-            || (AR::COMMAND_GRAB_RANGE2_START..=AR::COMMAND_GRAB_RANGE2_END).contains(&state))
+        && (ActionState::CMD_GRAB_RANGE_1.contains(&state)
+            || ActionState::CMD_GRAB_RANGE_2.contains(&state))
 }
 
 /// Returns true if the character is in any teching state. Does not included downed states.
@@ -164,8 +164,7 @@ pub fn is_cmd_grabbed(state: u16) -> bool {
 /// Minimum Slippi Version: 0.1.0
 #[inline]
 pub fn is_teching(state: u16) -> bool {
-    (AR::TECH_START..=AR::TECH_END).contains(&state)
-        // || (AR::DOWN_START..=AR::DOWN_END).contains(&state)
+    ActionState::TECH_RANGE.contains(&state)
         || ActionState::FLY_REFLECT_CEIL == state
         || ActionState::FLY_REFLECT_WALL == state
 }
@@ -175,7 +174,7 @@ pub fn is_teching(state: u16) -> bool {
 /// Minimum Slippi Version: 0.1.0
 #[inline]
 pub fn is_downed(state: u16) -> bool {
-    (AR::DOWN_START..=AR::DOWN_END).contains(&state)
+    ActionState::DOWNED_RANGE.contains(&state)
 }
 
 /// Returns true if the character is currently being thrown
@@ -183,7 +182,7 @@ pub fn is_downed(state: u16) -> bool {
 /// Minimum Slippi Version: 0.1.0
 #[inline]
 pub fn is_thrown(state: u16) -> bool {
-    (AR::THROWN_START..=AR::THROWN_END).contains(&state)
+    ActionState::THROWN_RANGE.contains(&state)
 }
 
 /// Returns true if the character is currently in a dying state (blast zone explosion, star KO, etc)
@@ -191,7 +190,7 @@ pub fn is_thrown(state: u16) -> bool {
 /// Minimum Slippi Version: 0.1.0
 #[inline]
 pub fn is_dying(state: u16) -> bool {
-    (AR::DYING_START..=AR::DYING_END).contains(&state)
+    ActionState::DYING_RANGE.contains(&state)
 }
 
 /// Returns true if the character is currently rolling or spot dodging
@@ -200,17 +199,17 @@ pub fn is_dying(state: u16) -> bool {
 #[inline]
 pub fn is_dodging(state: u16) -> bool {
     // intionally not `..=` due to leaving out airdodging
-    (AR::DODGE_START..AR::DODGE_END).contains(&state)
+    ActionState::DODGE_RANGE.contains(&state)
 }
 
 #[inline]
 pub fn is_shielding(state: u16) -> bool {
-    (AR::GUARD_START..=AR::GUARD_END).contains(&state)
+    ActionState::GUARD_RANGE.contains(&state)
 }
 
 #[inline]
 pub fn is_shield_broken(state: u16) -> bool {
-    (AR::GUARD_BREAK_START..=AR::GUARD_BREAK_END).contains(&state)
+    ActionState::GUARD_BREAK_RANGE.contains(&state)
 }
 
 /// Returns trie if the character is currently hanging from the ledge or performing any ledge action
@@ -218,12 +217,12 @@ pub fn is_shield_broken(state: u16) -> bool {
 /// Minimum Slippi Version: 0.1.0
 #[inline]
 pub fn is_ledge_action(state: u16) -> bool {
-    (AR::LEDGE_ACTION_START..=AR::LEDGE_ACTION_END).contains(&state)
+    ActionState::LEDGE_ACTION_RANGE.contains(&state)
 }
 
 #[inline]
 pub fn is_special_fall(state: u16) -> bool {
-    (AR::FALL_SPECIAL_START..=AR::FALL_SPECIAL_END).contains(&state)
+    ActionState::SPECIAL_FALL_RANGE.contains(&state)
 }
 
 /// NOTE: experimental

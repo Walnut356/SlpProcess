@@ -102,4 +102,5 @@ pub mod prelude {
     pub use crate::types::*;
     pub use crate::pos;
     pub use crate::vel;
+    pub use crate::stick_pos;
 }

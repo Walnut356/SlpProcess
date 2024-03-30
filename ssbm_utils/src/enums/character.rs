@@ -180,6 +180,7 @@ impl Character {
         }
     }
 
+    /// Converts the character to the u8 value corresponding to their CSS ID. See also `.as_internal()`
     pub fn try_as_css(&self) -> Result<u8> {
         use Character::*;
         match self {
@@ -220,6 +221,7 @@ impl Character {
         }
     }
 
+    /// Converts the character to the u8 value corresponding to their In-game ID. See also `.try_as_css()`
     pub fn as_internal(&self) -> u8 {
         *self as u8
     }
