@@ -88,6 +88,7 @@ pub enum GroundID {
     LEFT_SLANT,
     RIGHT_SLANT,
     RANDALL,
+    REWSPAWN_PLATFORM = 65535,
 }
 
 #[derive(Debug, Clone,)]
@@ -193,6 +194,9 @@ impl Stage {
     pub fn ground_from_id(&self, id: u16) -> GroundID {
         use GroundID::*;
         use StageID::*;
+        if id == 65535 {
+            return REWSPAWN_PLATFORM;
+        }
         match self.id {
             YOSHIS_STORY => match id {
                 0 => RANDALL,
