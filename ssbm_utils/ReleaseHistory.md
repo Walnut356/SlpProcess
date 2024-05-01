@@ -1,5 +1,12 @@
 # Release History
 
+## 0.4.0
+---
+
+* Added helper functions to `Attack`
+* [BREAKING] Replaced ActionRange enum with associated constant ranges in ActionState enum
+* Added respawn platform to `GroundID`
+
 ## 0.3.1
 
 ---

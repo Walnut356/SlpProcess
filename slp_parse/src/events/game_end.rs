@@ -4,9 +4,9 @@ use std::collections::HashMap;
 
 use bytes::{Buf, Bytes};
 use ssbm_utils::prelude::Port;
-use strum_macros::FromRepr;
+use strum_macros::{EnumString, FromRepr, IntoStaticStr};
 
-#[derive(Debug, Clone, PartialEq, Eq, FromRepr, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, FromRepr, Copy, EnumString, IntoStaticStr)]
 #[repr(u8)]
 pub enum EndMethod {
     Unresolved,
@@ -17,7 +17,7 @@ pub enum EndMethod {
     NoContest = 7,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, FromRepr)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, FromRepr, )]
 #[repr(i8)]
 pub enum Placement {
     Win,
