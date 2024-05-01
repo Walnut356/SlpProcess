@@ -27,7 +27,7 @@ pub const DIGITAL_TRIGGER_MASK: u32 = 0x60;
 /// >= 0.30
 ///
 #[rustfmt::skip]
-#[derive(Copy, Clone, PartialEq, PartialOrd, Ord, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 #[repr(u32)]
 pub enum EngineInput {
     None = 0,
@@ -81,7 +81,7 @@ pub enum EngineInput {
 /// `ANY_TRIGGER` is active when either L or R is active, and/or when there is an analog value
 /// >= 0.30
 #[rustfmt::skip]
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 #[repr(u16)]
 pub enum ControllerInput {
     None = 0,

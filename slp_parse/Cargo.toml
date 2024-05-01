@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/Walnut356/SlpProcess"
 readme = "./README.md"
-license = "MIT"
+license = "Apache-2.0"
 description = "A Slippi replay file parser for stats"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

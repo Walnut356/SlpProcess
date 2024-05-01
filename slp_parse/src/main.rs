@@ -2,9 +2,11 @@
 #[allow(dead_code)]
 use std::hint::black_box;
 
-use std::time::Instant;
+use itertools::izip;
+use ssbm_utils::prelude::{Character, Flags};
+use std::{collections::HashSet, time::Instant};
 
-use slp_parse::{prelude::*, stats::StatType};
+use slp_parse::{prelude::*, stats::{rate_falco_combos, StatType}};
 // static REPLAY: &[u8; 165123] = include_bytes!(r"G:/temp\Game_20230627T174002.slp");
 
 macro_rules! timeit {
@@ -17,93 +19,40 @@ macro_rules! timeit {
 }
 
 pub fn main() {
-    // rayon::ThreadPoolBuilder::default()
-    //     .stack_size(1048576 * 5)
-    //     .build_global()
-    //     .unwrap();
-    std::env::set_var("POLARS_FMT_TABLE_CELL_LIST_LEN", "-1");
 
-    // let replay = r"G:/temp";
-    // let replay = r"E:\Slippi Replays\Netplay\";
-
-    // let mut files: Vec<DirEntry> = fs::read_dir(replay)
-    //     .unwrap()
-    //     .filter_map(|file| {
-    //         if let Ok(entry) = file {
-    //             let path = entry.path();
-    //             if path.is_file() && path.extension().unwrap() == "slp" {
-    //                 Some(entry)
-    //             } else {
-    //                 None
-    //             }
-    //         } else {
-    //             None
-    //         }
-    //     })
-    //     .collect();
-
-    // files.sort_by_key(|b| std::cmp::Reverse(b.metadata().unwrap().created().unwrap()));
 
     // dbg!(&files[0..10]);
 
     // TODO old replay stubs end up misaligned when reading metadata somehow
     // let replay = r"E:\Slippi Replays\Netplay\Game_20240208T014130.slp";
     //
-    let replay = r"G:/Coding/My Projects/Slippi Stats/SlpProcess/weird_slideon.slp";
     // let replay = r"E:\Slippi Replays\Netplay\";
     // crashes on yoshi action state id 341 - fixed but circumstance still weird
     // let replay = r"E:\Slippi Replays\Netplay\Game_20231213T003213.slp";
 
-    // let replay = r"../test_replays/netplay_sample.slp";
-    // let mut f = File::open(replay).unwrap();
-    //     let file_length = f.metadata().unwrap().len() as usize;
-    //     dbg!(file_length);
-    //     let mut file_data = vec![0; file_length];
-    //     f.read_exact(&mut file_data).unwrap();
-
-    //     dbg!(&file_data[56268..56268 + 4]);
-    //     let mut b = Bytes::from(file_data);
-    //     let mut d = b.slice(..);
-
-    //     d.advance(56268);
-
-    //     dbg!(b.len() - d.len());
-    //     dbg!(d.get_i32());
-    let games = parse(replay, true);
-
-    let frames = games[0].players[0].frames.clone();
-
-    println!("{}", frames.pre.get_frame(5151 + 123));
-    // dbg!(games.iter().map(|g| g.item_frames.as_ref().unwrap().len()).sum::<usize>());
-    // for game in games {
-    //     let df = game.players[0].stats.defense.clone().unwrap();
-    //     let column = df.column("FrameIndex").unwrap().chunks();
-    //     dbg!(column.len());
-    //     // if let Some(lras) = game.end.clone().unwrap().lras_initiator {
-    //     //     if lras >=0 {
-    //     //         dbg!(game.end.unwrap());
-    //     //         println!("{}", game.players[0].frames.get_last_frame().0);
-    //     //         println!("{}", game.players[1].frames.get_last_frame().0);
-    //     //     }
-    //     // }
-    // }
-
-    // dbg!(game.date);
-
-    // TODO this replay has an item of ID 0x62
-    // let replay = r"G:/temp/Game_20230713T212214.slp";
-    // let replay = r"./Game_20230526T020459.slp";
-
-    // let replay = r"E:\Slippi Replays\Netplay\Game_20230607T011346.slp";
+    let replay = r"E:\Slippi Replays\Netplay\";
+    let replay = r"G:\Coding\My Projects\Slippi Stats\SlpProcess\test_replays\netplay_sample.slp";
 
     // print_summary(replay)
-
-    // loop {
-    //     timeit!(
-    //         "Parse Games: "
-    //         let games = parse_stubs(replay, false)
-    //     );
-    //     dbg!(games[0].duration);
+    let games = parse(replay, true, true).pop().unwrap();
+    for i in 0..games.players[0].frames.len() {
+        if i == 0 {
+            dbg!(&games.players[0].frames.post.last_ground_id.as_slice()[0]);
+        }
+        if games.players[0].frames.post.stocks[i] == 3 {
+            dbg!(games.players[0].frames.get_frame(i).1);
+        }
+    }
+    // let mut rated = rate_falco_combos("NUT#356", &games);
+    // rated.sort_by(|a, b| b.1.cmp(&a.1));
+    // // for a in &rated {
+    // //     println!("start: {}, end: {}, rating: {}", a.0.start_frame, a.0.end_frame, a.1);
+    // // }
+    // let combos = rated.iter().filter_map(|x| if x.1 >= 0 {Some(&x.0) } else {None}).collect::<Vec<_>>();
+    //     dbg!(combos.len());
+    // to_dolphin_queue("./test_combos.json".into(), combos.get(0..100).unwrap());
+    // for r in 0usize..100 {
+    //     println!("{}", rated[r].1)
     // }
 }
 

@@ -6,6 +6,7 @@
 * Added helper functions to `Attack`
 * [BREAKING] Replaced ActionRange enum with associated constant ranges in ActionState enum
 * Added respawn platform to `GroundID`
+* Added Hash and Eq impls for enums that were missing them.
 
 ## 0.3.1
 

@@ -53,7 +53,7 @@ impl TryFrom<i8> for Port {
 /// *Down is technically only used for warpstar item animation, but it's useful to give it a
 /// default value of 0 for stats
 #[derive(
-    Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
 )]
 #[repr(i8)]
 pub enum Orientation {
@@ -83,7 +83,7 @@ impl TryFrom<f32> for Orientation {
 /// L cancel status, active for 1 frame upon landing during an aerial attack, which indicates
 /// either SUCCESS or FAILURE. Value is NOT_APPLICABLE at all other times
 #[derive(
-    Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
 )]
 #[repr(u8)]
 pub enum LCancelState {
@@ -94,7 +94,7 @@ pub enum LCancelState {
 
 /// Hurtbox state. Can be VULNERABLE, INVULNERABLE, or INTANGIBLE
 #[derive(
-    Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
 )]
 #[repr(u8)]
 pub enum Hurtbox {
@@ -142,7 +142,7 @@ pub enum Hurtbox {
 /// * Bit 5 - INACTIVE
 /// * Bit 7 - DEAD
 /// * Bit 8 - OFFSCREEN
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u64)]
 pub enum Flags {
     None = 0,
@@ -232,7 +232,7 @@ pub enum Flags {
 }
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
+    Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, EnumString, Display, FromRepr, IntoStaticStr,
 )]
 pub enum TechType {
     TECH_IN_PLACE,
