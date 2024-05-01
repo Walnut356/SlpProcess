@@ -5,7 +5,7 @@ edition = "2021"
 repository = "https://github.com/Walnut356/SlpProcess"
 readme = "./README.md"
 license = "Apache-2.0"
-license-file = "../LICENSE.txt
+license-file = "../LICENSE.txt"
 description = "A collection of useful tools for working with data from Super Smash Bros Melee"
 exclude = ["ReleaseHistory.md"]
 
